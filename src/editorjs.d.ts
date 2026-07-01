@@ -7,3 +7,5 @@ declare module '@editorjs/warning';
 declare module '@editorjs/marker';
 declare module '@editorjs/inline-code';
 declare module '@editorjs/delimiter';
+declare module '@editorjs/image';
+declare module '@editorjs/code';

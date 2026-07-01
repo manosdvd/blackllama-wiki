@@ -34,6 +34,8 @@ export default function Editor({ initialData, onChange }: EditorProps) {
     const Marker = (await import('@editorjs/marker')).default;
     const InlineCode = (await import('@editorjs/inline-code')).default;
     const Delimiter = (await import('@editorjs/delimiter')).default;
+    const Image = (await import('@editorjs/image')).default;
+    const Code = (await import('@editorjs/code')).default;
 
     if (!editorRef.current) return;
 
@@ -56,6 +58,16 @@ export default function Editor({ initialData, onChange }: EditorProps) {
         marker: Marker,
         inlineCode: InlineCode,
         delimiter: Delimiter,
+        image: {
+          class: Image,
+          config: {
+            endpoints: {
+              byFile: '/api/uploadFile', // Placeholder for actual upload endpoint
+              byUrl: '/api/fetchUrl',    // Placeholder
+            }
+          }
+        },
+        code: Code,
       },
       placeholder: 'Start writing your wiki article here...',
       autofocus: true,

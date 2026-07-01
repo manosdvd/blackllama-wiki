@@ -76,8 +76,10 @@ html.dyslexia-mode h6,
 html.dyslexia-mode p,
 html.dyslexia-mode span,
 html.dyslexia-mode a,
+html.dyslexia-mode button,
 html.dyslexia-mode div {
-  font-family: 'OpenDyslexic', sans-serif !important;
+  font-family: 'Lexie Readable', var(--font-lexend), 'Comic Sans MS', sans-serif !important;
+  letter-spacing: 0.05em; /* Slightly wider letter spacing helps readability */
 }
 
 * {

@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
-import { Atkinson_Hyperlegible, Inter } from "next/font/google";
+import { Atkinson_Hyperlegible, Inter, Lexend } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/layout/Header";
 import EmbersBackground from "@/components/ui/EmbersBackground";
+import { AuthProvider } from "@/components/auth/AuthContext";
 
 const atkinson = Atkinson_Hyperlegible({ 
   weight: ['400', '700'],
@@ -13,6 +14,11 @@ const atkinson = Atkinson_Hyperlegible({
 const inter = Inter({ 
   subsets: ["latin"],
   variable: '--font-inter',
+});
+
+const lexend = Lexend({
+  subsets: ["latin"],
+  variable: '--font-lexend',
 });
 
 export const metadata: Metadata = {
@@ -28,13 +34,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${atkinson.variable} ${inter.variable}`}>
+    <html lang="en" className={`${atkinson.variable} ${inter.variable} ${lexend.variable}`}>
       <body>
-        <EmbersBackground />
-        <Header />
-        <main style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1 }}>
-          {children}
-        </main>
+        <AuthProvider>
+          <EmbersBackground />
+          <Header />
+          <main style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1 }}>
+            {children}
+          </main>
+        </AuthProvider>
       </body>
     </html>
   );

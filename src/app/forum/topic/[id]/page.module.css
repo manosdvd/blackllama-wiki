@@ -1,0 +1,214 @@
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem;
+  font-family: var(--font-inter), sans-serif;
+}
+
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--stone-grey);
+  text-decoration: none;
+  margin-bottom: 2rem;
+  font-size: 0.9rem;
+  transition: color 0.2s;
+}
+
+.backLink:hover {
+  color: var(--pine-green-light);
+}
+
+.header {
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.header h1 {
+  font-family: var(--font-atkinson), sans-serif;
+  color: var(--canvas-tan);
+  margin: 0 0 0.5rem 0;
+  font-size: 2rem;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-size: 0.9rem;
+}
+
+.categoryBadge {
+  background-color: var(--charcoal-dark);
+  color: var(--stone-grey);
+  padding: 0.15rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+.statusLocked {
+  color: var(--emergency-red);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.postList {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  margin-bottom: 3rem;
+}
+
+.postCard {
+  background-color: var(--charcoal-lighter);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.opPost {
+  border-left: 4px solid var(--lantern-gold);
+}
+
+.postHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  background-color: rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.authorInfo {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.authorName {
+  font-weight: 600;
+  color: var(--pine-green-light);
+}
+
+.authorRole {
+  background-color: var(--pine-green);
+  color: var(--canvas-tan);
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+}
+
+.postActions {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.postDate {
+  color: var(--stone-grey);
+  font-size: 0.85rem;
+}
+
+.flagBtn {
+  background: none;
+  border: none;
+  color: var(--stone-grey);
+  cursor: pointer;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  transition: color 0.2s;
+}
+
+.flagBtn:hover {
+  color: var(--emergency-red);
+}
+
+.postContent {
+  padding: 1.5rem;
+  color: var(--canvas-tan);
+  line-height: 1.6;
+}
+
+.removedPost {
+  padding: 1.5rem;
+  color: var(--emergency-red);
+  font-style: italic;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: rgba(220, 38, 38, 0.05);
+}
+
+.replySection {
+  background-color: var(--charcoal-dark);
+  padding: 2rem;
+  border-radius: 8px;
+  border: 1px solid var(--pine-green);
+}
+
+.replySection h3 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: var(--canvas-tan);
+  font-family: var(--font-atkinson), sans-serif;
+}
+
+.textarea {
+  width: 100%;
+  min-height: 150px;
+  background-color: var(--charcoal-lighter);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  padding: 1rem;
+  color: var(--canvas-tan);
+  font-family: var(--font-inter), sans-serif;
+  resize: vertical;
+  margin-bottom: 1rem;
+}
+
+.textarea:focus {
+  outline: none;
+  border-color: var(--pine-green-light);
+}
+
+.submitBtn {
+  background-color: var(--pine-green);
+  color: var(--canvas-tan);
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.submitBtn:hover {
+  background-color: var(--pine-green-light);
+}
+
+.submitBtn:disabled {
+  background-color: var(--stone-grey);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.lockedMessage {
+  text-align: center;
+  padding: 2rem;
+  background-color: rgba(220, 38, 38, 0.1);
+  border-radius: 8px;
+  color: var(--emergency-red);
+  font-weight: 600;
+}

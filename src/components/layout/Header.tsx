@@ -1,10 +1,16 @@
 import React from 'react';
 import Link from 'next/link';
-import { Menu, User, Tent } from 'lucide-react';
+import { Menu, Tent } from 'lucide-react';
 import AlertsHUD from './AlertsHUD';
+import Ticker from './Ticker';
+import DyslexiaToggle from './DyslexiaToggle';
+import AuthButton from './AuthButton';
+import { getOfflineTickerItems } from '@/lib/tickerUtils';
 import styles from './Header.module.css';
 
-export default function Header() {
+export default async function Header() {
+  const tickerItems = await getOfflineTickerItems();
+
   return (
     <header className={styles.headerContainer}>
       {/* Top Banner / Navigation */}
@@ -26,9 +32,8 @@ export default function Header() {
         </nav>
 
         <div className={styles.actions}>
-          <button className={styles.iconBtn} aria-label="Profile">
-            <User size={20} />
-          </button>
+          <DyslexiaToggle />
+          <AuthButton />
           <button className={`${styles.iconBtn} ${styles.mobileMenuBtn}`} aria-label="Menu">
             <Menu size={24} />
           </button>
@@ -37,6 +42,9 @@ export default function Header() {
 
       {/* Alerts HUD below the main nav */}
       <AlertsHUD />
+      
+      {/* Ticker at the bottom of the header */}
+      <Ticker items={tickerItems} />
     </header>
   );
 }
