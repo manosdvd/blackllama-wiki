@@ -133,10 +133,22 @@ export async function GET(req: Request) {
 
     // Ask Gemini to summarize (using flash which is free-tier optimized)
     const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
-    
     const prompt = `
 You are a content aggregator for a summer camp. I will give you a list of recent news items from various sources (weather, forest service, scouting, astronomy).
 Your task is to summarize these into 25 to 30 short, engaging, single-sentence alerts suitable for a scrolling marquee ticker.
+
+Additional Required Queries for Today (${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}):
+You MUST generate exactly one ticker item for each of the following specific queries and include them in the final JSON array:
+1. Flag Status: Determine if the Arizona state flag is flying at half-staff today. If not or if you don't know, output: "Flags are flying at full staff today over Camp Lawton." (source: "Arizona Flag Status", category: "camp_useful").
+2. Scouting America news/fact: A short update or historical fact about Scouting America.
+3. Scout.org/newsroom update: A short fact or update related to World Scouting.
+4. Catalina Council news/fact: An update or fact about Catalina Council (Boy Scouts of America).
+5. Mt. Lemmon local status/fact: An update or fact about Mt. Lemmon (elevation, environment, or activities).
+6. Summerhaven local status/fact: A quick detail or fact about Summerhaven, Arizona.
+7. Word of the Day: Generate one wholesome 'Word of the Day' with a definition. Format: "Word of the Day: [Word] - [Definition]" (source: "Dictionary.com", category: "wholesome_fun", url: "https://www.dictionary.com/word-of-the-day").
+8. Riddle of the Day: Generate one riddle and its answer. Format: "Riddle: [Question] (Ans: [Answer])" (source: "Riddles.com", category: "wholesome_fun", url: "https://www.riddles.com/riddle-of-the-day").
+9. This Day in Scouting History: A historical Scouting event that happened on this day in history. Format: "[Event description]" (source: "Scouting History", category: "history_curiosity").
+10. National Day: Identify the national day(s) celebrated on this day. Format: "Today is [National Day Name]!" (source: "National Day Calendar", category: "wholesome_fun", url: "https://nationaldaycalendar.com/what-day-is-it").
 
 Rules:
 1. Each alert MUST be under 110 characters.
@@ -145,17 +157,16 @@ Rules:
 4. Each object must have this exact structure:
 {
   "title": "The short alert text",
-  "source": "Short Name of Source",
-  "url": "The exact Link URL corresponding to this news item",
+  "source": "Short Name of Source (e.g. On Scouting, NASA, Riddles.com, Scouting History)",
+  "url": "The Link URL corresponding to this item, or an internal route like '/wiki' or '/' if generated",
   "category": "camp_useful"
 }
 5. The category MUST be one of: camp_useful, scouting, local_outdoors, nature_science, wholesome_fun, history_curiosity, dad_joke.
-6. You MUST generate at least 25 items. If there are not enough unique news stories in the input to reach 25 items, supplement the output with fun outdoor safety tips (e.g. about hydration, knots, leave no trace) or local Arizona nature facts, ensuring you reach at least 25 total items.
+6. You MUST generate at least 25 items in total (including the summaries of the news items below and the required queries above).
 
 News Items:
 ${rawNews}
     `;
-
     const result = await model.generateContent(prompt);
     let responseText = result.response.text().trim();
     
