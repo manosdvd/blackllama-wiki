@@ -1,8 +1,7 @@
 .hudContainer {
   width: 100%;
-  padding: 0.5rem 1rem;
   background-color: var(--charcoal-base);
-  border-bottom: 2px solid var(--surface-border);
+  border-bottom: 1px solid var(--surface-border);
 }
 
 .hudBarEmpty {
@@ -10,277 +9,330 @@
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  padding: 0.5rem;
-  background-color: var(--surface);
-  border: 1px solid var(--pine-green-light);
-  border-radius: 4px;
+  padding: 0.6rem 1rem;
   color: var(--pine-green-light);
   font-family: monospace;
-  font-weight: 600;
-  letter-spacing: 0.05em;
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
 }
+
+/* ── Main bar ────────────────────────────────────────────────── */
 
 .hudBar {
   display: flex;
-  background-color: var(--charcoal-dark, #161413);
-  border: 1px solid var(--charcoal-lighter, #2c2826);
-  border-radius: 4px;
-  overflow: hidden;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-  transition: all 0.3s ease;
-  min-height: 56px;
-}
-
-.pulseIndicator {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background-color: var(--canvas-tan);
-  animation: pulse 2s infinite;
-}
-
-.pulseIndicatorNominal {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background-color: var(--pine-green);
-  box-shadow: 0 0 8px var(--pine-green);
-  animation: pulseNominal 3s infinite;
-}
-
-@keyframes pulse {
-  0% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.5; transform: scale(0.8); }
-  100% { opacity: 1; transform: scale(1); }
-}
-
-@keyframes pulseNominal {
-  0% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.6; transform: scale(0.9); }
-  100% { opacity: 1; transform: scale(1); }
-}
-
-.hudCounter {
-  background: rgba(0, 0, 0, 0.3);
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  font-family: monospace;
-}
-
-.togglePauseBtn {
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: var(--canvas-tan);
-  border-radius: 4px;
-  padding: 0.25rem;
-  cursor: pointer;
-  display: flex;
   align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
+  gap: 0.75rem;
+  padding: 0.5rem 1rem;
+  background-color: #161413;
+  border-left: 4px solid transparent;
+  transition: border-color 0.3s ease, background-color 0.3s ease;
+  min-height: 54px;
 }
 
-.togglePauseBtn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
-}
+/* ── Severity level styles ───────────────────────────────────── */
 
-/* Alert Levels */
-.hudBar.info {
+.normal {
+  border-left-color: var(--pine-green);
+  background-color: rgba(6, 78, 59, 0.08);
+}
+.info {
   border-left-color: var(--pine-green-light);
-  color: var(--canvas-tan);
 }
-
-.hudBar.warning {
-  border-left-color: var(--lantern-gold, #f7b733);
+.watch {
+  border-left-color: #60a5fa;
+  background-color: rgba(96, 165, 250, 0.06);
 }
-
+.warning {
+  border-left-color: var(--lantern-gold);
+  background-color: rgba(234, 179, 8, 0.07);
+}
 .critical {
-  border-left-color: var(--red-ember, #d9381e);
-  background-color: rgba(217, 56, 30, 0.1);
+  border-left-color: var(--red-ember);
+  background-color: rgba(153, 27, 27, 0.12);
+  animation: glowRed 2s ease-in-out infinite alternate;
 }
-
-.fire {
-  border-left-color: #ff6b35;
-  background-color: rgba(255, 107, 53, 0.1);
-}
-
-.fireRed {
+.evacuation {
   border-left-color: #ff0000;
   background-color: rgba(255, 0, 0, 0.2);
-  color: #ffcccc;
-}
-
-.fireRed .hudSource, .fireRed .hudMessage {
-  color: #ffffff;
-  font-weight: bold;
-}
-
-.weather {
-  border-left-color: #4a90e2;
-  background-color: rgba(74, 144, 226, 0.05);
+  animation: glowRed 1s ease-in-out infinite alternate;
 }
 
 @keyframes glowRed {
-  from { box-shadow: 0 0 5px rgba(153, 27, 27, 0.2); }
-  to { box-shadow: 0 0 15px rgba(153, 27, 27, 0.6); }
+  from { box-shadow: inset 0 0 0 rgba(153, 27, 27, 0); }
+  to   { box-shadow: inset 0 0 20px rgba(153, 27, 27, 0.3); }
 }
+
+/* ── Icons ───────────────────────────────────────────────────── */
 
 .hudIconWrapper {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
-.icon {
-  width: 24px;
-  height: 24px;
-}
+.icon { width: 22px; height: 22px; }
+.warnIcon { color: #ff6b35; }
 
-.info .icon { color: var(--pine-green-light); }
-.warning .icon { color: var(--lantern-gold); }
-.critical .icon { color: var(--campfire-amber); }
-.fire .icon { color: var(--red-ember); }
+.normal .icon     { color: var(--pine-green-light); }
+.info .icon       { color: var(--pine-green-light); }
+.watch .icon      { color: #60a5fa; }
+.warning .icon    { color: var(--lantern-gold); }
+.critical .icon   { color: var(--red-ember); }
+.evacuation .icon { color: #ff0000; }
+
+/* ── Content ─────────────────────────────────────────────────── */
 
 .hudContent {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.2rem;
+  min-width: 0;
 }
 
 .hudHeader {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .hudSource {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  opacity: 0.8;
+  letter-spacing: 0.08em;
+  opacity: 0.85;
+  white-space: nowrap;
+}
+
+.sourceTag {
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 3px;
+  padding: 1px 5px;
+  color: rgba(255,255,255,0.6);
+  white-space: nowrap;
 }
 
 .hudMessage {
-  font-size: 0.9rem;
-  font-weight: 500;
-  line-height: 1.4;
+  font-size: 0.85rem;
+  font-weight: 400;
+  line-height: 1.45;
+  color: var(--canvas-tan);
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
-.hudControls {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding-left: 1rem;
-  border-left: 1px solid rgba(255, 255, 255, 0.1);
+.alertLink {
+  font-size: 0.72rem;
+  color: #60a5fa;
+  text-decoration: none;
+  opacity: 0.8;
+  transition: opacity 0.2s;
 }
+.alertLink:hover { opacity: 1; text-decoration: underline; }
+
+/* ── Weather snapshot ────────────────────────────────────────── */
 
 .weatherBlock {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
+  padding: 0 0.75rem;
+  border-left: 1px solid rgba(255,255,255,0.08);
+  flex-shrink: 0;
 }
 
 .weatherPrimary {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
+  color: var(--canvas-tan);
 }
 
 .weatherTemp {
-  font-size: 1.1rem;
-  font-weight: bold;
+  font-size: 1rem;
+  font-weight: 700;
   color: var(--lantern-gold);
 }
 
 .weatherCond {
-  font-size: 0.95rem;
-  color: var(--canvas-tan);
+  font-size: 0.78rem;
+  color: #c9c5c0;
 }
 
 .weatherStats {
   display: flex;
-  gap: 16px;
-  font-size: 0.75rem;
-  color: #a09d98;
+  gap: 10px;
+  font-size: 0.68rem;
+  color: #7a7672;
 }
-
 .weatherStats span {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
 }
 
-.weatherForecastDesktop {
-  display: none;
-  font-size: 0.75rem;
-  color: #8c8883;
-  margin-top: 4px;
-}
+/* ── Location block ──────────────────────────────────────────── */
 
 .locationBlock {
   display: flex;
   align-items: center;
-  padding: 0 16px;
-  border-left: 1px solid var(--charcoal-lighter);
-  background-color: rgba(0,0,0,0.2);
+  padding: 0 0.75rem;
+  border-left: 1px solid rgba(255,255,255,0.06);
+  flex-shrink: 0;
 }
 
 .locStats {
   display: flex;
   flex-direction: column;
-  font-size: 0.7rem;
-  color: #7a7672;
+  font-size: 0.65rem;
+  color: #5a5654;
   gap: 2px;
 }
-
 .locStats span {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
 }
 
-.weatherTimeBlock {
+/* ── Controls ────────────────────────────────────────────────── */
+
+.hudControls {
   display: flex;
-  gap: 16px;
-  font-size: 0.75rem;
-  color: #8c8883;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+  padding-left: 0.75rem;
+  border-left: 1px solid rgba(255,255,255,0.08);
 }
 
-.timeItem {
-  display: inline-flex;
+.hudCounter {
+  font-size: 0.7rem;
+  font-family: monospace;
+  color: #7a7672;
+  white-space: nowrap;
+}
+
+.togglePauseBtn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--canvas-tan);
+  border-radius: 4px;
+  padding: 3px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  opacity: 0.7;
+}
+.togglePauseBtn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  opacity: 1;
+}
+
+/* ── Source health footer ────────────────────────────────────── */
+
+.sourceHealthBar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.25rem 1rem;
+  background-color: rgba(0, 0, 0, 0.25);
+  border-top: 1px solid rgba(255,255,255,0.04);
+  flex-wrap: wrap;
+}
+
+.sourceHealthIcon {
+  color: #5a5654;
+  flex-shrink: 0;
+}
+
+.sourceHealthItem {
+  display: flex;
   align-items: center;
   gap: 4px;
 }
 
-
-@media (min-width: 768px) {
-  .hudHeader {
-    flex-direction: row;
-    align-items: center;
-  }
-
-  .weatherForecastDesktop {
-    display: block;
-  }
+.sourceHealthLabel {
+  font-size: 0.6rem;
+  font-family: monospace;
+  color: #6a6662;
+  letter-spacing: 0.04em;
 }
 
-@media (max-width: 600px) {
-  .hudBar {
-    padding: 0.5rem;
-    gap: 0.5rem;
-  }
-  .hudMessage {
-    font-size: 0.8rem;
-  }
-  .hudSource {
-    font-size: 0.65rem;
-  }
-  .icon {
-    width: 20px;
-    height: 20px;
-  }
+.healthDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+.dotOk      { background-color: #22c55e; box-shadow: 0 0 4px rgba(34,197,94,0.5); }
+.dotDegraded{ background-color: #f59e0b; }
+.dotError   { background-color: #ef4444; }
+.dotMissing { background-color: #4a4a4a; }
+
+.lastChecked {
+  font-size: 0.6rem;
+  font-family: monospace;
+  color: #4a4a4a;
+  margin-left: auto;
+}
+
+.allClearBadge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--pine-green-light);
+  white-space: nowrap;
+}
+
+.sourceHealthDivider {
+  width: 1px;
+  height: 10px;
+  background: rgba(255,255,255,0.1);
+  flex-shrink: 0;
+}
+
+/* ── Loading pulse ───────────────────────────────────────────── */
+
+.pulseIndicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: var(--pine-green-light);
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.4; transform: scale(0.8); }
+}
+
+/* ── Responsive ──────────────────────────────────────────────── */
+
+@media (max-width: 900px) {
+  .weatherBlock { display: none; }
+}
+
+@media (max-width: 700px) {
+  .locationBlock { display: none; }
+  .hudBar { padding: 0.4rem 0.6rem; gap: 0.5rem; }
+  .hudMessage { font-size: 0.8rem; -webkit-line-clamp: 3; }
+  .hudSource { font-size: 0.65rem; }
+  .icon { width: 18px; height: 18px; }
+}
+
+@media (max-width: 480px) {
+  .sourceHealthBar { gap: 0.4rem; padding: 0.2rem 0.6rem; }
+  .lastChecked { display: none; }
 }

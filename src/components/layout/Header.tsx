@@ -1,6 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
-import { Menu, Tent } from 'lucide-react';
+import Image from 'next/image';
+import { Menu } from 'lucide-react';
 import AlertsHUD from './AlertsHUD';
 import Ticker from './Ticker';
 import DyslexiaToggle from './DyslexiaToggle';
@@ -17,7 +18,14 @@ export default async function Header() {
       <div className={styles.navBar}>
         <div className={styles.brand}>
           <Link href="/" className={styles.logoLink}>
-            <Tent className={styles.logoIcon} />
+            <Image
+              src="/CLlogo.png"
+              alt="Camp Lawton"
+              width={48}
+              height={48}
+              className={styles.logoImage}
+              priority
+            />
             <div className={styles.logoText}>
               <h1>CAMP LAWTON</h1>
               <span>STAFF COMMAND</span>

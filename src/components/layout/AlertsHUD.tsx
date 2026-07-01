@@ -1,293 +1,255 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import styles from './AlertsHUD.module.css';
-import { AlertTriangle, Flame, CloudLightning, Info, Pause, Play, Wind, Droplets, ThermometerSun, MapPin } from 'lucide-react';
+import {
+  AlertTriangle, Flame, CloudLightning, Info, Pause, Play,
+  Wind, Droplets, ThermometerSun, MapPin, CheckCircle, Satellite,
+  Trees, Activity,
+} from 'lucide-react';
+import type {
+  FireAggregatorResponse,
+  FireAlertItem,
+  FireAlertLevel,
+  FireAlertSource,
+  SourceHealthStatus,
+  WeatherSnapshot,
+} from '@/app/api/alerts/fire/route';
 
-type AlertLevel = 'info' | 'warning' | 'critical' | 'fire' | 'fireRed' | 'weather';
+const SOURCE_HEALTH_ORDER: FireAlertSource[] = ['NWS', 'USFS', 'FIRMS', 'WFIGS', 'AIRNOW'];
 
-interface Alert {
-  id: string;
-  level: AlertLevel;
-  message: string;
-  source: string;
-  timestamp: string;
-  weatherDetails?: {
-    temp: string;
-    condition: string;
-    wind: string;
-    humidity: string;
-    precip: string;
-    forecast: string;
-    fetchedAt?: string;
-  };
-}
+const SOURCE_LABELS: Record<FireAlertSource, string> = {
+  NWS: 'NWS',
+  USFS: 'USFS',
+  FIRMS: 'FIRMS',
+  WFIGS: 'WFIGS',
+  NOAA_HMS: 'HMS',
+  AIRNOW: 'AirNow',
+};
 
 export default function AlertsHUD() {
-  const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [data, setData] = useState<FireAggregatorResponse | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
 
-  // 1. Ticking current time client-side only (avoid hydration mismatch)
+  // 1. Live clock — client-only to avoid hydration mismatch
   useEffect(() => {
-    setCurrentTime(new Date());
+    setTimeout(() => setCurrentTime(new Date()), 0);
     const clockInterval = setInterval(() => {
       setCurrentTime(new Date());
     }, 1000);
     return () => clearInterval(clockInterval);
   }, []);
 
-  // 2. Load cache immediately on launch (if available) to show instantly
+  // 2. Load from localStorage cache immediately for instant render
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const cached = localStorage.getItem('cachedWeather');
-      if (cached) {
-        try {
-          const cachedAlert = JSON.parse(cached);
-          cachedAlert.source = 'Mt. Lemmon Conditions (Offline Cache)';
-          setAlerts([cachedAlert]);
-          setIsLoading(false);
-        } catch (e) {
-          console.error('Failed to parse cached weather on launch', e);
-        }
-      }
-    }
-  }, []);
-
-  useEffect(() => {
-    async function fetchAllData() {
+    if (typeof window === 'undefined') return;
+    const cached = localStorage.getItem('fireAlertCache');
+    if (cached) {
       try {
-        const fetchedAlerts: Alert[] = [];
-        const headers = { 'User-Agent': '(camplawton.org, contact@camplawton.org)' };
-
-        // 1. Fetch NWS Alerts
-        try {
-          const nwsAlertsRes = await fetch('https://api.weather.gov/alerts/active?point=32.39806,-110.725', { headers });
-          if (nwsAlertsRes.ok) {
-            const data = await nwsAlertsRes.json();
-            if (data.features) {
-              data.features.forEach((feature: any) => {
-                const props = feature.properties;
-                let level: AlertLevel = 'info';
-                
-                if (props.severity === 'Extreme' || props.severity === 'Severe') level = 'critical';
-                if (props.severity === 'Moderate') level = 'warning';
-                
-                const eventName = (props.event || '').toLowerCase();
-                if (eventName.includes('fire')) level = 'fire';
-                if (eventName.includes('red flag warning')) level = 'fireRed';
-
-                fetchedAlerts.push({
-                  id: props.id,
-                  level,
-                  message: props.headline || props.event,
-                  source: props.senderName || 'NWS Weather Alert',
-                  timestamp: props.sent
-                });
-              });
-            }
-          }
-        } catch (e) { console.error('NWS Alerts err', e); }
-
-        // 2. Fetch Coronado Alerts
-        try {
-          const fsRes = await fetch('/api/alerts/coronado');
-          if (fsRes.ok) {
-            const fsData = await fsRes.json();
-            if (fsData.alerts && fsData.alerts.length > 0) {
-              fsData.alerts.forEach((alert: any) => fetchedAlerts.push(alert));
-            }
-          }
-        } catch (e) { console.error('FS Alerts err', e); }
-
-        // 3. Fetch Detailed NWS Weather (Gridpoint TWC/101,56)
-        let weatherLoaded = false;
-        try {
-          // Current Forecast
-          const forecastRes = await fetch('https://api.weather.gov/gridpoints/TWC/101,56/forecast', { headers });
-          if (forecastRes.ok) {
-            const data = await forecastRes.json();
-            if (data.properties && data.properties.periods && data.properties.periods.length > 0) {
-              const currentPeriod = data.properties.periods[0];
-              const nextPeriods = data.properties.periods.slice(1, 6);
-              
-              // Build a 5 day string for desktop
-              const forecastStr = nextPeriods.map((p: any) => `${p.name}: ${p.temperature}°${p.temperatureUnit}`).join(' | ');
-
-              const weatherAlert: Alert = {
-                id: 'nws-current-weather',
-                level: 'weather',
-                message: currentPeriod.detailedForecast,
-                source: 'Mt. Lemmon Current Conditions',
-                timestamp: currentPeriod.startTime,
-                weatherDetails: {
-                  temp: `${currentPeriod.temperature}°${currentPeriod.temperatureUnit}`,
-                  condition: currentPeriod.shortForecast,
-                  wind: currentPeriod.windSpeed,
-                  humidity: currentPeriod.relativeHumidity?.value ? `${currentPeriod.relativeHumidity.value}%` : 'N/A',
-                  precip: currentPeriod.probabilityOfPrecipitation?.value ? `${currentPeriod.probabilityOfPrecipitation.value}%` : '0%',
-                  forecast: forecastStr,
-                  fetchedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                }
-              };
-              
-              fetchedAlerts.unshift(weatherAlert);
-              localStorage.setItem('cachedWeather', JSON.stringify(weatherAlert));
-              weatherLoaded = true;
-            }
-          }
-        } catch (e) {
-          console.warn('NWS Weather fetch failed, attempting to load from cache', e);
-        }
-
-        if (!weatherLoaded) {
-          const cached = localStorage.getItem('cachedWeather');
-          if (cached) {
-            try {
-              const cachedAlert = JSON.parse(cached);
-              // Prepend [CACHED] or similar to indicate it's not live, or just show it
-              cachedAlert.source = 'Mt. Lemmon Conditions (Offline Cache)';
-              fetchedAlerts.unshift(cachedAlert);
-              weatherLoaded = true;
-            } catch (e) { console.error('Failed to parse cached weather', e); }
-          }
-        }
-
-        if (!weatherLoaded) {
-          fetchedAlerts.unshift({
-            id: 'nws-no-weather',
-            level: 'info',
-            message: 'No Weather Information Available at this time.',
-            source: 'Mt. Lemmon Conditions',
-            timestamp: new Date().toISOString()
-          });
-        }
-
-        // If nothing was fetched and no weather loaded (which shouldn't happen now since we fallback to "No weather"), 
-        // add a default fallback so it doesn't say "connecting to satellite"
-        if (fetchedAlerts.length === 0) {
-          fetchedAlerts.push({
-            id: 'fallback-nominal',
-            level: 'info',
-            message: 'No Active Emergency Alerts.',
-            source: 'Lawton Hub',
-            timestamp: new Date().toISOString()
-          });
-        }
-
-        setAlerts(fetchedAlerts);
-      } catch (err) {
-        console.error('Error fetching alerts dashboard:', err);
-      } finally {
-        setIsLoading(false);
+        const parsed = JSON.parse(cached) as FireAggregatorResponse;
+        setTimeout(() => {
+          setData(parsed);
+          setIsLoading(false);
+        }, 0);
+      } catch {
+        // ignore corrupt cache
       }
     }
+  }, []);
 
-    fetchAllData();
-    const interval = setInterval(fetchAllData, 5 * 60 * 1000);
-    return () => clearInterval(interval);
+  // 3. Fetch live data from unified aggregator
+  const fetchFireData = useCallback(async () => {
+    try {
+      const res = await fetch('/api/alerts/fire');
+      if (!res.ok) throw new Error(`Fire API returned ${res.status}`);
+      const fresh = (await res.json()) as FireAggregatorResponse;
+      setData(fresh);
+      setIsLoading(false);
+      localStorage.setItem('fireAlertCache', JSON.stringify(fresh));
+    } catch (err) {
+      console.error('Fire alert fetch failed:', err);
+      // Already showing cached data if available; don't clear it
+      setIsLoading(false);
+    }
   }, []);
 
   useEffect(() => {
-    if (alerts.length <= 1 || isPaused) return;
-    const interval = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % alerts.length);
-    }, 12000); // Slower rotation for weather
+    fetchFireData();
+    const interval = setInterval(fetchFireData, 5 * 60 * 1000);
     return () => clearInterval(interval);
-  }, [alerts, isPaused]);
+  }, [fetchFireData]);
+
+  // 4. Auto-rotate through alerts
+  useEffect(() => {
+    if (!data || data.alerts.length <= 1 || isPaused) return;
+    const interval = setInterval(() => {
+      setCurrentIndex(prev => (prev + 1) % data.alerts.length);
+    }, 12000);
+    return () => clearInterval(interval);
+  }, [data, isPaused]);
+
+  // Reset index when alert list changes
+  useEffect(() => {
+    setCurrentIndex(0);
+  }, [data?.alerts.length]);
+
+  // ─── Render helpers ──────────────────────────────────────────────────────
+
+  const getIcon = (level: FireAlertLevel, source?: FireAlertSource) => {
+    if (source === 'FIRMS') return <Satellite className={styles.icon} />;
+    if (source === 'WFIGS') return <Flame className={`${styles.icon} ${styles.warnIcon}`} />;
+    if (source === 'AIRNOW') return <Wind className={styles.icon} />;
+    if (source === 'USFS') return <Trees className={styles.icon} />;
+    switch (level) {
+      case 'evacuation':
+      case 'critical': return <AlertTriangle className={styles.icon} />;
+      case 'warning': return <Flame className={styles.icon} />;
+      case 'watch': return <CloudLightning className={styles.icon} />;
+      case 'normal': return <CheckCircle className={styles.icon} />;
+      default: return <Info className={styles.icon} />;
+    }
+  };
+
+  const healthDot = (status: SourceHealthStatus) => {
+    const cls = {
+      ok: styles.dotOk,
+      degraded: styles.dotDegraded,
+      error: styles.dotError,
+      'missing-key': styles.dotMissing,
+    }[status] || styles.dotMissing;
+    const label = { ok: 'OK', degraded: 'Delayed', error: 'Error', 'missing-key': 'No Key' }[status];
+    return <span className={`${styles.healthDot} ${cls}`} title={label} />;
+  };
+
+  // ─── Loading state ───────────────────────────────────────────────────────
 
   if (isLoading) {
     return (
       <div className={styles.hudContainer}>
         <div className={styles.hudBarEmpty}>
-          <span className={styles.pulseIndicator}></span>
-          <span>Loading Weather and Safety Feeds...</span>
+          <span className={styles.pulseIndicator} />
+          <span>Connecting to fire &amp; weather intelligence feeds...</span>
         </div>
       </div>
     );
   }
 
-  const currentAlert = alerts[currentIndex];
+  if (!data) return null;
 
-  const getIcon = (level: AlertLevel) => {
-    switch (level) {
-      case 'fire':
-      case 'fireRed': return <Flame className={styles.icon} />;
-      case 'critical': return <AlertTriangle className={styles.icon} />;
-      case 'warning': return <CloudLightning className={styles.icon} />;
-      case 'weather': return <ThermometerSun className={styles.icon} />;
-      case 'info': return <Info className={styles.icon} />;
-      default: return <Info className={styles.icon} />;
-    }
-  };
+  const alerts: FireAlertItem[] = data.alerts;
+  const weather: WeatherSnapshot | null = data.weather;
+  const isAllClear = alerts.length === 0;
+  const currentAlert = !isAllClear ? alerts[Math.min(currentIndex, alerts.length - 1)] : null;
+
+  // ── All-clear: only render the slim health footer, no alert bar ──
+  if (isAllClear) {
+    return (
+      <div className={styles.hudContainer}>
+        <div className={styles.sourceHealthBar}>
+          <span className={styles.allClearBadge}>✓ All Clear</span>
+          <span className={styles.sourceHealthDivider} />
+          {SOURCE_HEALTH_ORDER.map(src => (
+            <span key={src} className={styles.sourceHealthItem}>
+              {healthDot(data.sourceHealth[src])}
+              <span className={styles.sourceHealthLabel}>{SOURCE_LABELS[src]}</span>
+            </span>
+          ))}
+          {data.lastChecked && (
+            <span className={styles.lastChecked}>
+              Checked: {new Date(data.lastChecked).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Phoenix' })}
+            </span>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (!currentAlert) return null;
 
   return (
     <div className={styles.hudContainer}>
-      <div className={`${styles.hudBar} ${styles[currentAlert.level]}`}>
+      <div className={`${styles.hudBar} ${styles[currentAlert.level] || styles.info}`}>
+
+        {/* Icon */}
         <div className={styles.hudIconWrapper}>
-          {getIcon(currentAlert.level)}
+          {getIcon(currentAlert.level, currentAlert.source)}
         </div>
-        
+
+        {/* Main content */}
         <div className={styles.hudContent}>
           <div className={styles.hudHeader}>
-            <span className={styles.hudSource}>{currentAlert.source}</span>
+            <span className={styles.hudSource}>{currentAlert.title}</span>
+            {currentAlert.source && (
+              <span className={styles.sourceTag}>{SOURCE_LABELS[currentAlert.source] ?? currentAlert.source}</span>
+            )}
           </div>
-
-          {currentAlert.level === 'weather' && currentAlert.weatherDetails ? (
-            <div className={styles.weatherBlock}>
-              <div className={styles.weatherPrimary}>
-                <span className={styles.weatherTemp}>{currentAlert.weatherDetails.temp}</span>
-                <span className={styles.weatherCond}>{currentAlert.weatherDetails.condition}</span>
-              </div>
-              <div className={styles.weatherStats}>
-                <span><Wind size={12}/> {currentAlert.weatherDetails.wind}</span>
-                <span><Droplets size={12}/> Hum: {currentAlert.weatherDetails.humidity}</span>
-                <span>Precip: {currentAlert.weatherDetails.precip}</span>
-              </div>
-              <div className={styles.weatherTimeBlock}>
-                {currentTime && (
-                  <span className={styles.timeItem}>
-                    <strong>Time:</strong> {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </span>
-                )}
-                {currentAlert.weatherDetails.fetchedAt && (
-                  <span className={styles.timeItem}>
-                    <strong>Updated:</strong> {currentAlert.weatherDetails.fetchedAt}
-                  </span>
-                )}
-              </div>
-              <div className={styles.weatherForecastDesktop}>
-                <strong>Forecast:</strong> {currentAlert.weatherDetails.forecast}
-              </div>
-            </div>
-          ) : (
-             <p className={styles.hudMessage}>{currentAlert.message}</p>
+          <p className={styles.hudMessage}>{currentAlert.message}</p>
+          {currentAlert.url && (
+            <a href={currentAlert.url} target="_blank" rel="noopener noreferrer" className={styles.alertLink}>
+              View official source ↗
+            </a>
           )}
         </div>
 
+        {/* Weather snapshot — shown when available */}
+        {weather && (
+          <div className={styles.weatherBlock}>
+            <div className={styles.weatherPrimary}>
+              <ThermometerSun size={14} />
+              <span className={styles.weatherTemp}>{weather.temp}</span>
+              <span className={styles.weatherCond}>{weather.condition}</span>
+            </div>
+            <div className={styles.weatherStats}>
+              <span><Wind size={11} /> {weather.wind}</span>
+              <span><Droplets size={11} /> {weather.humidity}</span>
+              <span>Rain: {weather.precipChance}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Location + time */}
         <div className={styles.locationBlock}>
           <div className={styles.locStats}>
-             <span><MapPin size={12}/> 32.398° N, -110.725° W</span>
-             <span>Alt: 7,950 ft</span>
+            <span><MapPin size={11} /> 32.398° N, 110.725° W</span>
+            <span>7,950 ft</span>
+            {currentTime && (
+              <span>{currentTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Phoenix' })} MST</span>
+            )}
           </div>
         </div>
 
+        {/* Controls */}
         <div className={styles.hudControls}>
-          <span className={styles.hudCounter}>
-            {currentIndex + 1} / {alerts.length}
-          </span>
+          <span className={styles.hudCounter}>{currentIndex + 1} / {alerts.length}</span>
           {alerts.length > 1 && (
-            <button 
+            <button
               className={styles.togglePauseBtn}
               onClick={() => setIsPaused(!isPaused)}
-              title={isPaused ? "Resume Rotation" : "Freeze Rotation"}
+              title={isPaused ? 'Resume Rotation' : 'Freeze Rotation'}
             >
               {isPaused ? <Play size={16} /> : <Pause size={16} />}
             </button>
           )}
         </div>
+      </div>
+
+      {/* Source health footer */}
+      <div className={styles.sourceHealthBar}>
+        <Activity size={10} className={styles.sourceHealthIcon} />
+        {SOURCE_HEALTH_ORDER.map(src => (
+          <span key={src} className={styles.sourceHealthItem}>
+            {healthDot(data.sourceHealth[src])}
+            <span className={styles.sourceHealthLabel}>{SOURCE_LABELS[src]}</span>
+          </span>
+        ))}
+        {data.lastChecked && (
+          <span className={styles.lastChecked}>
+            Checked: {new Date(data.lastChecked).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Phoenix' })}
+          </span>
+        )}
       </div>
     </div>
   );

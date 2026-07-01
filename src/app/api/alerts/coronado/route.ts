@@ -1,68 +1,123 @@
 import { NextResponse } from 'next/server';
 import * as cheerio from 'cheerio';
 
+export interface CoronadoAlert {
+  id: string;
+  level: 'critical' | 'warning' | 'info';
+  title: string;
+  message: string;
+  effectiveDate?: string;
+  orderNumber?: string;
+  url?: string;
+  source: 'USFS';
+  timestamp: string;
+}
+
 export async function GET() {
-  try {
-    const response = await fetch('https://www.fs.usda.gov/alerts/coronado/alerts-notices', {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' // Some sites block fetch without UA
-      },
-      next: { revalidate: 3600 } // Cache for 1 hour to respect USFS servers
-    });
+  // Try new URL first, fall back to old one
+  const urls = [
+    'https://www.fs.usda.gov/r03/coronado/alerts',
+    'https://www.fs.usda.gov/alerts/coronado/alerts-notices',
+  ];
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch from FS');
+  let html = '';
+  for (const url of urls) {
+    try {
+      const response = await fetch(url, {
+        headers: {
+          'User-Agent': 'CampLawtonStaffHub/1.0 (contact@camplawton.org)',
+          'Accept': 'text/html',
+        },
+        next: { revalidate: 3600 },
+      });
+      if (response.ok) {
+        html = await response.text();
+        break;
+      }
+    } catch {
+      // try next url
     }
+  }
 
-    const html = await response.text();
-    const $ = cheerio.load(html);
+  if (!html) {
+    return NextResponse.json({ alerts: [] }, { status: 200 });
+  }
 
-    const alerts: any[] = [];
+  const $ = cheerio.load(html);
+  const alerts: CoronadoAlert[] = [];
 
-    // The USFS alerts page usually has tables or divs for alerts.
-    // Looking at the standard structure, alerts are often in a list or div with class 'alert' or just under headers.
-    // We will look for h4 tags or strong tags that might contain the alerts, or grab the specific alerts table.
-    
-    // A robust way for Coronado: look for links in the right-column or main content that indicate an alert.
-    // Or we can just look for text that contains 'Closure' or 'Restriction'.
-    // The specific page has a main content area.
-    $('.center-content h2:contains("Alerts"), .center-content h2:contains("Notices")').nextAll('ul').first().find('li').each((i, el) => {
-      const text = $(el).text().trim();
-      if (text) {
-        let level = 'warning';
-        if (text.toLowerCase().includes('closure') || text.toLowerCase().includes('fire')) {
-          level = 'critical';
-        }
-        alerts.push({
-          id: `fs-alert-${i}`,
-          level,
-          message: text,
-          source: 'Coronado NF',
-          timestamp: new Date().toISOString()
+  const levelFromText = (text: string): CoronadoAlert['level'] => {
+    const lower = text.toLowerCase();
+    if (lower.includes('critical') || lower.includes('closure') || lower.includes('evacuation')) return 'critical';
+    if (lower.includes('fire restriction') || lower.includes('red flag') || lower.includes('warning') || lower.includes('fire')) return 'warning';
+    return 'info';
+  };
+
+  // Strategy 1: Look for structured alert items with headings + content
+  $('article, .alert-item, .view-row, .views-row').each((i, el) => {
+    const titleEl = $(el).find('h2, h3, h4, .views-field-title, .field-title').first();
+    const title = titleEl.text().trim();
+    const bodyEl = $(el).find('p, .views-field-body, .field-body').first();
+    const body = bodyEl.text().trim();
+    const linkEl = $(el).find('a').first();
+    const href = linkEl.attr('href');
+
+    if (title) {
+      alerts.push({
+        id: `usfs-${i}`,
+        level: levelFromText(title + ' ' + body),
+        title,
+        message: body || title,
+        url: href ? (href.startsWith('http') ? href : `https://www.fs.usda.gov${href}`) : undefined,
+        source: 'USFS',
+        timestamp: new Date().toISOString(),
+      });
+    }
+  });
+
+  // Strategy 2: List items under "Alerts" heading
+  if (alerts.length === 0) {
+    $('h2, h3').each((_, heading) => {
+      const headingText = $(heading).text().toLowerCase();
+      if (headingText.includes('alert') || headingText.includes('notice') || headingText.includes('closure') || headingText.includes('restriction')) {
+        $(heading).nextAll('ul').first().find('li').each((i, li) => {
+          const text = $(li).text().trim();
+          const linkEl = $(li).find('a').first();
+          const href = linkEl.attr('href');
+          if (text) {
+            alerts.push({
+              id: `usfs-list-${i}`,
+              level: levelFromText(text),
+              title: text.slice(0, 100),
+              message: text,
+              url: href ? (href.startsWith('http') ? href : `https://www.fs.usda.gov${href}`) : undefined,
+              source: 'USFS',
+              timestamp: new Date().toISOString(),
+            });
+          }
         });
       }
     });
-
-    // Fallback if the standard list isn't found, try finding any <strong> or <a> tags that look like alerts in the main body
-    if (alerts.length === 0) {
-      $('.box-feature').find('li a').each((i, el) => {
-        const text = $(el).text().trim();
-        if (text) {
-          alerts.push({
-            id: `fs-fallback-alert-${i}`,
-            level: 'warning',
-            message: text,
-            source: 'Coronado NF',
-            timestamp: new Date().toISOString()
-          });
-        }
-      });
-    }
-
-    return NextResponse.json({ alerts });
-
-  } catch (err) {
-    console.error('Error fetching Coronado NF alerts:', err);
-    return NextResponse.json({ alerts: [] }, { status: 500 });
   }
+
+  // Strategy 3: box-feature fallback
+  if (alerts.length === 0) {
+    $('.box-feature, .alert-box, [class*="alert"]').find('li a, p a').each((i, el) => {
+      const text = $(el).text().trim();
+      const href = $(el).attr('href');
+      if (text && text.length > 5) {
+        alerts.push({
+          id: `usfs-fb-${i}`,
+          level: levelFromText(text),
+          title: text.slice(0, 100),
+          message: text,
+          url: href ? (href.startsWith('http') ? href : `https://www.fs.usda.gov${href}`) : undefined,
+          source: 'USFS',
+          timestamp: new Date().toISOString(),
+        });
+      }
+    });
+  }
+
+  return NextResponse.json({ alerts: alerts.slice(0, 10) });
 }

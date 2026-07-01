@@ -4,6 +4,7 @@ import React, { useMemo, useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
+import { X, ExternalLink } from 'lucide-react';
 import styles from './Ticker.module.css';
 
 interface TickerItem {
@@ -24,7 +25,16 @@ export default function Ticker({ items }: TickerProps) {
   const [shuffledLocalItems, setShuffledLocalItems] = useState<TickerItem[]>(items);
   const [mobileIndex, setMobileIndex] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
+  const [isFeedOpen, setIsFeedOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  
+  const feedButtonRef = useRef<HTMLButtonElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  
+  const mobileContainerRef = useRef<HTMLDivElement>(null);
+  const mobileTextRef = useRef<HTMLDivElement>(null);
+  const [mobileScrollAmount, setMobileScrollAmount] = useState(0);
+  const [mobileShouldScroll, setMobileShouldScroll] = useState(false);
 
   // Fetch live items from Firestore
   useEffect(() => {
@@ -60,13 +70,14 @@ export default function Ticker({ items }: TickerProps) {
 
   // Shuffle local items client-side only to avoid hydration mismatch
   useEffect(() => {
-    setShuffledLocalItems([...items].sort(() => 0.5 - Math.random()));
+    const timer = setTimeout(() => {
+      setShuffledLocalItems([...items].sort(() => 0.5 - Math.random()));
+    }, 0);
+    return () => clearTimeout(timer);
   }, [items]);
 
   const combinedItems = useMemo(() => {
-    // Determine which live items to use (DB takes precedence if it has data)
     const activeLiveItems = dbItems.length > 0 ? dbItems : apiItems;
-    // Live data first, then client-side-shuffled local data
     return [...activeLiveItems, ...shuffledLocalItems];
   }, [shuffledLocalItems, dbItems, apiItems]);
 
@@ -81,7 +92,6 @@ export default function Ticker({ items }: TickerProps) {
 
   const displayItems = useMemo(() => {
     if (combinedItems.length === 0) return [];
-    // Duplicate the array once for seamless scrolling
     return [...combinedItems, ...combinedItems];
   }, [combinedItems]);
 
@@ -98,9 +108,9 @@ export default function Ticker({ items }: TickerProps) {
     let animationId: number;
     const scroll = () => {
       if (scrollRef.current && !isHovered) {
-        scrollRef.current.scrollLeft += 0.4; // Ticker speed
+        scrollRef.current.scrollLeft += 0.4;
         if (scrollRef.current.scrollLeft >= scrollRef.current.scrollWidth / 2) {
-          scrollRef.current.scrollLeft = 0; // Seamless loop reset
+          scrollRef.current.scrollLeft = 0;
         }
       }
       animationId = requestAnimationFrame(scroll);
@@ -109,6 +119,47 @@ export default function Ticker({ items }: TickerProps) {
     return () => cancelAnimationFrame(animationId);
   }, [isHovered, displayItems]);
 
+  // Measure overflow for mobile marquee scroll
+  useEffect(() => {
+    if (mobileContainerRef.current && mobileTextRef.current) {
+      const timer = setTimeout(() => {
+        if (mobileContainerRef.current && mobileTextRef.current) {
+          const containerWidth = mobileContainerRef.current.clientWidth;
+          const textWidth = mobileTextRef.current.scrollWidth;
+          const overflow = textWidth - containerWidth;
+          
+          if (overflow > 0) {
+            setMobileScrollAmount(overflow + 30); // 30px safety padding
+            setMobileShouldScroll(true);
+          } else {
+            setMobileScrollAmount(0);
+            setMobileShouldScroll(false);
+          }
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [mobileIndex, combinedItems]);
+
+  // Escape key and outside click handling for modal accessibility
+  useEffect(() => {
+    if (!isFeedOpen) return;
+    
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsFeedOpen(false);
+        feedButtonRef.current?.focus();
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    closeButtonRef.current?.focus();
+    
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isFeedOpen]);
+
   const nextMobile = () => setMobileIndex((p) => (p + 1) % combinedItems.length);
   const prevMobile = () => setMobileIndex((p) => (p - 1 + combinedItems.length) % combinedItems.length);
 
@@ -116,15 +167,22 @@ export default function Ticker({ items }: TickerProps) {
 
   return (
     <div className={styles.tickerContainer}>
-      <div className={styles.tickerLabel}>
+      <button 
+        ref={feedButtonRef}
+        onClick={() => setIsFeedOpen(true)}
+        className={styles.tickerLabel}
+        aria-label="Open Camp Feed List"
+      >
         CAMP FEED
-      </div>
+      </button>
+      
       <div className={styles.desktopArrows}>
         <button 
           onClick={() => { if (scrollRef.current) scrollRef.current.scrollLeft -= 300; setIsHovered(true); setTimeout(() => setIsHovered(false), 2000); }} 
           className={styles.desktopArrowBtn}
         >◀</button>
       </div>
+      
       <div 
         className={styles.tickerContent}
         ref={scrollRef}
@@ -148,6 +206,7 @@ export default function Ticker({ items }: TickerProps) {
           </div>
         ))}
       </div>
+      
       <div className={styles.desktopArrows}>
         <button 
           onClick={() => { if (scrollRef.current) scrollRef.current.scrollLeft += 300; setIsHovered(true); setTimeout(() => setIsHovered(false), 2000); }} 
@@ -158,21 +217,97 @@ export default function Ticker({ items }: TickerProps) {
       <div className={styles.tickerMobileContent}>
         <button onClick={prevMobile} className={styles.arrowBtn}>◀</button>
         {combinedItems.length > 0 && (
-          <div className={`${styles.tickerItem} ${styles.mobileItem}`}>
-            <span className={styles.tickerCategory} style={{ color: getCategoryColor(combinedItems[mobileIndex].category) }}>
-              [{combinedItems[mobileIndex].source || 'Camp Lawton'}]
-            </span>
-            {combinedItems[mobileIndex].url ? (
-              <Link href={combinedItems[mobileIndex].url} className={styles.tickerLink}>
-                {combinedItems[mobileIndex].title}
-              </Link>
-            ) : (
-              <span className={styles.tickerText}>{combinedItems[mobileIndex].title}</span>
-            )}
+          <div className={`${styles.tickerItem} ${styles.mobileItem}`} ref={mobileContainerRef}>
+            <div 
+              key={mobileIndex} 
+              ref={mobileTextRef}
+              className={`${styles.mobileItemInner} ${mobileShouldScroll ? styles.mobileMarquee : ''}`}
+              style={{ '--scroll-amount': `-${mobileScrollAmount}px` } as React.CSSProperties}
+            >
+              <span className={styles.tickerCategory} style={{ color: getCategoryColor(combinedItems[mobileIndex].category) }}>
+                [{combinedItems[mobileIndex].source || 'Camp Lawton'}]
+              </span>
+              {combinedItems[mobileIndex].url ? (
+                <Link href={combinedItems[mobileIndex].url} className={styles.tickerLink}>
+                  {combinedItems[mobileIndex].title}
+                </Link>
+              ) : (
+                <span className={styles.tickerText}>{combinedItems[mobileIndex].title}</span>
+              )}
+            </div>
           </div>
         )}
         <button onClick={nextMobile} className={styles.arrowBtn}>▶</button>
       </div>
+
+      {/* Floating Window Modal */}
+      {isFeedOpen && (
+        <div 
+          className={styles.modalOverlay} 
+          onClick={() => {
+            setIsFeedOpen(false);
+            feedButtonRef.current?.focus();
+          }}
+          role="presentation"
+        >
+          <div 
+            className={styles.modalContainer} 
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="feed-modal-title"
+          >
+            <div className={styles.modalHeader}>
+              <h2 id="feed-modal-title" className={styles.modalTitle}>CAMP FEED BULLETIN</h2>
+              <button 
+                ref={closeButtonRef}
+                onClick={() => {
+                  setIsFeedOpen(false);
+                  feedButtonRef.current?.focus();
+                }}
+                className={styles.modalCloseBtn}
+                aria-label="Close Camp Feed List"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className={styles.modalBody}>
+              <div className={styles.modalList}>
+                {combinedItems.map((item) => (
+                  <div key={item.id} className={styles.modalItem}>
+                    <div className={styles.modalItemMeta}>
+                      <span 
+                        className={styles.modalCategoryBadge} 
+                        style={{ backgroundColor: getCategoryColor(item.category), color: '#000' }}
+                      >
+                        {item.category.replace('_', ' ')}
+                      </span>
+                      <span className={styles.modalSource}>
+                        {item.source || 'Camp Lawton'}
+                      </span>
+                    </div>
+                    <div className={styles.modalItemContent}>
+                      {item.url ? (
+                        <a 
+                          href={item.url} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className={styles.modalItemLink}
+                        >
+                          <span className={styles.modalItemText}>{item.title}</span>
+                          <ExternalLink size={14} className={styles.modalLinkIcon} />
+                        </a>
+                      ) : (
+                        <span className={styles.modalItemText}>{item.title}</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

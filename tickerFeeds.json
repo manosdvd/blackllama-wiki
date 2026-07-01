@@ -260,7 +260,7 @@
     },
     {
       "id": "nps_grand_canyon_news",
-      "enabled": true,
+      "enabled": false,
       "title": "Grand Canyon National Park News Releases",
       "sourceType": "rss",
       "lane": "flavor",
@@ -355,7 +355,7 @@
     },
     {
       "id": "nps_grand_canyon_backcountry",
-      "enabled": true,
+      "enabled": false,
       "title": "Grand Canyon Backcountry Updates and Closures",
       "sourceType": "rss",
       "lane": "operational_candidate",
@@ -452,7 +452,7 @@
     },
     {
       "id": "nps_grand_canyon_newspapers",
-      "enabled": true,
+      "enabled": false,
       "title": "Grand Canyon Park Newspapers",
       "sourceType": "rss",
       "lane": "flavor",

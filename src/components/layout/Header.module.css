@@ -34,9 +34,11 @@
   opacity: 0.8;
 }
 
-.logoIcon {
-  width: 32px;
-  height: 32px;
+.logoImage {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  border-radius: 4px;
 }
 
 .logoText {
@@ -140,5 +142,9 @@
   }
   .logoText h1 {
     font-size: 1.1rem;
+  }
+  .logoImage {
+    width: 38px;
+    height: 38px;
   }
 }

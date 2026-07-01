@@ -18,6 +18,7 @@ import path from 'path';
 import * as admin from 'firebase-admin';
 import { getApps, initializeApp, cert } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { getAuth } from 'firebase-admin/auth';
 
 // Initialize Firebase Admin (only once)
 if (!getApps().length) {
@@ -43,6 +44,33 @@ export async function GET(req: Request) {
   try {
     const url = new URL(req.url);
     const force = url.searchParams.get('force') === 'true';
+
+    // Security check: If CRON_SECRET is defined, verify request matches secret or has an Admin role header
+    const cronSecret = process.env.CRON_SECRET;
+    if (cronSecret) {
+      const requestSecretHeader = req.headers.get('x-cron-secret');
+      const requestSecretParam = url.searchParams.get('secret');
+      let isAuthorized = (requestSecretHeader === cronSecret) || (requestSecretParam === cronSecret);
+
+      if (!isAuthorized) {
+        const authHeader = req.headers.get('Authorization');
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+          try {
+            const token = authHeader.substring(7);
+            const decodedToken = await getAuth().verifyIdToken(token);
+            if (decodedToken && decodedToken.admin === true) {
+              isAuthorized = true;
+            }
+          } catch (authError) {
+            console.error('Firebase Auth Verification failed in Ticker Sync:', authError);
+          }
+        }
+      }
+
+      if (!isAuthorized) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+    }
 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
@@ -76,11 +104,23 @@ export async function GET(req: Request) {
     const fileContents = await fs.readFile(jsonPath, 'utf8');
     const data = JSON.parse(fileContents);
 
-    const feeds = [...(data.rssFeeds || []), ...(data.aiAggregationFeeds || [])].filter(f => f.enabled);
+    interface RssFeedConfig {
+      id: string;
+      enabled: boolean;
+      title: string;
+      sourceType: string;
+      lane: string;
+      category: string;
+      feedUrl?: string;
+      url?: string;
+      sourceFeedIds?: string[];
+    }
+
+    const feeds = [...(data.rssFeeds || []), ...(data.aiAggregationFeeds || [])].filter((f: RssFeedConfig) => f.enabled);
     
     // Create a map of RSS feeds for quick lookup by ID for AI aggregation feeds
-    const rssMap = new Map<string, any>();
-    (data.rssFeeds || []).forEach((f: any) => {
+    const rssMap = new Map<string, RssFeedConfig>();
+    (data.rssFeeds || []).forEach((f: RssFeedConfig) => {
       rssMap.set(f.id, f);
     });
 
@@ -142,8 +182,8 @@ You MUST generate exactly one ticker item for each of the following specific que
 1. Flag Status: Determine if the Arizona state flag is flying at half-staff today. If not or if you don't know, output: "Flags are flying at full staff today over Camp Lawton." (source: "Arizona Flag Status", category: "camp_useful").
 2. Scouting America news/fact: A short update or historical fact about Scouting America.
 3. Scout.org/newsroom update: A short fact or update related to World Scouting.
-4. Catalina Council news/fact: An update or fact about Catalina Council (Boy Scouts of America).
-5. Mt. Lemmon local status/fact: An update or fact about Mt. Lemmon (elevation, environment, or activities).
+4. Catalina Council news/fact: An update or fact about Catalina Council (Boy Scouts of America) in Arizona. Do NOT refer to Catalina Island in California.
+5. Mt. Lemmon local status/fact: An update or fact about Mt. Lemmon (elevation, environment, local wildlife, or outdoor activities in Arizona).
 6. Summerhaven local status/fact: A quick detail or fact about Summerhaven, Arizona.
 7. Word of the Day: Generate one wholesome 'Word of the Day' with a definition. Format: "Word of the Day: [Word] - [Definition]" (source: "Dictionary.com", category: "wholesome_fun", url: "https://www.dictionary.com/word-of-the-day").
 8. Riddle of the Day: Generate one riddle. DO NOT output the answer anywhere in the text; users must follow the link to get the answer. Format: "Riddle: [Question]" (source: "Riddles.com", category: "wholesome_fun", url: "https://www.riddles.com/riddle-of-the-day").
@@ -153,16 +193,19 @@ You MUST generate exactly one ticker item for each of the following specific que
 Rules:
 1. Each alert MUST be under 110 characters.
 2. The language should be natural, friendly, and camp-appropriate (NOT technical or sci-fi).
-3. Output ONLY a valid JSON array of objects, with no markdown formatting or extra text.
-4. Each object must have this exact structure:
+3. Focus heavily on Santa Catalina Mountains data, local Arizona nature/geology, wildlife, hiking, forest service, astronomy, and broad "outdoors" content.
+4. Try to avoid generic, dry, or repetitive facts. Keep it interesting, active, and fresh.
+5. STRICT EXCLUSION: Do NOT mention or include facts about "Catalina Island" in California. Any search or reference to "Catalina" must strictly refer to the Santa Catalina Mountains or Catalina Council in Arizona. Do NOT include Grand Canyon news or facts.
+6. Output ONLY a valid JSON array of objects, with no markdown formatting or extra text.
+7. Each object must have this exact structure:
 {
   "title": "The short alert text",
   "source": "Short Name of Source (e.g. On Scouting, NASA, Riddles.com, Scouting History)",
   "url": "The Link URL corresponding to this item, or an internal route like '/wiki' or '/' if generated",
   "category": "camp_useful"
 }
-5. The category MUST be one of: camp_useful, scouting, local_outdoors, nature_science, wholesome_fun, history_curiosity, dad_joke.
-6. You MUST generate at least 25 items in total (including the summaries of the news items below and the required queries above).
+8. The category MUST be one of: camp_useful, scouting, local_outdoors, nature_science, wholesome_fun, history_curiosity, dad_joke.
+9. You MUST generate at least 25 items in total (including the summaries of the news items below and the required queries above).
 
 News Items:
 ${rawNews}
@@ -175,9 +218,26 @@ ${rawNews}
       responseText = responseText.replace(/^```json\n/, '').replace(/\n```$/, '');
     }
 
-    const generatedItems = JSON.parse(responseText);
+    interface GeneratedTickerItem {
+      title: string;
+      source: string;
+      url?: string;
+      category: string;
+    }
 
-    const liveItems = generatedItems.map((item: any) => {
+    const generatedItems = JSON.parse(responseText) as GeneratedTickerItem[];
+
+    interface LiveTickerItem {
+      id: string;
+      title: string;
+      url: string;
+      category: string;
+      source: string;
+      sourceType: string;
+      timestamp: FieldValue;
+    }
+
+    const liveItems: LiveTickerItem[] = generatedItems.map((item: GeneratedTickerItem) => {
       return {
         id: `live_${Math.random().toString(36).substr(2, 9)}`,
         title: item.title,
@@ -202,7 +262,7 @@ ${rawNews}
 
       // Insert new items
       const newBatch = db.batch();
-      liveItems.forEach((item: any) => {
+      liveItems.forEach((item: LiveTickerItem) => {
         const docRef = db.collection('liveTicker').doc(item.id);
         newBatch.set(docRef, item);
       });

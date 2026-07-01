@@ -10,8 +10,10 @@ export default function DyslexiaToggle() {
   useEffect(() => {
     const stored = localStorage.getItem('dyslexiaMode');
     if (stored === 'true') {
-      setIsDyslexiaMode(true);
-      document.documentElement.classList.add('dyslexia-mode');
+      setTimeout(() => {
+        setIsDyslexiaMode(true);
+        document.documentElement.classList.add('dyslexia-mode');
+      }, 0);
     }
   }, []);
 
@@ -31,7 +33,7 @@ export default function DyslexiaToggle() {
     <button 
       className={`${styles.iconBtn} ${isDyslexiaMode ? styles.active : ''}`}
       onClick={toggleDyslexiaMode}
-      title="Toggle Dyslexia Mode (Lexie Readable)"
+      title="Toggle Dyslexia-Friendly Mode (OpenDyslexic)"
       aria-label="Toggle Dyslexia Mode"
     >
       <Type size={20} />

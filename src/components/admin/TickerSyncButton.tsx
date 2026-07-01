@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { getAuth } from 'firebase/auth';
 
 export default function TickerSyncButton() {
   const [loading, setLoading] = useState(false);
@@ -10,15 +11,22 @@ export default function TickerSyncButton() {
     setLoading(true);
     setResult(null);
     try {
-      const res = await fetch('/api/ticker/sync');
+      const auth = getAuth();
+      const token = await auth.currentUser?.getIdToken();
+      const headers: HeadersInit = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const res = await fetch('/api/ticker/sync', { headers });
       const data = await res.json();
       if (res.ok && data.success) {
         setResult(`Synced ${data.count} items successfully!`);
       } else {
         setResult(`Error: ${data.error || data.warning || 'Unknown error'}`);
       }
-    } catch (e: any) {
-      setResult(`Fetch failed: ${e.message}`);
+    } catch (e: unknown) {
+      setResult(`Fetch failed: ${e instanceof Error ? e.message : String(e)}`);
     } finally {
       setLoading(false);
     }
