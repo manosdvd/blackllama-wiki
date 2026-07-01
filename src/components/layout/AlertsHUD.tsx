@@ -142,29 +142,21 @@ export default function AlertsHUD() {
   const alerts: FireAlertItem[] = data.alerts;
   const weather: WeatherSnapshot | null = data.weather;
   const isAllClear = alerts.length === 0;
-  const currentAlert = !isAllClear ? alerts[Math.min(currentIndex, alerts.length - 1)] : null;
 
-  // ── All-clear: only render the slim health footer, no alert bar ──
+  let currentAlert: FireAlertItem;
   if (isAllClear) {
-    return (
-      <div className={styles.hudContainer}>
-        <div className={styles.sourceHealthBar}>
-          <span className={styles.allClearBadge}>✓ All Clear</span>
-          <span className={styles.sourceHealthDivider} />
-          {SOURCE_HEALTH_ORDER.map(src => (
-            <span key={src} className={styles.sourceHealthItem}>
-              {healthDot(data.sourceHealth[src])}
-              <span className={styles.sourceHealthLabel}>{SOURCE_LABELS[src]}</span>
-            </span>
-          ))}
-          {data.lastChecked && (
-            <span className={styles.lastChecked}>
-              Checked: {new Date(data.lastChecked).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Phoenix' })}
-            </span>
-          )}
-        </div>
-      </div>
-    );
+    currentAlert = {
+      id: 'nominal-weather',
+      level: 'normal',
+      source: 'NWS',
+      title: 'Mt. Lemmon Weather Forecast',
+      message: weather ? weather.detailedForecast : 'No active emergency alerts for the Camp Lawton area.',
+      updatedAt: new Date().toISOString(),
+      confidence: 'official',
+      actionability: 'monitor',
+    };
+  } else {
+    currentAlert = alerts[Math.min(currentIndex, alerts.length - 1)] || null;
   }
 
   if (!currentAlert) return null;
@@ -222,9 +214,9 @@ export default function AlertsHUD() {
         </div>
 
         {/* Controls */}
-        <div className={styles.hudControls}>
-          <span className={styles.hudCounter}>{currentIndex + 1} / {alerts.length}</span>
-          {alerts.length > 1 && (
+        {!isAllClear && alerts.length > 1 && (
+          <div className={styles.hudControls}>
+            <span className={styles.hudCounter}>{currentIndex + 1} / {alerts.length}</span>
             <button
               className={styles.togglePauseBtn}
               onClick={() => setIsPaused(!isPaused)}
@@ -232,13 +224,18 @@ export default function AlertsHUD() {
             >
               {isPaused ? <Play size={16} /> : <Pause size={16} />}
             </button>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Source health footer */}
       <div className={styles.sourceHealthBar}>
-        <Activity size={10} className={styles.sourceHealthIcon} />
+        {isAllClear ? (
+          <span className={styles.allClearBadge}>✓ All Clear</span>
+        ) : (
+          <Activity size={10} className={styles.sourceHealthIcon} />
+        )}
+        {isAllClear && <span className={styles.sourceHealthDivider} />}
         {SOURCE_HEALTH_ORDER.map(src => (
           <span key={src} className={styles.sourceHealthItem}>
             {healthDot(data.sourceHealth[src])}

@@ -1,4 +1,24 @@
 import { NextResponse } from 'next/server';
+import * as admin from 'firebase-admin';
+import { getApps, initializeApp, cert } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
+
+// Initialize Firebase Admin (only once)
+if (!getApps().length) {
+  try {
+    const serviceAccountStr = process.env.FIREBASE_SERVICE_ACCOUNT;
+    if (serviceAccountStr) {
+      const serviceAccount = JSON.parse(serviceAccountStr);
+      initializeApp({
+        credential: cert(serviceAccount)
+      });
+    } else {
+       initializeApp();
+    }
+  } catch (e) {
+    console.warn("Firebase Admin Initialization Warning:", e);
+  }
+}
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -30,6 +50,7 @@ export interface WeatherSnapshot {
   humidity: string;
   precipChance: string;
   forecastStrip: string;
+  detailedForecast: string;
   fetchedAt: string;
 }
 
@@ -170,6 +191,7 @@ async function fetchNWSWeather(): Promise<{ weather: WeatherSnapshot | null; hea
         humidity: current.relativeHumidity?.value ? `${current.relativeHumidity.value}%` : 'N/A',
         precipChance: current.probabilityOfPrecipitation?.value ? `${current.probabilityOfPrecipitation.value}%` : '0%',
         forecastStrip,
+        detailedForecast: current.detailedForecast || current.shortForecast || '',
         fetchedAt: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Phoenix' }),
       },
       health: 'ok',
@@ -409,7 +431,7 @@ async function fetchWFIGS(): Promise<{ items: FireAlertItem[]; health: SourceHea
 
 async function fetchAirNow(airNowKey: string): Promise<{ items: FireAlertItem[]; health: SourceHealthStatus }> {
   try {
-    const url = `https://www.airnowapi.org/aq/observation/latLong/current/?format=application/json&latitude=${CAMP_LAT}&longitude=${CAMP_LON}&distance=50&API_KEY=${airNowKey}`;
+    const url = `https://www.airnowapi.org/aq/observation/zipCode/current/?format=application/json&zipCode=85619&distance=50&API_KEY=${airNowKey}`;
     const res = await fetch(url, { next: { revalidate: 300 } });
     if (!res.ok) return { items: [], health: 'degraded' };
     const data = await res.json();
@@ -455,71 +477,140 @@ export async function GET() {
   const firmsKey = process.env.FIRMS_MAP_KEY;
   const airNowKey = process.env.AIRNOW_API_KEY;
 
-  const sourceHealth: Record<FireAlertSource, SourceHealthStatus> = {
-    NWS: 'ok',
-    USFS: 'ok',
-    FIRMS: firmsKey ? 'ok' : 'missing-key',
-    WFIGS: 'ok',
-    NOAA_HMS: 'ok', // not yet implemented, start as ok
-    AIRNOW: airNowKey ? 'ok' : 'missing-key',
-  };
+  const db = getFirestore();
+  let cachedData: FireAggregatorResponse | null = null;
 
-  // Run all fetches in parallel — none block each other
-  const [
-    nwsAlerts,
-    nwsWeather,
-    usfsAlerts,
-    firmsResult,
-    wfigsResult,
-    airNowResult,
-  ] = await Promise.allSettled([
-    fetchNWSAlerts(),
-    fetchNWSWeather(),
-    fetchUSFSAlerts(),
-    firmsKey ? fetchFIRMS(firmsKey) : Promise.resolve({ items: [], health: 'missing-key' as SourceHealthStatus }),
-    fetchWFIGS(),
-    airNowKey ? fetchAirNow(airNowKey) : Promise.resolve({ items: [], health: 'missing-key' as SourceHealthStatus }),
-  ]);
+  // 1. Pre-load cache from Firestore
+  try {
+    const docRef = db.collection('alertsCache').doc('latest');
+    const docSnap = await docRef.get();
+    if (docSnap.exists) {
+      cachedData = docSnap.data() as FireAggregatorResponse;
+    }
+  } catch (cacheErr) {
+    console.warn("Could not read alertsCache from Firestore:", cacheErr);
+  }
 
-  const resolve = <T>(result: PromiseSettledResult<T>, fallback: T): T =>
-    result.status === 'fulfilled' ? result.value : fallback;
+  try {
+    const sourceHealth: Record<FireAlertSource, SourceHealthStatus> = {
+      NWS: 'ok',
+      USFS: 'ok',
+      FIRMS: firmsKey ? 'ok' : 'missing-key',
+      WFIGS: 'ok',
+      NOAA_HMS: 'ok',
+      AIRNOW: airNowKey ? 'ok' : 'missing-key',
+    };
 
-  const nwsAlertsData = resolve(nwsAlerts, { items: [], health: 'error' as SourceHealthStatus });
-  const nwsWeatherData = resolve(nwsWeather, { weather: null, health: 'error' as SourceHealthStatus });
-  const usfsData = resolve(usfsAlerts, { items: [], health: 'error' as SourceHealthStatus });
-  const firmsData = resolve(firmsResult, { items: [], health: firmsKey ? 'error' : 'missing-key' } as { items: FireAlertItem[]; health: SourceHealthStatus });
-  const wfigsData = resolve(wfigsResult, { items: [], health: 'error' as SourceHealthStatus });
-  const airNowData = resolve(airNowResult, { items: [], health: airNowKey ? 'error' : 'missing-key' } as { items: FireAlertItem[]; health: SourceHealthStatus });
+    // Run all fetches in parallel — none block each other
+    const [
+      nwsAlerts,
+      nwsWeather,
+      usfsAlerts,
+      firmsResult,
+      wfigsResult,
+      airNowResult,
+    ] = await Promise.allSettled([
+      fetchNWSAlerts(),
+      fetchNWSWeather(),
+      fetchUSFSAlerts(),
+      firmsKey ? fetchFIRMS(firmsKey) : Promise.resolve({ items: [], health: 'missing-key' as SourceHealthStatus }),
+      fetchWFIGS(),
+      airNowKey ? fetchAirNow(airNowKey) : Promise.resolve({ items: [], health: 'missing-key' as SourceHealthStatus }),
+    ]);
 
-  sourceHealth.NWS = nwsAlertsData.health;
-  sourceHealth.USFS = usfsData.health;
-  sourceHealth.FIRMS = firmsData.health;
-  sourceHealth.WFIGS = wfigsData.health;
-  sourceHealth.AIRNOW = airNowData.health;
+    const resolve = <T>(result: PromiseSettledResult<T>, fallback: T): T =>
+      result.status === 'fulfilled' ? result.value : fallback;
 
-  // Aggregate all alert items, sorted by severity desc
-  const allAlerts: FireAlertItem[] = [
-    ...nwsAlertsData.items,
-    ...usfsData.items,
-    ...wfigsData.items, // official perimeters first among detection sources
-    ...firmsData.items,
-    ...airNowData.items,
-  ].sort((a, b) => levelToScore(b.level) - levelToScore(a.level));
+    const nwsAlertsData = resolve(nwsAlerts, { items: [], health: 'error' as SourceHealthStatus });
+    const nwsWeatherData = resolve(nwsWeather, { weather: null, health: 'error' as SourceHealthStatus });
+    const usfsData = resolve(usfsAlerts, { items: [], health: 'error' as SourceHealthStatus });
+    const firmsData = resolve(firmsResult, { items: [], health: firmsKey ? 'error' : 'missing-key' } as { items: FireAlertItem[]; health: SourceHealthStatus });
+    const wfigsData = resolve(wfigsResult, { items: [], health: 'error' as SourceHealthStatus });
+    const airNowData = resolve(airNowResult, { items: [], health: airNowKey ? 'error' : 'missing-key' } as { items: FireAlertItem[]; health: SourceHealthStatus });
 
-  const overallLevel = highestLevel(allAlerts.map(a => a.level));
+    sourceHealth.NWS = nwsAlertsData.health;
+    sourceHealth.USFS = usfsData.health;
+    sourceHealth.FIRMS = firmsData.health;
+    sourceHealth.WFIGS = wfigsData.health;
+    sourceHealth.AIRNOW = airNowData.health;
 
+    // 2. Fallback merging for failed sources
+    const finalAlerts: FireAlertItem[] = [];
 
-  const response: FireAggregatorResponse = {
-    overallLevel,
-    alerts: allAlerts,
-    weather: nwsWeatherData.weather,
-    sourceHealth,
-    lastChecked: new Date().toISOString(),
-  };
+    if (nwsAlertsData.health !== 'error') {
+      finalAlerts.push(...nwsAlertsData.items);
+    } else if (cachedData && Array.isArray(cachedData.alerts)) {
+      finalAlerts.push(...cachedData.alerts.filter(a => a.source === 'NWS'));
+    }
 
-  return NextResponse.json(response, {
-    headers: {
-      'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=60',
-    },
-  });
+    if (usfsData.health !== 'error') {
+      finalAlerts.push(...usfsData.items);
+    } else if (cachedData && Array.isArray(cachedData.alerts)) {
+      finalAlerts.push(...cachedData.alerts.filter(a => a.source === 'USFS'));
+    }
+
+    if (wfigsData.health !== 'error') {
+      finalAlerts.push(...wfigsData.items);
+    } else if (cachedData && Array.isArray(cachedData.alerts)) {
+      finalAlerts.push(...cachedData.alerts.filter(a => a.source === 'WFIGS'));
+    }
+
+    if (firmsData.health !== 'error') {
+      finalAlerts.push(...firmsData.items);
+    } else if (cachedData && Array.isArray(cachedData.alerts)) {
+      finalAlerts.push(...cachedData.alerts.filter(a => a.source === 'FIRMS'));
+    }
+
+    if (airNowData.health !== 'error') {
+      finalAlerts.push(...airNowData.items);
+    } else if (cachedData && Array.isArray(cachedData.alerts)) {
+      finalAlerts.push(...cachedData.alerts.filter(a => a.source === 'AIRNOW'));
+    }
+
+    // Sort aggregated final alerts by severity
+    finalAlerts.sort((a, b) => levelToScore(b.level) - levelToScore(a.level));
+
+    const overallLevel = highestLevel(finalAlerts.map(a => a.level));
+
+    // 3. Weather fallback handling
+    let finalWeather = nwsWeatherData.weather;
+    if (!finalWeather && cachedData && cachedData.weather) {
+      finalWeather = cachedData.weather;
+      if (sourceHealth.NWS === 'error') {
+        sourceHealth.NWS = 'degraded'; // weather retrieved from cache, mark as degraded rather than pure error
+      }
+    }
+
+    const response: FireAggregatorResponse = {
+      overallLevel,
+      alerts: finalAlerts,
+      weather: finalWeather,
+      sourceHealth,
+      lastChecked: new Date().toISOString(),
+    };
+
+    // 4. Save to Firestore cache back
+    try {
+      await db.collection('alertsCache').doc('latest').set(response);
+    } catch (saveErr) {
+      console.warn("Could not save alertsCache to Firestore:", saveErr);
+    }
+
+    return NextResponse.json(response, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=60',
+      },
+    });
+
+  } catch (err) {
+    console.error("Critical error in fire aggregator, falling back to cache:", err);
+    if (cachedData) {
+      return NextResponse.json({
+        ...cachedData,
+        lastChecked: cachedData.lastChecked || new Date().toISOString(),
+        warning: "Serving cached data from Firestore due to server-side error"
+      });
+    }
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  }
 }
