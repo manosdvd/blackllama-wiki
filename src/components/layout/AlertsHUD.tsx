@@ -19,6 +19,7 @@ interface Alert {
     humidity: string;
     precip: string;
     forecast: string;
+    fetchedAt?: string;
   };
 }
 
@@ -27,6 +28,33 @@ export default function AlertsHUD() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [currentTime, setCurrentTime] = useState<Date | null>(null);
+
+  // 1. Ticking current time client-side only (avoid hydration mismatch)
+  useEffect(() => {
+    setCurrentTime(new Date());
+    const clockInterval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(clockInterval);
+  }, []);
+
+  // 2. Load cache immediately on launch (if available) to show instantly
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const cached = localStorage.getItem('cachedWeather');
+      if (cached) {
+        try {
+          const cachedAlert = JSON.parse(cached);
+          cachedAlert.source = 'Mt. Lemmon Conditions (Offline Cache)';
+          setAlerts([cachedAlert]);
+          setIsLoading(false);
+        } catch (e) {
+          console.error('Failed to parse cached weather on launch', e);
+        }
+      }
+    }
+  }, []);
 
   useEffect(() => {
     async function fetchAllData() {
@@ -100,7 +128,8 @@ export default function AlertsHUD() {
                   wind: currentPeriod.windSpeed,
                   humidity: currentPeriod.relativeHumidity?.value ? `${currentPeriod.relativeHumidity.value}%` : 'N/A',
                   precip: currentPeriod.probabilityOfPrecipitation?.value ? `${currentPeriod.probabilityOfPrecipitation.value}%` : '0%',
-                  forecast: forecastStr
+                  forecast: forecastStr,
+                  fetchedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                 }
               };
               
@@ -216,6 +245,18 @@ export default function AlertsHUD() {
                 <span><Wind size={12}/> {currentAlert.weatherDetails.wind}</span>
                 <span><Droplets size={12}/> Hum: {currentAlert.weatherDetails.humidity}</span>
                 <span>Precip: {currentAlert.weatherDetails.precip}</span>
+              </div>
+              <div className={styles.weatherTimeBlock}>
+                {currentTime && (
+                  <span className={styles.timeItem}>
+                    <strong>Time:</strong> {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                )}
+                {currentAlert.weatherDetails.fetchedAt && (
+                  <span className={styles.timeItem}>
+                    <strong>Updated:</strong> {currentAlert.weatherDetails.fetchedAt}
+                  </span>
+                )}
               </div>
               <div className={styles.weatherForecastDesktop}>
                 <strong>Forecast:</strong> {currentAlert.weatherDetails.forecast}

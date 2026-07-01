@@ -243,6 +243,20 @@
   gap: 4px;
 }
 
+.weatherTimeBlock {
+  display: flex;
+  gap: 16px;
+  font-size: 0.75rem;
+  color: #8c8883;
+}
+
+.timeItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+
 @media (min-width: 768px) {
   .hudHeader {
     flex-direction: row;
