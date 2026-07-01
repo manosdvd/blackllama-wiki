@@ -1,0 +1,12 @@
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+# NEXT_PUBLIC_* variables are intentionally embedded in the client bundle by Next.js.
+# These are not secrets — they're public Firebase config values that must be visible
+# to the browser. Netlify's secrets scanner flags them incorrectly.
+[build.environment]
+  SECRETS_SCAN_OMIT_KEYS = "NEXT_PUBLIC_FIREBASE_API_KEY,NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,NEXT_PUBLIC_FIREBASE_PROJECT_ID,NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,NEXT_PUBLIC_FIREBASE_APP_ID"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
