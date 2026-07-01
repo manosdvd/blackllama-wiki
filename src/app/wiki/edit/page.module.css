@@ -1,0 +1,124 @@
+.container {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 2rem;
+  font-family: var(--font-inter), sans-serif;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid var(--pine-green);
+}
+
+.header h1 {
+  font-family: var(--font-atkinson), sans-serif;
+  color: var(--pine-green-light);
+  margin: 0;
+  font-size: 2rem;
+}
+
+.actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.saveBtn, .publishBtn {
+  padding: 0.75rem 1.5rem;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.saveBtn {
+  background-color: var(--charcoal-lighter);
+  color: var(--canvas-tan);
+  border: 1px solid var(--stone-grey);
+}
+
+.saveBtn:hover {
+  background-color: var(--stone-grey);
+}
+
+.publishBtn {
+  background-color: var(--pine-green);
+  color: var(--canvas-tan);
+  box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+}
+
+.publishBtn:hover {
+  background-color: var(--pine-green-light);
+  transform: translateY(-2px);
+}
+
+.editorWrapper {
+  background-color: var(--charcoal-lighter);
+  border-radius: 8px;
+  box-shadow: 0 8px 16px rgba(0,0,0,0.4);
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.metadataForm {
+  padding: 1.5rem;
+  background-color: rgba(0,0,0,0.2);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  gap: 1rem;
+}
+
+.titleInput {
+  flex: 1;
+  background: var(--charcoal-dark);
+  border: 1px solid var(--stone-grey);
+  color: white;
+  padding: 0.75rem 1rem;
+  border-radius: 4px;
+  font-size: 1.25rem;
+  font-family: var(--font-atkinson), sans-serif;
+}
+
+.titleInput:focus {
+  outline: none;
+  border-color: var(--pine-green-light);
+}
+
+.categorySelect {
+  background: var(--charcoal-dark);
+  border: 1px solid var(--stone-grey);
+  color: var(--canvas-tan);
+  padding: 0.75rem 1rem;
+  border-radius: 4px;
+  font-size: 1rem;
+  min-width: 250px;
+}
+
+.categorySelect:focus {
+  outline: none;
+  border-color: var(--pine-green-light);
+}
+
+.editorArea {
+  padding: 2rem 4rem;
+  background-color: white; /* EditorJS needs a light background for its default themes to look best, or we override everything */
+  color: #333; /* Dark text for the light background */
+  min-height: 60vh;
+}
+
+.loadingEditor {
+  padding: 4rem;
+  text-align: center;
+  color: var(--canvas-tan);
+  font-family: monospace;
+  opacity: 0.7;
+}
+
+/* Make sure EditorJS tools are styled correctly inside our area */
+.editorArea :global(.codex-editor) {
+  /* This targets the internal editor js container */
+}

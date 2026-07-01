@@ -1,0 +1,128 @@
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem;
+  font-family: var(--font-inter), sans-serif;
+}
+
+.breadcrumb {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.backLink, .editLink {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--canvas-tan);
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.2s;
+}
+
+.backLink:hover, .editLink:hover {
+  color: var(--pine-green-light);
+}
+
+.editLink {
+  color: var(--stone-grey);
+}
+
+.article {
+  background-color: var(--charcoal-lighter);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+}
+
+.articleHeader {
+  padding: 2rem;
+  background-color: rgba(0,0,0,0.2);
+  border-bottom: 2px solid var(--pine-green);
+}
+
+.categoryBadge {
+  display: inline-block;
+  background-color: var(--pine-green);
+  color: var(--canvas-tan);
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 1rem;
+}
+
+.articleHeader h1 {
+  font-family: var(--font-atkinson), sans-serif;
+  color: white;
+  margin: 0 0 1rem 0;
+  font-size: 2.5rem;
+}
+
+.metaData {
+  display: flex;
+  gap: 2rem;
+  color: var(--stone-grey);
+  font-size: 0.9rem;
+}
+
+.metaItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.content {
+  padding: 3rem;
+  color: var(--canvas-tan);
+  line-height: 1.7;
+  font-size: 1.1rem;
+}
+
+/* Base styles for editorjs rendered content inside our dark theme */
+.content :global(h2),
+.content :global(h3),
+.content :global(h4) {
+  font-family: var(--font-atkinson), sans-serif;
+  color: var(--pine-green-light);
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+}
+
+.content :global(ul),
+.content :global(ol) {
+  padding-left: 2rem;
+  margin-bottom: 1.5rem;
+}
+
+.content :global(li) {
+  margin-bottom: 0.5rem;
+}
+
+.content :global(.cdx-warning) {
+  background-color: rgba(255, 69, 58, 0.1);
+  border-left: 4px solid var(--emergency-red);
+  padding: 1rem;
+  margin: 1.5rem 0;
+  border-radius: 0 4px 4px 0;
+}
+
+.content :global(.cdx-warning__title) {
+  font-weight: bold;
+  color: var(--emergency-red);
+  margin-bottom: 0.5rem;
+}
+
+.content :global(.cdx-quote) {
+  border-left: 4px solid var(--lantern-gold);
+  padding-left: 1rem;
+  font-style: italic;
+  color: var(--stone-grey);
+  margin: 1.5rem 0;
+}

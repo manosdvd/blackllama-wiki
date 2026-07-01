@@ -1,0 +1,144 @@
+.headerContainer {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  background-color: var(--charcoal-base);
+  border-bottom: 1px solid var(--surface-border);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.navBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  background-color: var(--charcoal-base);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+}
+
+.logoLink {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--pine-green-light);
+  transition: opacity 0.2s;
+}
+
+.logoLink:hover {
+  opacity: 0.8;
+}
+
+.logoIcon {
+  width: 32px;
+  height: 32px;
+}
+
+.logoText {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.logoText h1 {
+  font-size: 1.25rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.05em;
+  color: var(--canvas-tan);
+  margin: 0;
+}
+
+.logoText span {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  color: var(--campfire-amber);
+  text-transform: uppercase;
+}
+
+.navLinks {
+  display: flex;
+  gap: 2rem;
+  align-items: center;
+}
+
+.navItem {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--canvas-tan);
+  opacity: 0.8;
+  transition: all 0.2s;
+  padding: 0.5rem 0;
+  position: relative;
+}
+
+.navItem:hover {
+  opacity: 1;
+  color: var(--lantern-gold);
+}
+
+.navItem::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background-color: var(--lantern-gold);
+  transition: width 0.2s ease;
+}
+
+.navItem:hover::after {
+  width: 100%;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.iconBtn {
+  background: transparent;
+  border: none;
+  color: var(--canvas-tan);
+  opacity: 0.8;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.iconBtn:hover {
+  opacity: 1;
+  background-color: var(--surface);
+  color: var(--lantern-gold);
+}
+
+.mobileMenuBtn {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .navLinks {
+    display: none;
+  }
+  .mobileMenuBtn {
+    display: flex;
+  }
+  .navBar {
+    padding: 1rem;
+  }
+  .logoText h1 {
+    font-size: 1.1rem;
+  }
+}

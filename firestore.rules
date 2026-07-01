@@ -1,0 +1,86 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ==========================================
+    // 1. HELPER FUNCTIONS & ROLES
+    // ==========================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    function getUserRole() {
+      // Default to guest if no custom claim is set
+      return isAuthenticated() && request.auth.token.role != null ? request.auth.token.role : 'guest';
+    }
+    function isAdmin() {
+      return getUserRole() == 'admin';
+    }
+    function isStaffOrHigher() {
+      return getUserRole() in ['staff', 'alumni', 'admin'];
+    }
+    function isAuthor(authorId) {
+      return isAuthenticated() && request.auth.uid == authorId;
+    }
+    
+    // ==========================================
+    // 2. CORE USER PROFILES
+    // ==========================================
+    match /profiles/{userId} {
+      // PROFILES: Anyone can view names
+      allow read: if true;
+      // Users can update their own basic profile info, Admins have complete control
+      allow update: if (isAuthenticated() && request.auth.uid == userId) || isAdmin();
+      allow create, delete: if isAdmin();
+    }
+    
+    // ==========================================
+    // 3. PARENT YOUTH ASSOCIATIONS (YPT Transparency)
+    // ==========================================
+    match /parent_youth_associations/{assocId} {
+      // Only Admins or the involved parent/youth can view the association
+      allow read: if isAdmin() || (isAuthenticated() && (request.auth.uid == resource.data.parent_id || request.auth.uid == resource.data.youth_id));
+      allow write: if isAdmin();
+    }
+    
+    // ==========================================
+    // 4. UNIFIED WIKI & FORUM TABLE
+    // ==========================================
+    match /wiki_articles/{articleId} {
+      // Rule A: Anyone (including unauthenticated guests) can view PUBLIC, PUBLISHED items
+      allow read: if resource.data.visibility == 'public' && resource.data.status == 'published';
+      
+      // Rule B: Authenticated Staff, Alumni, and Admins can view INTERNAL, PUBLISHED items
+      allow read: if resource.data.visibility == 'internal' && resource.data.status == 'published' && isStaffOrHigher();
+      
+      // Rule C: Admins can view everything (Drafts, Pending, Public, Internal)
+      allow read: if isAdmin();
+      
+      // Rule D: Authors can view their own drafts or pending submissions
+      allow read: if isAuthor(resource.data.author_id);
+      
+      // Write Rules
+      // Active Staff, Alumni, and Admins can create posts
+      allow create: if isStaffOrHigher() && request.resource.data.author_id == request.auth.uid;
+      // Authors can update their own posts, Admins can update any post
+      allow update: if isAdmin() || (isAuthor(resource.data.author_id) && request.resource.data.author_id == request.auth.uid);
+      // Authors and Admins can delete
+      allow delete: if isAdmin() || isAuthor(resource.data.author_id);
+    }
+    
+    // ==========================================
+    // 5. PUBLIC YPT-COMPLIANT COMMENT SYSTEM
+    // ==========================================
+    match /forum_comments/{commentId} {
+      // Rule A: Anyone who has access to the app can read comments (the client queries by articleId)
+      // Since DMs are forbidden, all comments are inherently public to the tier that can see them.
+      allow read: if true; 
+      
+      // Rule B: Active Staff, Alumni, and Admins can write comments
+      allow create: if isStaffOrHigher() && request.resource.data.author_id == request.auth.uid;
+      
+      // Users can delete their own comments. No editing is allowed to preserve audit history.
+      allow update: if false; 
+      allow delete: if isAdmin() || isAuthor(resource.data.author_id);
+    }
+  }
+}

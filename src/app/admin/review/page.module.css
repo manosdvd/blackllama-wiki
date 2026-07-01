@@ -1,0 +1,220 @@
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 3rem 1rem;
+}
+
+.pageHeader {
+  margin-bottom: 2.5rem;
+}
+
+.pageHeader h1 {
+  font-size: 2.5rem;
+  color: var(--campfire-amber);
+  margin-bottom: 0.5rem;
+}
+
+.pageHeader p {
+  color: var(--canvas-tan);
+  opacity: 0.8;
+  font-size: 1.1rem;
+}
+
+.dashboardGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+}
+
+.panel {
+  background: rgba(30, 27, 24, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 2rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(8px);
+}
+
+.panelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+  border-bottom: 2px solid var(--pine-green);
+  padding-bottom: 1rem;
+}
+
+.panelHeader h2 {
+  color: var(--lantern-gold);
+  font-size: 1.4rem;
+  margin: 0;
+}
+
+.countBadge {
+  background: var(--pine-green);
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.9rem;
+  font-weight: bold;
+}
+
+.queueList {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.queueItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  background: rgba(12, 10, 9, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  transition: transform 0.2s, border-color 0.2s;
+}
+
+.queueItem:hover {
+  border-color: rgba(217, 119, 6, 0.3);
+  transform: translateX(4px);
+}
+
+.itemMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.itemMeta strong {
+  font-size: 1.2rem;
+  color: white;
+}
+
+.itemMeta span {
+  font-size: 0.9rem;
+  color: var(--canvas-tan);
+  opacity: 0.8;
+}
+
+.itemActions {
+  display: flex;
+  gap: 1rem;
+}
+
+.btnApprove {
+  background: var(--pine-green);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btnApprove:hover {
+  background: #115e35;
+}
+
+.btnReject {
+  background: transparent;
+  color: var(--red-ember);
+  border: 1px solid var(--red-ember);
+  padding: 0.75rem 1.5rem;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btnReject:hover {
+  background: rgba(153, 27, 27, 0.1);
+}
+
+.statusTable {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+}
+
+.statusTable th {
+  text-align: left;
+  padding: 1rem;
+  color: var(--canvas-tan);
+  font-weight: 600;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.statusTable td {
+  padding: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  vertical-align: middle;
+}
+
+.statusTable tr:hover td {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.statusCheck {
+  color: var(--pine-green);
+  font-weight: bold;
+}
+
+.statusPending {
+  color: var(--campfire-amber);
+}
+
+.statusMissing {
+  color: var(--red-ember);
+  font-weight: bold;
+}
+
+.statusNA {
+  color: var(--canvas-tan);
+  opacity: 0.5;
+}
+
+.statusBadgeWarning {
+  display: inline-block;
+  background: rgba(217, 119, 6, 0.2);
+  color: var(--campfire-amber);
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  font-weight: bold;
+  border: 1px solid rgba(217, 119, 6, 0.5);
+}
+
+.statusBadgeGood {
+  display: inline-block;
+  background: rgba(17, 94, 53, 0.2);
+  color: var(--pine-green);
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  font-weight: bold;
+  border: 1px solid rgba(17, 94, 53, 0.5);
+}
+
+.statusBadgeDanger {
+  display: inline-block;
+  background: rgba(153, 27, 27, 0.2);
+  color: var(--red-ember);
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  font-weight: bold;
+  border: 1px solid rgba(153, 27, 27, 0.5);
+}
+
+.disclaimer {
+  margin-top: 1.5rem;
+  font-size: 0.85rem;
+  color: var(--canvas-tan);
+  opacity: 0.6;
+  font-style: italic;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}

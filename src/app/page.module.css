@@ -1,0 +1,153 @@
+.dashboardContainer {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.pageHeader {
+  margin-bottom: 2rem;
+  border-bottom: 2px solid var(--surface-border);
+  padding-bottom: 1rem;
+}
+
+.pageHeader h2 {
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: var(--canvas-tan);
+  margin-bottom: 0.25rem;
+}
+
+.pageHeader p {
+  color: var(--pine-green-light);
+  font-family: monospace;
+  letter-spacing: 0.1em;
+  font-size: 0.9rem;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.spanTwo {
+  grid-column: span 2;
+}
+
+.card {
+  background-color: var(--surface);
+  border: 1px solid var(--surface-border);
+  border-radius: 6px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.cardHeader {
+  background-color: rgba(0, 0, 0, 0.2);
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--surface-border);
+}
+
+.cardHeader h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--canvas-tan);
+}
+
+.cardBody {
+  padding: 1.25rem;
+  flex: 1;
+}
+
+/* Quick Actions */
+.actionList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.actionBtn {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  background-color: var(--charcoal-base);
+  border: 1px solid var(--surface-border);
+  border-radius: 4px;
+  color: var(--canvas-tan);
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.actionBtn:hover {
+  background-color: var(--pine-green);
+  border-color: var(--pine-green-light);
+}
+
+/* Status Items */
+.statusItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--surface-border);
+}
+
+.statusItem:last-child {
+  border-bottom: none;
+}
+
+.statusLabel {
+  font-family: monospace;
+  color: var(--canvas-tan);
+  opacity: 0.7;
+}
+
+.statusValue {
+  font-weight: 600;
+}
+
+.statusBadge {
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+
+.statusBadge.danger {
+  background-color: rgba(153, 27, 27, 0.2);
+  color: var(--red-ember);
+  border: 1px solid var(--red-ember);
+}
+
+.statusBadge.warning {
+  background-color: rgba(217, 119, 6, 0.2);
+  color: var(--campfire-amber);
+  border: 1px solid var(--campfire-amber);
+}
+
+/* Empty State */
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 150px;
+  color: var(--canvas-tan);
+  opacity: 0.5;
+  gap: 1rem;
+  text-align: center;
+  font-family: monospace;
+}
+
+@media (max-width: 768px) {
+  .spanTwo {
+    grid-column: span 1;
+  }
+}
