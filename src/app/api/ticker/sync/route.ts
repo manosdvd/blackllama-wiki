@@ -146,7 +146,7 @@ You MUST generate exactly one ticker item for each of the following specific que
 5. Mt. Lemmon local status/fact: An update or fact about Mt. Lemmon (elevation, environment, or activities).
 6. Summerhaven local status/fact: A quick detail or fact about Summerhaven, Arizona.
 7. Word of the Day: Generate one wholesome 'Word of the Day' with a definition. Format: "Word of the Day: [Word] - [Definition]" (source: "Dictionary.com", category: "wholesome_fun", url: "https://www.dictionary.com/word-of-the-day").
-8. Riddle of the Day: Generate one riddle and its answer. Format: "Riddle: [Question] (Ans: [Answer])" (source: "Riddles.com", category: "wholesome_fun", url: "https://www.riddles.com/riddle-of-the-day").
+8. Riddle of the Day: Generate one riddle. DO NOT output the answer anywhere in the text; users must follow the link to get the answer. Format: "Riddle: [Question]" (source: "Riddles.com", category: "wholesome_fun", url: "https://www.riddles.com/riddle-of-the-day").
 9. This Day in Scouting History: A historical Scouting event that happened on this day in history. Format: "[Event description]" (source: "Scouting History", category: "history_curiosity").
 10. National Day: Identify the national day(s) celebrated on this day. Format: "Today is [National Day Name]!" (source: "National Day Calendar", category: "wholesome_fun", url: "https://nationaldaycalendar.com/what-day-is-it").
 
