@@ -84,53 +84,47 @@ export async function GET(req: Request) {
       rssMap.set(f.id, f);
     });
 
-    // To strictly respect Gemini free tier limits (tokens/requests):
-    // 1. We only make ONE Gemini request per sync.
-    // 2. We randomly select a max of 4 feeds so the context window remains small.
-    const shuffledFeeds = feeds.sort(() => 0.5 - Math.random()).slice(0, 4);
-    
-    let rawNews = '';
-    
-    for (const feed of shuffledFeeds) {
+    // Collect all unique RSS URLs that need to be fetched
+    const feedsToFetch = new Map<string, { url: string; title: string; category: string }>();
+
+    for (const feed of feeds) {
       if (feed.sourceType === 'rss') {
-        try {
-          const urlToFetch = feed.feedUrl || feed.url;
-          if (!urlToFetch) continue;
-          const feedContent = await parser.parseURL(urlToFetch);
-          rawNews += `\nSource: ${feed.title}\n`;
-          feedContent.items.slice(0, 2).forEach(item => {
-            rawNews += `- Title: ${item.title}\n  Link: ${item.link || ''}\n  Snippet: ${item.contentSnippet?.substring(0, 150) || item.summary?.substring(0, 150) || ''}\n`;
-          });
-        } catch (err) {
-          console.error(`Failed to fetch RSS feed ${feed.title}:`, err);
+        const url = feed.feedUrl || feed.url;
+        if (url) {
+          feedsToFetch.set(url, { url, title: feed.title, category: feed.category });
         }
       } else if (feed.sourceType === 'ai_aggregation') {
         const sourceIds = feed.sourceFeedIds || [];
-        const enabledSources = sourceIds
-          .map((id: string) => rssMap.get(id))
-          .filter((f: any) => f && f.enabled)
-          .sort(() => 0.5 - Math.random())
-          .slice(0, 2);
-
-        for (const sourceFeed of enabledSources) {
-          try {
-            const urlToFetch = sourceFeed.feedUrl || sourceFeed.url;
-            if (!urlToFetch) continue;
-            const feedContent = await parser.parseURL(urlToFetch);
-            rawNews += `\nSource (aggregated under ${feed.title}): ${sourceFeed.title}\n`;
-            feedContent.items.slice(0, 2).forEach(item => {
-              rawNews += `- Title: ${item.title}\n  Link: ${item.link || ''}\n  Snippet: ${item.contentSnippet?.substring(0, 150) || item.summary?.substring(0, 150) || ''}\n`;
-            });
-          } catch (err) {
-            console.error(`Failed to fetch aggregated feed ${sourceFeed.title} for ${feed.title}:`, err);
+        for (const id of sourceIds) {
+          const sourceFeed = rssMap.get(id);
+          if (sourceFeed && sourceFeed.enabled) {
+            const url = sourceFeed.feedUrl || sourceFeed.url;
+            if (url) {
+              feedsToFetch.set(url, { url, title: sourceFeed.title, category: sourceFeed.category });
+            }
           }
         }
       }
     }
+    
+    let rawNews = '';
+    
+    // Fetch top 3 items from each unique feed
+    for (const [url, feedMeta] of feedsToFetch.entries()) {
+      try {
+        const feedContent = await parser.parseURL(url);
+        rawNews += `\nSource: ${feedMeta.title}\n`;
+        feedContent.items.slice(0, 3).forEach(item => {
+          rawNews += `- Title: ${item.title}\n  Link: ${item.link || ''}\n  Snippet: ${item.contentSnippet?.substring(0, 150) || item.summary?.substring(0, 150) || ''}\n`;
+        });
+      } catch (err) {
+        console.error(`Failed to fetch RSS feed ${feedMeta.title}:`, err);
+      }
+    }
 
     // Hard cap token usage just in case
-    if (rawNews.length > 8000) {
-      rawNews = rawNews.substring(0, 8000);
+    if (rawNews.length > 15000) {
+      rawNews = rawNews.substring(0, 15000);
     }
 
     if (!rawNews.trim()) {
@@ -142,7 +136,7 @@ export async function GET(req: Request) {
     
     const prompt = `
 You are a content aggregator for a summer camp. I will give you a list of recent news items from various sources (weather, forest service, scouting, astronomy).
-Your task is to summarize these into 5-8 short, engaging, single-sentence alerts suitable for a scrolling marquee ticker.
+Your task is to summarize these into 25 to 30 short, engaging, single-sentence alerts suitable for a scrolling marquee ticker.
 
 Rules:
 1. Each alert MUST be under 110 characters.
@@ -156,6 +150,7 @@ Rules:
   "category": "camp_useful"
 }
 5. The category MUST be one of: camp_useful, scouting, local_outdoors, nature_science, wholesome_fun, history_curiosity, dad_joke.
+6. You MUST generate at least 25 items. If there are not enough unique news stories in the input to reach 25 items, supplement the output with fun outdoor safety tips (e.g. about hydration, knots, leave no trace) or local Arizona nature facts, ensuring you reach at least 25 total items.
 
 News Items:
 ${rawNews}
