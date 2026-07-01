@@ -340,6 +340,22 @@ canAccessVisibility(visibility)
 
 The UI should use this for route guards and button visibility. Firestore rules and server checks remain the real enforcement.
 
+### 4.7 Suggested user/auth files
+
+Add or refactor toward:
+
+```txt
+src/types/users.ts
+src/types/permissions.ts
+src/lib/auth/permissions.ts
+src/lib/auth/access.ts
+src/lib/firebase/admin.ts
+src/lib/server/currentUser.ts
+src/lib/server/adminActions.ts
+```
+
+These files should centralize role checks, profile loading, permission checks, and server-only admin operations so permission logic does not get scattered across random components.
+
 ---
 
 ## 5. Security Rules Plan
@@ -513,6 +529,21 @@ contentItems/{contentId}/revisions/{revisionId}
 | form | Blank/fillable form listing with instructions and official submission guidance. |
 | forum_topic_later | Reserved for future hidden internal community. |
 
+### 6.4 Suggested content files
+
+Add:
+
+```txt
+src/types/content.ts
+src/types/tags.ts
+src/types/categories.ts
+src/lib/content/contentService.ts
+src/lib/content/revisionService.ts
+src/lib/content/editorText.ts
+```
+
+`editorText.ts` should extract plain text from Editor.js blocks for search, link detection, preview snippets, and offline indexes.
+
 ---
 
 ## 7. Wiki Completion Plan
@@ -642,7 +673,7 @@ The wiki needs to feel like an industry-standard knowledge base, not a pile of p
 
 ### 8.1 Search
 
-Use a free/open-source local search approach for v1, such as MiniSearch or Fuse.js.
+Use a free/open-source local search approach for v1, such as MiniSearch or Fuse.js. MiniSearch is the preferred first try because it is built for local full-text indexes and can work well with an offline wiki cache.
 
 Search should work online and offline against the cached published wiki index.
 
@@ -673,6 +704,13 @@ audience/visibility filters for admins
 recently updated
 pinned/important pages
 emergency/safety priority
+```
+
+Suggested files:
+
+```txt
+src/lib/search/buildSearchIndex.ts
+src/lib/search/wikiSearch.ts
 ```
 
 ### 8.2 Tags
@@ -1120,7 +1158,42 @@ Generate and cache a local search index from published content the user is allow
 
 ---
 
-## 14. Implementation Phases
+## 14. Implementation Strategy
+
+Build this in vertical slices, not as one giant abstract backend project.
+
+The goal is to prove real loops early:
+
+```txt
+Admin logs in
+Admin creates a wiki draft
+Admin publishes it
+Staff can read it
+Unauthorized users cannot
+Staff can search it
+Admin can later manage onboarding around it
+```
+
+Do not spend weeks only modeling data without shipping a path that proves the app works.
+
+### Build order
+
+```txt
+1. User/profile/permission foundation
+2. Content/wiki data model
+3. Real wiki read/edit/publish flow
+4. Search, tags, and interlinking
+5. Admin backend
+6. Application/onboarding/forms
+7. Offline polish
+8. Forum/community placeholder only
+```
+
+This keeps the wiki and permissions as the spine, then expands outward.
+
+---
+
+## 15. Implementation Phases
 
 ### Phase 1: User foundation and rules
 
@@ -1171,7 +1244,31 @@ Acceptance criteria:
 - Publishers can publish.
 - Revision history exists.
 
-### Phase 3: Search, tags, and interlinking
+### Phase 3: Real wiki read/edit/publish flow
+
+Deliverables:
+
+```txt
+/wiki/[slug]
+/wiki/edit/[contentId]
+Save Draft action
+Submit for Review action
+Publish action
+Archive action
+Rollback action
+permission-aware edit/publish buttons
+```
+
+Acceptance criteria:
+
+- Admin/editor can create a draft.
+- Draft can be previewed.
+- Publisher can publish.
+- Staff can read the published page.
+- Candidate/guest users cannot read staff-only content.
+- Older revisions remain available.
+
+### Phase 4: Search, tags, and interlinking
 
 Deliverables:
 
@@ -1193,7 +1290,7 @@ Acceptance criteria:
 - Backlinks are visible.
 - Search works offline against cached content.
 
-### Phase 4: Admin backend
+### Phase 5: Admin backend
 
 Deliverables:
 
@@ -1215,7 +1312,7 @@ Acceptance criteria:
 - Dangerous actions require confirmation.
 - Audit history is readable.
 
-### Phase 5: Applications and onboarding
+### Phase 6: Applications and onboarding
 
 Deliverables:
 
@@ -1239,7 +1336,7 @@ Acceptance criteria:
 - Admins can verify required tasks.
 - Completed onboarding can promote user to staff.
 
-### Phase 6: Offline polish
+### Phase 7: Offline polish
 
 Deliverables:
 
@@ -1259,7 +1356,7 @@ Acceptance criteria:
 - The UI clearly shows stale/offline state.
 - Admin writes wait until online or are disabled.
 
-### Phase 7: Future community placeholder only
+### Phase 8: Future community placeholder only
 
 Deliverables:
 
@@ -1276,33 +1373,111 @@ Acceptance criteria:
 
 ---
 
-## 15. First Concrete Build Checklist
+## 16. First Concrete Coding Sprint
 
 Start here:
 
 ```txt
-1. Create shared TypeScript types for users, permissions, content, tags, categories, onboarding, and forms.
-2. Add Firebase Admin server helper.
-3. Add user profile creation on first login.
-4. Replace AuthContext booleans with profile + permissions.
-5. Create route guard helpers.
-6. Build /admin shell visible only to admin portal mode.
-7. Create contentItems and revisions write/read helpers.
-8. Wire /wiki page to Firestore published wiki content.
-9. Wire /wiki/edit to save draft content.
-10. Add publish action restricted to canPublishWiki.
-11. Add tag/category models and UI.
-12. Add local search index generation.
-13. Add application persistence.
-14. Add onboarding checklist models.
-15. Add forms/resource library.
+1. Add shared TypeScript models for users, permissions, content, tags, categories.
+2. Add Firebase Admin helper.
+3. Add first-login profile creation.
+4. Upgrade AuthContext to load profile and permissions.
+5. Add route guard helpers.
+6. Add /admin shell visible only to admin portal mode.
+7. Add contentItems and revisions Firestore helpers.
+8. Wire /wiki/edit Save Draft to Firestore.
+9. Add /wiki/[slug] published article rendering.
+10. Add basic publish action for canPublishWiki users.
 ```
 
-This order prevents the common trap: building shiny pages before the permissions and content foundation are real.
+This first sprint proves the core app loop:
+
+```txt
+Admin logs in
+Admin writes wiki draft
+Admin publishes it
+Staff user can read it
+Non-authorized user cannot
+```
+
+Do not start with onboarding, forms, or forum UX until this loop works.
 
 ---
 
-## 16. Definition of Done for the Core System
+## 17. Second Coding Sprint
+
+After the first loop works, widen the wiki into an actual knowledge base.
+
+```txt
+1. Replace /wiki mock index with Firestore published content.
+2. Add category and tag collections.
+3. Add category/tag admin screens.
+4. Add tag/category selectors to the editor.
+5. Add plain-text extraction from Editor.js blocks.
+6. Add MiniSearch or Fuse.js search proof of concept.
+7. Add /wiki/search route.
+8. Add [[Internal Link]] detection on save/publish.
+9. Add backlinks and related pages display.
+10. Add review due date metadata.
+```
+
+Acceptance criteria:
+
+```txt
+A user can browse, search, filter, and follow internal links through real wiki content.
+```
+
+---
+
+## 18. Third Coding Sprint
+
+Then build the admin workbench around the working content and user model.
+
+```txt
+1. Expand /admin dashboard cards.
+2. Add /admin/users list and detail view.
+3. Add permission preset assignment UI.
+4. Add suspend/restore user actions.
+5. Add /admin/content review queue.
+6. Add publish/request revision/archive actions.
+7. Add audit log viewer.
+8. Add admin UX copy explaining dangerous actions.
+```
+
+Acceptance criteria:
+
+```txt
+A nontechnical admin can manage users and wiki content without opening Firebase console.
+```
+
+---
+
+## 19. Fourth Coding Sprint
+
+Only then make onboarding real.
+
+```txt
+1. Persist the /apply form.
+2. Create application status dashboard for candidates.
+3. Add /admin/applications review queue.
+4. Add approve/reject/request info actions.
+5. Create onboarding template/task models.
+6. Generate user onboarding checklist after approval.
+7. Add forms/resource library.
+8. Add official URL/hosted PDF fields.
+9. Add task verification workflow.
+10. Add promote-to-staff action.
+```
+
+Acceptance criteria:
+
+```txt
+An applicant can apply, be approved, complete onboarding tasks, and become active staff.
+```
+
+---
+
+## 20. Definition of Done for the Core System
 
 The wiki and user system are not truly done until:
 
