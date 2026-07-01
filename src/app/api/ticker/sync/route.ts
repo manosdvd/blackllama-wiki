@@ -78,6 +78,12 @@ export async function GET(req: Request) {
 
     const feeds = [...(data.rssFeeds || []), ...(data.aiAggregationFeeds || [])].filter(f => f.enabled);
     
+    // Create a map of RSS feeds for quick lookup by ID for AI aggregation feeds
+    const rssMap = new Map<string, any>();
+    (data.rssFeeds || []).forEach((f: any) => {
+      rssMap.set(f.id, f);
+    });
+
     // To strictly respect Gemini free tier limits (tokens/requests):
     // 1. We only make ONE Gemini request per sync.
     // 2. We randomly select a max of 4 feeds so the context window remains small.
@@ -85,18 +91,40 @@ export async function GET(req: Request) {
     
     let rawNews = '';
     
-    // Fetch top 2 items from each of the 4 selected feeds
     for (const feed of shuffledFeeds) {
-      try {
-        const urlToFetch = feed.feedUrl || feed.url;
-        if (!urlToFetch) continue;
-        const feedContent = await parser.parseURL(urlToFetch);
-        rawNews += `\nSource: ${feed.title}\n`;
-        feedContent.items.slice(0, 2).forEach(item => {
-          rawNews += `- ${item.title}: ${item.contentSnippet?.substring(0, 150) || item.summary?.substring(0, 150) || ''}\n`;
-        });
-      } catch (err) {
-        console.error(`Failed to fetch feed ${feed.title}:`, err);
+      if (feed.sourceType === 'rss') {
+        try {
+          const urlToFetch = feed.feedUrl || feed.url;
+          if (!urlToFetch) continue;
+          const feedContent = await parser.parseURL(urlToFetch);
+          rawNews += `\nSource: ${feed.title}\n`;
+          feedContent.items.slice(0, 2).forEach(item => {
+            rawNews += `- Title: ${item.title}\n  Link: ${item.link || ''}\n  Snippet: ${item.contentSnippet?.substring(0, 150) || item.summary?.substring(0, 150) || ''}\n`;
+          });
+        } catch (err) {
+          console.error(`Failed to fetch RSS feed ${feed.title}:`, err);
+        }
+      } else if (feed.sourceType === 'ai_aggregation') {
+        const sourceIds = feed.sourceFeedIds || [];
+        const enabledSources = sourceIds
+          .map((id: string) => rssMap.get(id))
+          .filter((f: any) => f && f.enabled)
+          .sort(() => 0.5 - Math.random())
+          .slice(0, 2);
+
+        for (const sourceFeed of enabledSources) {
+          try {
+            const urlToFetch = sourceFeed.feedUrl || sourceFeed.url;
+            if (!urlToFetch) continue;
+            const feedContent = await parser.parseURL(urlToFetch);
+            rawNews += `\nSource (aggregated under ${feed.title}): ${sourceFeed.title}\n`;
+            feedContent.items.slice(0, 2).forEach(item => {
+              rawNews += `- Title: ${item.title}\n  Link: ${item.link || ''}\n  Snippet: ${item.contentSnippet?.substring(0, 150) || item.summary?.substring(0, 150) || ''}\n`;
+            });
+          } catch (err) {
+            console.error(`Failed to fetch aggregated feed ${sourceFeed.title} for ${feed.title}:`, err);
+          }
+        }
       }
     }
 
@@ -119,14 +147,15 @@ Your task is to summarize these into 5-8 short, engaging, single-sentence alerts
 Rules:
 1. Each alert MUST be under 110 characters.
 2. The language should be natural, friendly, and camp-appropriate (NOT technical or sci-fi).
-3. Do not include URLs or links.
-4. Output ONLY a valid JSON array of objects, with no markdown formatting or extra text.
-5. Each object must have this exact structure:
+3. Output ONLY a valid JSON array of objects, with no markdown formatting or extra text.
+4. Each object must have this exact structure:
 {
   "title": "The short alert text",
   "source": "Short Name of Source",
+  "url": "The exact Link URL corresponding to this news item",
   "category": "camp_useful"
 }
+5. The category MUST be one of: camp_useful, scouting, local_outdoors, nature_science, wholesome_fun, history_curiosity, dad_joke.
 
 News Items:
 ${rawNews}
@@ -148,6 +177,7 @@ ${rawNews}
       return {
         id: `live_${Math.random().toString(36).substr(2, 9)}`,
         title: displayTitle,
+        url: item.url || '',
         category: item.category || 'flavor',
         sourceType: 'live',
         timestamp: FieldValue.serverTimestamp()
