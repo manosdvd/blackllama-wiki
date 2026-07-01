@@ -42,3 +42,5 @@ next-env.d.ts
 blackllamaDEPRICATED/
 camp-lawton-staff-hub-firebase-adminsdk-fbsvc-439f443121.json
 .env.local
+dev_server.log
+sync_output.json
