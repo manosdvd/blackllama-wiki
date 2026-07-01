@@ -172,13 +172,12 @@ ${rawNews}
     const generatedItems = JSON.parse(responseText);
 
     const liveItems = generatedItems.map((item: any) => {
-      // Append the source per user request: "[content] - [source]"
-      const displayTitle = item.source ? `${item.title} - ${item.source}` : item.title;
       return {
         id: `live_${Math.random().toString(36).substr(2, 9)}`,
-        title: displayTitle,
+        title: item.title,
         url: item.url || '',
         category: item.category || 'flavor',
+        source: item.source || 'Live Feed',
         sourceType: 'live',
         timestamp: FieldValue.serverTimestamp()
       };

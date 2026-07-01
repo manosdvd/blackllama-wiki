@@ -11,6 +11,7 @@ interface TickerItem {
   title: string;
   url: string;
   category: string;
+  source?: string;
 }
 
 interface TickerProps {
@@ -135,7 +136,7 @@ export default function Ticker({ items }: TickerProps) {
         {displayItems.map((item, index) => (
           <div key={`${item.id}-${index}`} className={styles.tickerItem}>
             <span className={styles.tickerCategory} style={{ color: getCategoryColor(item.category) }}>
-              [{item.category.replace('_', ' ')}]
+              [{item.source || 'Camp Lawton'}]
             </span>
             {item.url ? (
               <Link href={item.url} className={styles.tickerLink}>
@@ -159,7 +160,7 @@ export default function Ticker({ items }: TickerProps) {
         {combinedItems.length > 0 && (
           <div className={`${styles.tickerItem} ${styles.mobileItem}`}>
             <span className={styles.tickerCategory} style={{ color: getCategoryColor(combinedItems[mobileIndex].category) }}>
-              [{combinedItems[mobileIndex].category.replace('_', ' ')}]
+              [{combinedItems[mobileIndex].source || 'Camp Lawton'}]
             </span>
             {combinedItems[mobileIndex].url ? (
               <Link href={combinedItems[mobileIndex].url} className={styles.tickerLink}>
