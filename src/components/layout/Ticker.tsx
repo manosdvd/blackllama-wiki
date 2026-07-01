@@ -20,6 +20,7 @@ interface TickerProps {
 export default function Ticker({ items }: TickerProps) {
   const [dbItems, setDbItems] = useState<TickerItem[]>([]);
   const [apiItems, setApiItems] = useState<TickerItem[]>([]);
+  const [shuffledLocalItems, setShuffledLocalItems] = useState<TickerItem[]>(items);
   const [mobileIndex, setMobileIndex] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -56,18 +57,17 @@ export default function Ticker({ items }: TickerProps) {
     };
   }, []);
 
+  // Shuffle local items client-side only to avoid hydration mismatch
+  useEffect(() => {
+    setShuffledLocalItems([...items].sort(() => 0.5 - Math.random()));
+  }, [items]);
+
   const combinedItems = useMemo(() => {
     // Determine which live items to use (DB takes precedence if it has data)
     const activeLiveItems = dbItems.length > 0 ? dbItems : apiItems;
-
-    // 1. Local data randomized
-    const localShuffled = [...items].sort(() => 0.5 - Math.random());
-    
-    // 2. Live data (we assume it's recent from the API)
-    // If it has timestamps, we can sort, but the API sync is all-at-once
-    // We just prioritize live data by putting it FIRST
-    return [...activeLiveItems, ...localShuffled];
-  }, [items, dbItems, apiItems]);
+    // Live data first, then client-side-shuffled local data
+    return [...activeLiveItems, ...shuffledLocalItems];
+  }, [shuffledLocalItems, dbItems, apiItems]);
 
   const getCategoryColor = (category: string) => {
     const lower = category.toLowerCase();
