@@ -4,12 +4,16 @@ This branch starts the Camp Lawton staff-handbook import for the wiki.
 
 ## Source package
 
-The generated source package contains 79 cleaned wiki pages derived from `staffHandbookCL.md`:
+The generated source package contains 79 cleaned wiki pages derived from `staffHandbookCL.md`.
 
-- `camp_lawton_staff_handbook_wiki_pages.json`
-- `camp_lawton_staff_handbook_wiki_cleaned.md`
-- `camp_lawton_wiki_pages.zip`
-- `camp_lawton_staff_handbook_cleanup_report.md`
+Use the final export files for any future import:
+
+- `camp_lawton_staff_handbook_wiki_pages_final.json`
+- `camp_lawton_staff_handbook_wiki_cleaned_final.md`
+- `camp_lawton_wiki_pages_frontmatter.zip`
+- `camp_lawton_staff_handbook_export_changelog.md`
+
+The final flat-file Markdown export uses standard YAML frontmatter at the top of each individual page file. Migration-only drafting metadata has been pruned from the final JSON and page frontmatter.
 
 ## Current repo fit
 
@@ -44,7 +48,27 @@ Current blockers:
 | `tags` | `tagIds` after tag normalization |
 | `summary` | `summary` |
 | `content_markdown` | convert to `bodyEditorJs` or store as markdown during seed phase |
-| `source_note` | admin-only note or revision change summary |
+
+## Flat-file Markdown frontmatter
+
+Each individual Markdown file should start with frontmatter like this:
+
+```yaml
+---
+id: welcome-to-camp-lawton-staff
+title: Welcome to Camp Lawton Staff
+section: Camp Culture and History
+visibility: staff
+status: draft-needs-review
+show_on_home: true
+tags:
+  - orientation
+  - home
+summary: ""
+---
+```
+
+Do not include one-off migration notes in live frontmatter. Keep drafting provenance in changelogs, import logs, or revision summaries instead.
 
 ## Status mapping
 
@@ -72,7 +96,7 @@ Current blockers:
 
 Do **not** hand-enter these pages.
 
-Add a real import script that reads `camp_lawton_staff_handbook_wiki_pages.json`, normalizes sections/tags/visibility/status, and writes:
+Add a real import script that reads `camp_lawton_staff_handbook_wiki_pages_final.json`, normalizes sections/tags/visibility/status, and writes:
 
 ```txt
 contentItems/{contentId}
@@ -81,4 +105,4 @@ categories/{categoryId}
 tags/{tagId}
 ```
 
-Until the content engine is wired, the JSON should be treated as authoritative seed content rather than manually pasted page copy.
+Until the content engine is wired, the JSON should be treated as authoritative seed content rather than manually pasted page copy. If the project pivots to a flat-file CMS, use `camp_lawton_wiki_pages_frontmatter.zip` as the import source instead of the Firestore JSON seed.
