@@ -113,8 +113,25 @@ export async function GET(req: Request) {
       category: string;
       feedUrl?: string;
       url?: string;
+      homepageUrl?: string;
       sourceFeedIds?: string[];
     }
+
+    const arizonaTrailFeed: RssFeedConfig = {
+      id: 'arizona_trail_association',
+      enabled: true,
+      title: 'Arizona Trail Association',
+      sourceType: 'rss',
+      lane: 'operational_candidate',
+      category: 'local_outdoors',
+      feedUrl: 'https://aztrail.org/feed/',
+      homepageUrl: 'https://aztrail.org/'
+    };
+
+    data.rssFeeds = [
+      ...(data.rssFeeds || []).filter((feed: RssFeedConfig) => feed.id !== arizonaTrailFeed.id),
+      arizonaTrailFeed
+    ];
 
     const feeds = [...(data.rssFeeds || []), ...(data.aiAggregationFeeds || [])].filter((f: RssFeedConfig) => f.enabled);
     
