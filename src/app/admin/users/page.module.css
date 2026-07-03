@@ -1,0 +1,109 @@
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 3rem 1rem;
+}
+
+.pageHeader {
+  margin-bottom: 2rem;
+}
+
+.pageHeader h1 {
+  color: var(--campfire-amber);
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.pageHeader p {
+  color: rgba(245, 245, 244, 0.78);
+  line-height: 1.5;
+  max-width: 780px;
+}
+
+.userList {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.userCard {
+  align-items: end;
+  background: rgba(30, 27, 24, 0.86);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1.5fr repeat(4, minmax(150px, 1fr));
+  padding: 1rem;
+}
+
+.userIdentity {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.userIdentity strong {
+  color: white;
+  font-size: 1.05rem;
+}
+
+.userIdentity span {
+  color: rgba(245, 245, 244, 0.62);
+  font-size: 0.82rem;
+  overflow-wrap: anywhere;
+}
+
+.userCard label {
+  color: rgba(245, 245, 244, 0.72);
+  display: flex;
+  flex-direction: column;
+  font-size: 0.78rem;
+  font-weight: 700;
+  gap: 0.35rem;
+  text-transform: uppercase;
+}
+
+.userCard input,
+.userCard select {
+  background: rgba(12, 10, 9, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 4px;
+  color: var(--canvas-tan);
+  font: inherit;
+  min-height: 42px;
+  padding: 0.65rem;
+  text-transform: none;
+}
+
+.successMessage,
+.errorMessage {
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  padding: 1rem;
+}
+
+.successMessage {
+  background: rgba(6, 78, 59, 0.36);
+  border: 1px solid rgba(16, 185, 129, 0.28);
+  color: #bbf7d0;
+}
+
+.errorMessage {
+  background: rgba(153, 27, 27, 0.18);
+  border: 1px solid rgba(248, 113, 113, 0.28);
+  color: #fecaca;
+}
+
+@media (max-width: 1050px) {
+  .userCard {
+    align-items: stretch;
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 650px) {
+  .userCard {
+    grid-template-columns: 1fr;
+  }
+}

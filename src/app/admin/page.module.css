@@ -1,0 +1,61 @@
+.container {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 3rem 1rem;
+}
+
+.pageHeader {
+  margin-bottom: 2rem;
+}
+
+.pageHeader h1 {
+  color: var(--campfire-amber);
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.pageHeader p {
+  color: rgba(245, 245, 244, 0.8);
+  font-size: 1.05rem;
+  line-height: 1.5;
+  max-width: 760px;
+}
+
+.adminGrid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.adminCard {
+  align-items: flex-start;
+  background: rgba(30, 27, 24, 0.86);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: var(--canvas-tan);
+  display: flex;
+  gap: 1rem;
+  min-height: 160px;
+  padding: 1.25rem;
+  transition: border-color 0.2s, transform 0.2s;
+}
+
+.adminCard:hover {
+  border-color: var(--lantern-gold);
+  transform: translateY(-2px);
+}
+
+.adminCard svg {
+  color: var(--lantern-gold);
+  flex: 0 0 auto;
+}
+
+.adminCard h2 {
+  font-size: 1.15rem;
+  margin-bottom: 0.5rem;
+}
+
+.adminCard p {
+  color: rgba(245, 245, 244, 0.7);
+  line-height: 1.45;
+}

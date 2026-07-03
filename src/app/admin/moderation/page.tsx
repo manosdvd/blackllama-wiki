@@ -90,7 +90,7 @@ export default function ModerationPage() {
                   <strong>Action:</strong> {log.action}
                 </div>
                 <div className={styles.logReason}>
-                  "{log.reason}"
+                  &quot;{log.reason}&quot;
                 </div>
               </div>
             ))}

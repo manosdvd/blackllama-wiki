@@ -27,6 +27,10 @@
   --campfire-amber: #d97706;
   --lantern-gold: #eab308;
   --red-ember: #991b1b;
+  --emergency-red: #dc2626;
+  --stone-grey: #a8a29e;
+  --charcoal-dark: #0c0a09;
+  --charcoal-lighter: #1c1917;
 
   /* Theme Defaults (Dark Mode Primary) */
   --background: var(--charcoal-base);

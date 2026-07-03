@@ -77,9 +77,14 @@ export default function AlertsHUD() {
   }, []);
 
   useEffect(() => {
-    fetchFireData();
+    const initialFetch = window.setTimeout(() => {
+      void fetchFireData();
+    }, 0);
     const interval = setInterval(fetchFireData, 5 * 60 * 1000);
-    return () => clearInterval(interval);
+    return () => {
+      window.clearTimeout(initialFetch);
+      clearInterval(interval);
+    };
   }, [fetchFireData]);
 
   // 4. Auto-rotate through alerts
@@ -93,7 +98,8 @@ export default function AlertsHUD() {
 
   // Reset index when alert list changes
   useEffect(() => {
-    setCurrentIndex(0);
+    const timer = window.setTimeout(() => setCurrentIndex(0), 0);
+    return () => window.clearTimeout(timer);
   }, [data?.alerts.length]);
 
   // ─── Render helpers ──────────────────────────────────────────────────────

@@ -34,9 +34,11 @@ export default async function Header() {
         </div>
 
         <nav className={styles.navLinks}>
-          <Link href="/dashboard" className={styles.navItem}>Dashboard</Link>
+          <Link href="/" className={styles.navItem}>Dashboard</Link>
           <Link href="/wiki" className={styles.navItem}>Wiki & Procedures</Link>
-          <Link href="/forum" className={styles.navItem}>Forum</Link>
+          <Link href="/apply" className={styles.navItem}>Apply</Link>
+          <Link href="/onboarding" className={styles.navItem}>Onboarding</Link>
+          <Link href="/admin/review" className={styles.navItem}>Admin</Link>
         </nav>
 
         <div className={styles.actions}>

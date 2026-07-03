@@ -6,7 +6,7 @@ import { useAuth } from '@/components/auth/AuthContext';
 import styles from './Header.module.css';
 
 export default function AuthButton() {
-  const { user, loading, login, logout, isAdmin, isModerator } = useAuth();
+  const { user, profile, loading, login, logout } = useAuth();
 
   if (loading) {
     return (
@@ -18,14 +18,17 @@ export default function AuthButton() {
 
   if (user) {
     return (
-      <button 
-        className={styles.iconBtn} 
-        onClick={logout} 
-        title={`Sign out (${user.email})`}
-        aria-label="Sign Out"
-      >
-        <LogOut size={20} />
-      </button>
+      <div className={styles.authCluster}>
+        <span className={styles.authMode}>{profile?.portalMode ?? 'guest'}</span>
+        <button
+          className={styles.iconBtn}
+          onClick={logout}
+          title={`Sign out (${user.email})`}
+          aria-label="Sign Out"
+        >
+          <LogOut size={20} />
+        </button>
+      </div>
     );
   }
 

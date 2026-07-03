@@ -1,7 +1,13 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import React from 'react';
+import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
+import type { OutputData } from '@editorjs/editorjs';
+import { useAuth } from '@/components/auth/AuthContext';
+import { slugify } from '@/lib/content/editorText';
+import { DEFAULT_WIKI_CATEGORIES, type ContentItem, type ContentStatus, type ContentVisibility, type EditorData } from '@/types/content';
 import styles from './page.module.css';
 
 // Editor.js must be imported dynamically with ssr: false
@@ -10,42 +16,244 @@ const Editor = dynamic(() => import('@/components/wiki/Editor'), {
   loading: () => <div className={styles.loadingEditor}>Loading Editor...</div>
 });
 
-export default function WikiEditPage() {
-  const handleEditorChange = (data: any) => {
-    console.log('Editor data:', data);
-    // TODO: Save to Firestore
+function WikiEditPageContent() {
+  const searchParams = useSearchParams();
+  const articleId = searchParams.get('id') ?? undefined;
+  const { user, loading, hasPermission } = useAuth();
+  const [title, setTitle] = useState('');
+  const [slug, setSlug] = useState('');
+  const [summary, setSummary] = useState('');
+  const [categoryId, setCategoryId] = useState(DEFAULT_WIKI_CATEGORIES[0].id);
+  const [visibility, setVisibility] = useState<ContentVisibility>('staff');
+  const [status, setStatus] = useState<ContentStatus>('draft');
+  const [tags, setTags] = useState('');
+  const [reviewDueAt, setReviewDueAt] = useState('');
+  const [isPinned, setIsPinned] = useState(false);
+  const [slugTouched, setSlugTouched] = useState(false);
+  const [editorData, setEditorData] = useState<EditorData>(() => ({ time: Date.now(), blocks: [], version: '2.31.6' }));
+  const [existingArticle, setExistingArticle] = useState<ContentItem | null>(null);
+  const [loadingArticle, setLoadingArticle] = useState(!!articleId);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const canDraft = hasPermission('canDraftWiki') || hasPermission('canEditWiki') || hasPermission('canPublishWiki');
+  const canPublish = hasPermission('canPublishWiki');
+
+  useEffect(() => {
+    if (!articleId || loading) return;
+
+    let cancelled = false;
+    const targetArticleId = articleId;
+    async function loadArticle() {
+      setLoadingArticle(true);
+      setError(null);
+      try {
+        const token = await user?.getIdToken();
+        const response = await fetch(`/api/wiki/articles/${encodeURIComponent(targetArticleId)}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        });
+        const data = (await response.json()) as { article?: ContentItem; error?: string };
+        if (!response.ok || !data.article) throw new Error(data.error || 'Unable to load article.');
+        if (cancelled) return;
+        setExistingArticle(data.article);
+        setTitle(data.article.title);
+        setSlug(data.article.slug);
+        setSlugTouched(true);
+        setSummary(data.article.summary);
+        setCategoryId(data.article.categoryId);
+        setVisibility(data.article.visibility);
+        setStatus(data.article.status);
+        setTags(data.article.tagIds.join(', '));
+        setIsPinned(data.article.isPinned);
+        setEditorData(data.article.bodyEditorJs);
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err.message : String(err));
+      } finally {
+        if (!cancelled) setLoadingArticle(false);
+      }
+    }
+
+    loadArticle();
+    return () => {
+      cancelled = true;
+    };
+  }, [articleId, loading, user]);
+
+  const tagIds = useMemo(
+    () =>
+      tags
+        .split(',')
+        .map((tag) => slugify(tag))
+        .filter(Boolean),
+    [tags],
+  );
+
+  const handleEditorChange = useCallback((data: OutputData) => {
+    setEditorData(data as EditorData);
+  }, []);
+
+  const saveArticle = async (nextStatus: ContentStatus) => {
+    if (!user) {
+      setError('Sign in before saving wiki content.');
+      return;
+    }
+    if (nextStatus === 'published' && !canPublish) {
+      setError('Publishing requires publisher access.');
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+    setMessage(null);
+
+    try {
+      const token = await user.getIdToken();
+      const payload = {
+        title,
+        slug,
+        summary,
+        bodyEditorJs: editorData,
+        categoryId,
+        tagIds,
+        visibility,
+        status: nextStatus,
+        reviewDueAt: reviewDueAt || null,
+        isPinned,
+      };
+      const response = await fetch(articleId ? `/api/wiki/articles/${encodeURIComponent(articleId)}` : '/api/wiki/articles', {
+        method: articleId ? 'PATCH' : 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+      const data = (await response.json()) as { article?: ContentItem; error?: string };
+      if (!response.ok || !data.article) throw new Error(data.error || 'Unable to save article.');
+
+      setExistingArticle(data.article);
+      setStatus(data.article.status);
+      setMessage(nextStatus === 'published' ? 'Article published.' : nextStatus === 'in_review' ? 'Draft submitted for review.' : 'Draft saved.');
+      if (!articleId) {
+        window.history.replaceState(null, '', `/wiki/edit?id=${data.article.id}`);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSaving(false);
+    }
   };
+
+  if (loading || loadingArticle) {
+    return <div className={styles.container}>Loading editor...</div>;
+  }
+
+  if (!canDraft) {
+    return (
+      <div className={styles.container}>
+        <header className={styles.header}>
+          <h1>Wiki Editor</h1>
+        </header>
+        <div className={styles.noticePanel}>
+          <p>Wiki editing is available to staff with draft, editor, or publisher access.</p>
+          {!user && <button className={styles.publishBtn}>Sign in from the header</button>}
+          <Link href="/wiki" className={styles.secondaryLink}>Back to Wiki</Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.container}>
       <header className={styles.header}>
-        <h1>Create/Edit Wiki Article</h1>
+        <div>
+          <h1>{existingArticle ? 'Edit Wiki Article' : 'Create Wiki Article'}</h1>
+          {existingArticle && <p className={styles.subtleMeta}>Current status: {status}</p>}
+        </div>
         <div className={styles.actions}>
-          <button className={styles.saveBtn}>Save Draft</button>
-          <button className={styles.publishBtn}>Publish</button>
+          <button className={styles.saveBtn} onClick={() => saveArticle('draft')} disabled={saving}>Save Draft</button>
+          <button className={styles.saveBtn} onClick={() => saveArticle('in_review')} disabled={saving}>Submit for Review</button>
+          <button className={styles.publishBtn} onClick={() => saveArticle('published')} disabled={saving || !canPublish}>Publish</button>
         </div>
       </header>
+
+      {message && <div className={styles.successMessage}>{message}</div>}
+      {error && <div className={styles.errorMessage}>{error}</div>}
       
       <div className={styles.editorWrapper}>
         <div className={styles.metadataForm}>
-          <input 
-            type="text" 
-            placeholder="Article Title" 
-            className={styles.titleInput} 
+          <input
+            type="text"
+            placeholder="Article Title"
+            className={styles.titleInput}
+            value={title}
+            onChange={(event) => {
+              const nextTitle = event.target.value;
+              setTitle(nextTitle);
+              if (!slugTouched) setSlug(slugify(nextTitle));
+            }}
           />
-          <select className={styles.categorySelect}>
-            <option value="">Select Category...</option>
-            <option value="programs">Programs & Activities</option>
-            <option value="facilities">Facilities & Maintenance</option>
-            <option value="emergency">Emergency Procedures</option>
-            <option value="kitchen">Kitchen & Dining</option>
+          <input
+            type="text"
+            placeholder="article-slug"
+            className={styles.slugInput}
+            value={slug}
+            onChange={(event) => {
+              setSlugTouched(true);
+              setSlug(slugify(event.target.value));
+            }}
+          />
+          <select className={styles.categorySelect} value={categoryId} onChange={(event) => setCategoryId(event.target.value)}>
+            {DEFAULT_WIKI_CATEGORIES.map((category) => (
+              <option key={category.id} value={category.id}>{category.name}</option>
+            ))}
           </select>
+        </div>
+
+        <div className={styles.secondaryMetadata}>
+          <label>
+            Summary
+            <textarea value={summary} onChange={(event) => setSummary(event.target.value)} rows={3} />
+          </label>
+          <label>
+            Tags
+            <input value={tags} onChange={(event) => setTags(event.target.value)} placeholder="training, forms, policy" />
+          </label>
+          <label>
+            Visibility
+            <select value={visibility} onChange={(event) => setVisibility(event.target.value as ContentVisibility)}>
+              <option value="public">Public</option>
+              <option value="candidate">Candidate</option>
+              <option value="onboarding">Onboarding</option>
+              <option value="staff">Staff</option>
+              <option value="alumni">Alumni</option>
+              <option value="admin_only">Admin only</option>
+              <option value="safety_sensitive">Safety sensitive</option>
+            </select>
+          </label>
+          <label>
+            Review due
+            <input type="date" value={reviewDueAt} onChange={(event) => setReviewDueAt(event.target.value)} />
+          </label>
+          <label className={styles.checkboxLabel}>
+            <input type="checkbox" checked={isPinned} onChange={(event) => setIsPinned(event.target.checked)} />
+            Pin article
+          </label>
         </div>
         
         <div className={styles.editorArea}>
-          <Editor onChange={handleEditorChange} />
+          <Editor key={existingArticle?.id ?? 'new'} initialData={editorData as OutputData} onChange={handleEditorChange} />
         </div>
       </div>
     </div>
+  );
+}
+
+export default function WikiEditPage() {
+  return (
+    <Suspense fallback={<div className={styles.container}>Loading editor...</div>}>
+      <WikiEditPageContent />
+    </Suspense>
   );
 }

@@ -45,7 +45,7 @@ export default async function TopicPage({ params }: { params: Promise<{ id: stri
   const { id } = await params;
   
   return (
-    <div className={styles.container}>
+    <div className={styles.container} data-topic-id={id}>
       <Link href="/forum" className={styles.backLink}>
         <span>←</span> Back to Forum
       </Link>

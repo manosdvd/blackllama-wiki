@@ -1,6 +1,14 @@
 import { promises as fs } from 'fs';
 import path from 'path';
 
+interface OfflineTickerItem {
+  id: string;
+  title: string;
+  url: string;
+  category: string;
+  enabled: boolean;
+}
+
 export async function getOfflineTickerItems() {
   try {
     const jsonPath = path.join(process.cwd(), 'tickerFeeds.json');
@@ -8,8 +16,8 @@ export async function getOfflineTickerItems() {
     const data = JSON.parse(fileContents);
     
     // Filter to enabled items
-    const enabledItems = (data.offlineTicker || []).filter((item: any) => item.enabled);
-    return enabledItems.map((item: any) => ({
+    const enabledItems = ((data.offlineTicker || []) as OfflineTickerItem[]).filter((item) => item.enabled);
+    return enabledItems.map((item) => ({
       id: item.id,
       title: item.title,
       url: item.url,

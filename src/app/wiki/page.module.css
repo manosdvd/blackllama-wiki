@@ -52,6 +52,47 @@
   gap: 3rem;
 }
 
+.searchPanel {
+  display: grid;
+  grid-template-columns: 1fr minmax(180px, 280px);
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.searchBox {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: rgba(28, 25, 23, 0.86);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  padding: 0 1rem;
+  color: var(--lantern-gold);
+}
+
+.searchBox input,
+.searchPanel select {
+  width: 100%;
+  min-height: 48px;
+  background: transparent;
+  border: 0;
+  color: var(--canvas-tan);
+  font: inherit;
+}
+
+.searchPanel select {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(28, 25, 23, 0.86);
+  border-radius: 6px;
+  padding: 0 1rem;
+}
+
+.searchBox input:focus,
+.searchPanel select:focus {
+  outline: 2px solid rgba(234, 179, 8, 0.35);
+  outline-offset: 2px;
+}
+
 @media (max-width: 900px) {
   .layout {
     grid-template-columns: 1fr;
@@ -90,12 +131,21 @@
   color: inherit;
   transition: all 0.2s;
   box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
 }
 
 .categoryCard:hover {
   transform: translateY(-4px);
   border-color: var(--pine-green);
   box-shadow: 0 8px 12px rgba(0,0,0,0.4);
+}
+
+.categoryCardActive {
+  border-color: var(--lantern-gold);
+  background: rgba(234, 179, 8, 0.08);
 }
 
 .catIconWrapper {
@@ -155,6 +205,13 @@
   font-size: 1.1rem;
 }
 
+.articleSummary {
+  color: rgba(245, 245, 244, 0.76);
+  font-size: 0.92rem;
+  line-height: 1.45;
+  margin: 0 0 0.75rem;
+}
+
 .articleDetails {
   display: flex;
   align-items: center;
@@ -179,4 +236,38 @@
 .articleDate {
   color: var(--stone-grey);
   opacity: 0.7;
+}
+
+.emptyState,
+.errorState {
+  border: 1px dashed rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  padding: 1.5rem;
+  color: rgba(245, 245, 244, 0.75);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.errorState {
+  border-color: rgba(153, 27, 27, 0.45);
+  color: #fecaca;
+}
+
+@media (max-width: 700px) {
+  .searchPanel {
+    grid-template-columns: 1fr;
+  }
+
+  .header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .articleDetails {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
 }

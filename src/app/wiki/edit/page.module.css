@@ -21,6 +21,11 @@
   font-size: 2rem;
 }
 
+.subtleMeta {
+  color: rgba(245, 245, 244, 0.65);
+  margin-top: 0.35rem;
+}
+
 .actions {
   display: flex;
   gap: 1rem;
@@ -33,6 +38,13 @@
   cursor: pointer;
   transition: all 0.2s;
   border: none;
+}
+
+.saveBtn:disabled,
+.publishBtn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  transform: none;
 }
 
 .saveBtn {
@@ -68,11 +80,13 @@
   padding: 1.5rem;
   background-color: rgba(0,0,0,0.2);
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr minmax(160px, 220px) minmax(220px, 280px);
   gap: 1rem;
 }
 
-.titleInput {
+.titleInput,
+.slugInput {
   flex: 1;
   background: var(--charcoal-dark);
   border: 1px solid var(--stone-grey);
@@ -83,7 +97,8 @@
   font-family: var(--font-atkinson), sans-serif;
 }
 
-.titleInput:focus {
+.titleInput:focus,
+.slugInput:focus {
   outline: none;
   border-color: var(--pine-green-light);
 }
@@ -101,6 +116,75 @@
 .categorySelect:focus {
   outline: none;
   border-color: var(--pine-green-light);
+}
+
+.secondaryMetadata {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 0.8fr 0.7fr;
+  gap: 1rem;
+  padding: 1.5rem;
+  background: rgba(12, 10, 9, 0.36);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.secondaryMetadata label {
+  color: rgba(245, 245, 244, 0.78);
+  display: flex;
+  flex-direction: column;
+  font-size: 0.86rem;
+  font-weight: 700;
+  gap: 0.45rem;
+  text-transform: uppercase;
+}
+
+.secondaryMetadata input,
+.secondaryMetadata select,
+.secondaryMetadata textarea {
+  background: var(--charcoal-dark);
+  border: 1px solid var(--stone-grey);
+  border-radius: 4px;
+  color: var(--canvas-tan);
+  font: inherit;
+  padding: 0.72rem 0.85rem;
+  text-transform: none;
+}
+
+.checkboxLabel {
+  align-self: end;
+  flex-direction: row !important;
+  min-height: 44px;
+}
+
+.checkboxLabel input {
+  width: 18px;
+}
+
+.successMessage,
+.errorMessage,
+.noticePanel {
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  padding: 1rem;
+}
+
+.successMessage {
+  background: rgba(6, 78, 59, 0.36);
+  border: 1px solid rgba(16, 185, 129, 0.28);
+  color: #bbf7d0;
+}
+
+.errorMessage,
+.noticePanel {
+  background: rgba(153, 27, 27, 0.16);
+  border: 1px solid rgba(248, 113, 113, 0.28);
+  color: #fecaca;
+}
+
+.secondaryLink {
+  color: var(--lantern-gold);
+  display: inline-flex;
+  font-weight: 700;
+  margin-top: 1rem;
 }
 
 .editorArea {
@@ -121,4 +205,21 @@
 /* Make sure EditorJS tools are styled correctly inside our area */
 .editorArea :global(.codex-editor) {
   /* This targets the internal editor js container */
+}
+
+@media (max-width: 860px) {
+  .header,
+  .actions {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .metadataForm,
+  .secondaryMetadata {
+    grid-template-columns: 1fr;
+  }
+
+  .editorArea {
+    padding: 1rem;
+  }
 }

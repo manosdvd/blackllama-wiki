@@ -2,89 +2,224 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // ==========================================
-    // HELPER FUNCTIONS
-    // ==========================================
-
-    function isAuthenticated() {
+    function isSignedIn() {
       return request.auth != null;
     }
 
-    function isModerator() {
-      // Assuming admins assign a custom claim 'moderator'
-      return isAuthenticated() && request.auth.token.moderator == true;
+    function isSelf(uid) {
+      return isSignedIn() && request.auth.uid == uid;
     }
 
-    function isAuthor(docData) {
-      return isAuthenticated() && request.auth.uid == docData.authorId;
+    function hasUserDoc() {
+      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid));
     }
 
-    // ==========================================
-    // FORUM TOPICS (Zero-DM Enforced: All public reads)
-    // ==========================================
+    function userData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isHealthyAccount() {
+      return hasUserDoc()
+        && userData().accountStatus in ['pending', 'active'];
+    }
+
+    function isAdmin() {
+      return isSignedIn()
+        && (
+          request.auth.token.admin == true
+          || (hasUserDoc() && userData().isAdmin == true)
+        );
+    }
+
+    function hasPermission(permission) {
+      return isAdmin()
+        || (
+          isHealthyAccount()
+          && userData().adminPermissions is list
+          && userData().adminPermissions.hasAny([permission])
+        );
+    }
+
+    function portalMode() {
+      return hasUserDoc() ? userData().portalMode : 'guest';
+    }
+
+    function canReadVisibility(visibility) {
+      return visibility == 'public'
+        || (
+          isHealthyAccount()
+          && (
+            isAdmin()
+            || (visibility == 'candidate' && portalMode() in ['candidate', 'onboarding', 'staff', 'alumni', 'admin'])
+            || (visibility == 'onboarding' && portalMode() in ['onboarding', 'staff', 'admin'])
+            || (visibility == 'staff' && portalMode() in ['staff', 'admin'])
+            || (visibility == 'alumni' && portalMode() in ['staff', 'alumni', 'admin'])
+            || (visibility == 'admin_only' && isAdmin())
+            || (visibility == 'safety_sensitive' && (hasPermission('canManageAlerts') || hasPermission('canPublishWiki')))
+          )
+        );
+    }
+
+    function canEditWiki(resourceData) {
+      return hasPermission('canEditWiki')
+        || hasPermission('canPublishWiki')
+        || (
+          hasPermission('canDraftWiki')
+          && resourceData.createdByUid == request.auth.uid
+          && request.resource.data.status in ['draft', 'in_review']
+        );
+    }
+
+    match /users/{uid} {
+      allow read: if isSelf(uid) || hasPermission('canManageUsers') || hasPermission('canViewAuditLog');
+      allow create: if isSelf(uid) || hasPermission('canManageUsers');
+      allow update: if hasPermission('canManageUsers')
+        || (
+          isSelf(uid)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'displayName',
+            'preferredName',
+            'phone',
+            'photoURL',
+            'updatedAt',
+            'lastLoginAt'
+          ])
+        );
+      allow delete: if false;
+    }
+
+    match /contentItems/{contentId} {
+      allow read: if (
+          resource.data.status == 'published'
+          && canReadVisibility(resource.data.visibility)
+        )
+        || (
+          isHealthyAccount()
+          && (
+            resource.data.createdByUid == request.auth.uid
+            || hasPermission('canEditWiki')
+            || hasPermission('canPublishWiki')
+          )
+        );
+
+      allow create: if isHealthyAccount()
+        && (hasPermission('canDraftWiki') || hasPermission('canEditWiki') || hasPermission('canPublishWiki'))
+        && request.resource.data.createdByUid == request.auth.uid;
+
+      allow update: if isHealthyAccount()
+        && canEditWiki(resource.data)
+        && (
+          request.resource.data.status != 'published'
+          || hasPermission('canPublishWiki')
+        );
+
+      allow delete: if hasPermission('canArchiveWiki');
+
+      match /revisions/{revisionId} {
+        allow read: if get(/databases/$(database)/documents/contentItems/$(contentId)).data.status == 'published'
+          && canReadVisibility(get(/databases/$(database)/documents/contentItems/$(contentId)).data.visibility)
+          || hasPermission('canEditWiki')
+          || hasPermission('canPublishWiki');
+        allow write: if false;
+      }
+    }
+
+    match /applications/{applicationId} {
+      allow create: if request.resource.data.status == 'submitted'
+        && request.resource.data.email is string
+        && request.resource.data.applicantName is string;
+      allow read: if hasPermission('canReviewApplications')
+        || (isSignedIn() && resource.data.uid == request.auth.uid);
+      allow update: if hasPermission('canReviewApplications');
+      allow delete: if false;
+    }
+
+    match /seasonMemberships/{membershipId} {
+      allow read: if hasPermission('canManageUsers')
+        || (isSignedIn() && resource.data.uid == request.auth.uid);
+      allow write: if hasPermission('canManageUsers');
+    }
+
+    match /userOnboarding/{onboardingId} {
+      allow read: if hasPermission('canManageOnboarding')
+        || (isSignedIn() && resource.data.uid == request.auth.uid);
+      allow create, update: if hasPermission('canManageOnboarding');
+      allow delete: if false;
+
+      match /taskStatus/{taskId} {
+        allow read: if hasPermission('canManageOnboarding')
+          || (isSignedIn() && resource.data.uid == request.auth.uid);
+        allow create, update: if hasPermission('canManageOnboarding')
+          || (
+            isSignedIn()
+            && request.resource.data.uid == request.auth.uid
+            && request.resource.data.status in ['not_started', 'in_progress', 'submitted']
+          );
+        allow delete: if false;
+      }
+    }
+
+    match /roleGrants/{grantId} {
+      allow read: if hasPermission('canManageRoles') || hasPermission('canViewAuditLog');
+      allow write: if false;
+    }
+
+    match /permissionPresets/{presetId} {
+      allow read: if isHealthyAccount();
+      allow write: if false;
+    }
+
+    match /auditLogs/{logId} {
+      allow read: if hasPermission('canViewAuditLog');
+      allow write: if false;
+    }
+
     match /forum_topics/{topicId} {
-      // ANY authenticated user can read topics (Public by default)
-      allow read: if isAuthenticated();
-
-      // Only authenticated users can create, and they must set themselves as author
-      allow create: if isAuthenticated() 
-                    && request.resource.data.authorId == request.auth.uid;
-
-      // Authors can update their topics (e.g. edit title), OR moderators can lock them
-      allow update: if isAuthor(resource.data) 
-                    || (isModerator() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isLocked']));
-
-      // Only moderators can delete topics entirely
-      allow delete: if isModerator();
+      allow read: if isHealthyAccount();
+      allow create: if isHealthyAccount()
+        && request.resource.data.authorId == request.auth.uid;
+      allow update: if (
+          isHealthyAccount()
+          && resource.data.authorId == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['title', 'content', 'updatedAt'])
+        )
+        || (
+          hasPermission('canModerateCommunity')
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isLocked', 'updatedAt'])
+        );
+      allow delete: if hasPermission('canModerateCommunity');
     }
 
-    // ==========================================
-    // FORUM POSTS
-    // ==========================================
     match /forum_posts/{postId} {
-      // ANY authenticated user can read posts (Public by default)
-      allow read: if isAuthenticated();
-
-      // Only authenticated users can reply, must be to an unlocked topic
-      allow create: if isAuthenticated() 
-                    && request.resource.data.authorId == request.auth.uid;
-
-      // Authors can update content, OR anyone can flag a post, OR mods can remove
-      allow update: if isAuthor(resource.data) 
-                    || (isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isFlagged', 'flagCount']))
-                    || isModerator();
-
-      // Only moderators can delete posts
-      allow delete: if isModerator();
+      allow read: if isHealthyAccount();
+      allow create: if isHealthyAccount()
+        && request.resource.data.authorId == request.auth.uid;
+      allow update: if (
+          isHealthyAccount()
+          && resource.data.authorId == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['content', 'updatedAt'])
+        )
+        || (
+          isHealthyAccount()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isFlagged', 'flagCount', 'updatedAt'])
+        )
+        || hasPermission('canModerateCommunity');
+      allow delete: if hasPermission('canModerateCommunity');
     }
 
-    // ==========================================
-    // MODERATION LOGS (Transparency)
-    // ==========================================
     match /moderation_logs/{logId} {
-      // Only moderators can read or write logs (Two-adult rule enforcement)
-      allow read, write: if isModerator();
+      allow read: if hasPermission('canModerateCommunity') || hasPermission('canViewAuditLog');
+      allow write: if false;
     }
 
-    // ==========================================
-    // WIKI (From previous phase)
-    // ==========================================
-    match /wiki_articles/{articleId} {
-      // All staff can read wiki
-      allow read: if isAuthenticated();
-      // Assume 'editor' or 'admin' claim for writing
-      allow write: if isAuthenticated() && (request.auth.token.admin == true || request.auth.token.editor == true);
-    }
-
-    // ==========================================
-    // TICKER
-    // ==========================================
     match /liveTicker/{itemId} {
-      // Ticker feeds are public reading
       allow read: if true;
-      // Writes are handled by the server using firebase-admin (which bypasses rules)
-      allow write: if false; 
+      allow write: if false;
+    }
+
+    match /alertsCache/{docId} {
+      allow read: if true;
+      allow write: if false;
     }
   }
 }

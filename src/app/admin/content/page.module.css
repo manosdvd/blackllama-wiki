@@ -1,0 +1,116 @@
+.container {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 3rem 1rem;
+}
+
+.pageHeader {
+  align-items: flex-start;
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.pageHeader h1 {
+  color: var(--campfire-amber);
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.pageHeader p {
+  color: rgba(245, 245, 244, 0.78);
+}
+
+.primaryButton {
+  background: var(--pine-green);
+  border-radius: 4px;
+  color: white;
+  font-weight: 700;
+  padding: 0.75rem 1rem;
+  white-space: nowrap;
+}
+
+.statGrid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  margin-bottom: 1.5rem;
+}
+
+.statCard {
+  background: rgba(30, 27, 24, 0.86);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.statCard strong {
+  color: var(--lantern-gold);
+  display: block;
+  font-size: 2rem;
+}
+
+.statCard span {
+  color: rgba(245, 245, 244, 0.72);
+  text-transform: capitalize;
+}
+
+.contentList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.contentRow {
+  align-items: center;
+  background: rgba(30, 27, 24, 0.86);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: var(--canvas-tan);
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr 150px 140px 130px;
+  padding: 1rem;
+}
+
+.contentRow:hover {
+  border-color: var(--lantern-gold);
+}
+
+.contentRow strong {
+  color: white;
+}
+
+.contentRow p {
+  color: rgba(245, 245, 244, 0.68);
+  font-size: 0.9rem;
+  line-height: 1.35;
+  margin-top: 0.25rem;
+}
+
+.statusBadge {
+  background: rgba(234, 179, 8, 0.1);
+  border: 1px solid rgba(234, 179, 8, 0.35);
+  border-radius: 999px;
+  color: var(--lantern-gold);
+  padding: 0.25rem 0.75rem;
+  text-align: center;
+}
+
+.errorMessage {
+  background: rgba(153, 27, 27, 0.18);
+  border: 1px solid rgba(248, 113, 113, 0.28);
+  border-radius: 8px;
+  color: #fecaca;
+  margin-bottom: 1rem;
+  padding: 1rem;
+}
+
+@media (max-width: 760px) {
+  .pageHeader,
+  .contentRow {
+    grid-template-columns: 1fr;
+    flex-direction: column;
+  }
+}

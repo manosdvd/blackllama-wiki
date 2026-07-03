@@ -24,6 +24,28 @@
   margin: 0 auto;
 }
 
+.progressWrap {
+  align-items: center;
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 1.5rem;
+}
+
+.progressBar {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  height: 12px;
+  overflow: hidden;
+  width: min(360px, 65vw);
+}
+
+.progressBar span {
+  background: var(--pine-green-light);
+  display: block;
+  height: 100%;
+}
+
 .checklistGrid {
   display: flex;
   flex-direction: column;
@@ -134,6 +156,28 @@
   background: #115e35;
 }
 
+.taskActions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+
+.inlineButton {
+  background: transparent;
+  border: 1px solid rgba(234, 179, 8, 0.5);
+  border-radius: 4px;
+  color: var(--lantern-gold);
+  cursor: pointer;
+  font-weight: 700;
+  padding: 0.5rem 1rem;
+}
+
+.inlineButton:hover {
+  background: rgba(234, 179, 8, 0.1);
+}
+
 .statusPending {
   color: var(--campfire-amber);
   font-weight: 500;
@@ -142,4 +186,44 @@
   background: rgba(217, 119, 6, 0.1);
   border-radius: 4px;
   border: 1px solid rgba(217, 119, 6, 0.2);
+}
+
+.successMessage,
+.errorMessage,
+.pendingPanel {
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  padding: 1rem;
+}
+
+.successMessage {
+  background: rgba(6, 78, 59, 0.36);
+  border: 1px solid rgba(16, 185, 129, 0.28);
+  color: #bbf7d0;
+}
+
+.errorMessage {
+  background: rgba(153, 27, 27, 0.18);
+  border: 1px solid rgba(248, 113, 113, 0.28);
+  color: #fecaca;
+}
+
+.pendingPanel {
+  background: rgba(217, 119, 6, 0.12);
+  border: 1px solid rgba(217, 119, 6, 0.28);
+  color: var(--canvas-tan);
+}
+
+@media (max-width: 740px) {
+  .taskList li,
+  .taskActions,
+  .sectionHeader,
+  .progressWrap {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .externalLink {
+    margin-left: 0;
+  }
 }
