@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { FieldValue } from 'firebase-admin/firestore';
+import { existsSync, readFileSync } from 'fs';
+import path from 'path';
 import { getAdminAuth, getAdminDb } from '@/lib/firebase/admin';
 
 export const runtime = 'nodejs';
@@ -36,9 +38,22 @@ interface LiveTickerItem {
 type TickerResponseItem = Omit<LiveTickerItem, 'timestamp'>;
 
 const TARGET_LOCATION = 'Camp Lawton, Mt Lemmon, Santa Catalina Mountains';
+const MAX_TICKER_ITEMS = 36;
+const MERIT_BADGES_PATH = path.join(process.cwd(), 'meritBadges.csv');
+
+const FALLBACK_LAWTON_BADGE_SUBJECTS = [
+  'American Indian Culture', 'Archery', 'Art', 'Basketry', 'Bird Study', 'Climbing',
+  'Environmental Science', 'Fish & Wildlife Management', 'Forestry', 'Geocaching',
+  'Insect Study', 'Leatherwork', 'Mammal Study', 'Nature', 'Orienteering', 'Photography',
+  'Plant Science', 'Pottery', 'Rifle Shooting', 'Soil & Water Conservation',
+  'Wilderness Survival', 'Wood Carving', 'Archaeology', 'Astronomy', 'Engineering',
+  'Exploration', 'First Aid', 'Game Design', 'Geology', 'Pioneering', 'Search and Rescue',
+  'Signs, Signals, and Codes', 'Space Exploration', 'Surveying',
+];
 
 // Stripped of https://, www., and extra whitespace to reduce input tokens significantly.
 const COMPRESSED_FEEDS = [
+  'aztrail.org/feed',
   'onscouting.org/feed',
   'scoutlife.org/feed',
   'scoutingwire.org/feed',
@@ -57,20 +72,51 @@ const COMPRESSED_FEEDS = [
   'apod.nasa.gov/apod.rss',
   'earthsky.org/feed',
   'smithsonianmag.com/rss/science-nature',
-  'archives.gov/global-pages/rss/news.xml'
+  'archives.gov/global-pages/rss/news.xml',
+  'tucsonbirdalliance.blogspot.com/feeds/posts/default',
 ].join(',');
 
 const COMPRESSED_QUERIES = [
-  "AZ flag status('half staff')",
-  "'Scouting America'",
-  "'Catalina Council'",
-  "'Mt. Lemmon'",
-  'Summerhaven',
+  'Arizona Trail Association latest closures restrictions events',
+  'Arizona Trail Association Santa Catalina Summerhaven Marshall Gulch',
+  '"Scouting America" latest',
+  '"Catalina Council" latest decision resolved merger',
+  '"Mt. Lemmon" OR Summerhaven current trail road nature',
+  'Santa Catalina Mountains flora fauna sky island fact',
+  'Tucson Bird Alliance field trips rare bird alert',
+  'Arizona-Sonora Desert Museum events Sonoran Desert nature',
+  'Cooper Center Tucson wildlife camera outdoor education',
+  'Southern Arizona Rescue Association training safety',
+  'University of Arizona SkyCenter astronomy Mt Lemmon',
+  'Pepper Steps YouTube camping bushcraft latest',
+  'wholesome outdoor YouTube camping bushcraft tip latest',
   'Dictionary.com Word of the Day',
   'Riddles.com Riddle of the Day(1 Q&A)',
   'This day in Scouting History',
   'NationalDayCalendar'
 ].join(',');
+
+const PRIORITY_SOURCES = [
+  'aztrail.org',
+  'tucsonbirds.org',
+  'tbc.tucsonbirds.org',
+  'desertmuseum.org',
+  'coopercenter.arizona.edu',
+  'soazrescue.org',
+  'skycenter.arizona.edu',
+  'azgfd.com',
+  'fs.usda.gov/coronado',
+  'youtube.com/@PepperSteps',
+].join(',');
+
+const LOCAL_ORG_TOPICS = [
+  'Tucson Bird Alliance: Bird Study, Nature, habitat restoration, community science',
+  'Arizona-Sonora Desert Museum: mammals, reptiles, insects, plants, geology, desert ecology',
+  'Cooper Center for Environmental Learning: Sonoran Desert outdoor education and wildlife cameras',
+  'Southern Arizona Rescue Association: Search and Rescue, first aid, navigation, wilderness safety',
+  'University of Arizona SkyCenter: Astronomy and Space Exploration',
+  'Arizona Geological Society / UA Geosciences: Geology, mining, rocks, landforms',
+].join(' | ');
 
 const MINIFIED_JOKES = '["What do you call a funny mountain? Hill-arious.","Why don\'t eggs tell jokes? They might crack up!","Did you hear about the circus fire? It was in tents!"]';
 
@@ -124,6 +170,73 @@ function normalizeTickerCategory(value: unknown) {
     .toUpperCase();
 }
 
+function wait(ms: number) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+function isRetriableGeminiError(error: unknown) {
+  const message = String(error);
+  return /\b(429|500|502|503|504)\b/.test(message)
+    || /high demand|temporarily unavailable|rate limit|deadline|timeout/i.test(message);
+}
+
+function parseCsvLine(line: string) {
+  const values: string[] = [];
+  let current = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i += 1) {
+    const char = line[i];
+    const next = line[i + 1];
+
+    if (char === '"' && inQuotes && next === '"') {
+      current += '"';
+      i += 1;
+      continue;
+    }
+
+    if (char === '"') {
+      inQuotes = !inQuotes;
+      continue;
+    }
+
+    if (char === ',' && !inQuotes) {
+      values.push(current.trim());
+      current = '';
+      continue;
+    }
+
+    current += char;
+  }
+
+  values.push(current.trim());
+  return values;
+}
+
+function lawtonBadgeSubjects() {
+  if (!existsSync(MERIT_BADGES_PATH)) return FALLBACK_LAWTON_BADGE_SUBJECTS.join(', ');
+
+  const rows = readFileSync(MERIT_BADGES_PATH, 'utf8')
+    .split(/\r?\n/)
+    .map((line) => parseCsvLine(line))
+    .filter((row) => row.length > 2 && ['S', 'A'].includes(row[0]));
+
+  const badges = rows
+    .map((row) => row[1])
+    .filter(Boolean)
+    .map((badge) => {
+      if (badge === 'Fish & Wildlife Mgt.') return 'Fish & Wildlife Management';
+      if (badge === 'Soil & Water Cons.') return 'Soil & Water Conservation';
+      if (badge === 'Model Design & Bldg.') return 'Model Design and Building';
+      if (badge === 'Signs, Signals, Codes') return 'Signs, Signals, and Codes';
+      return badge;
+    });
+
+  return (badges.length ? badges : FALLBACK_LAWTON_BADGE_SUBJECTS).join(', ');
+}
+
 function normalizeGeneratedTicker(value: unknown): NewsTicker {
   if (!value || typeof value !== 'object') {
     throw new Error('Gemini returned a non-object ticker payload.');
@@ -149,7 +262,7 @@ function normalizeGeneratedTicker(value: unknown): NewsTicker {
       };
     })
     .filter((item): item is NewsTickerItem => item !== null)
-    .slice(0, 12);
+    .slice(0, MAX_TICKER_ITEMS);
 
   if (items.length === 0) {
     throw new Error('Gemini returned ticker JSON without any usable items.');
@@ -179,19 +292,32 @@ function tickerResponseItem(item: LiveTickerItem): TickerResponseItem {
 }
 
 function buildTickerPrompt() {
+  const today = getPhoenixDateStamp();
+
   return `
 Loc:${TARGET_LOCATION}
-Time Anchor:${getPhoenixDateStamp()}
-Window:Last 24-48h. If undated, verify ongoing relevance.
+Today:${today} America/Phoenix. Treat TODAY as ${today}; treat yesterday as stale unless the item is still active today.
+Currentness Rule: Before including any news/event/status item, verify it is relevant as of TODAY. If a story was resolved before today, omit the old speculative version and only include the resolved/current outcome when useful. Do not include flag half-staff, road, closure, fire, weather, council, merger, or event items unless the source says they are active/true today or scheduled for the future.
+Specific stale guardrails: Do not say "possible Catalina Council merger" if the latest source says the question was resolved on May 1. Do not include yesterday's half-staff flag notice unless flags are still ordered half-staff today.
+Window:Prefer last 24-72h for news. Future scheduled events are allowed. Evergreen facts/tips may be undated if locally relevant and clearly not a news claim.
 Feeds:${COMPRESSED_FEEDS}
 Queries:${COMPRESSED_QUERIES}
+PrioritySources:${PRIORITY_SOURCES}
+LocalOrgs:${LOCAL_ORG_TOPICS}
+LawtonBestMeritBadges(S/A tiers from meritBadges.csv):${lawtonBadgeSubjects()}
 JokePool:${MINIFIED_JOKES}
 Return only one valid JSON object with this exact shape:
 {"ticker_metadata":{"generated_at":"ISO string","target_location":"string","refresh_rate_seconds":3600},"items":[{"category":"UPPERCASE LABEL","headline":"short ticker text","source":"publication/source name","link":"https://... or N/A"}]}
 Rules:
-- Return 6 to 10 items.
+- Return 24 to 36 items.
+- Include at least 2 Arizona Trail Association items when current ATA updates/events/closures exist today.
+- Include 8-12 verified current/local updates: Arizona Trail Association, Mt. Lemmon/Summerhaven, Coronado NF, Tucson Bird Alliance, Desert Museum, Cooper Center, SkyCenter, SAR/SARA, local trails/weather/access.
+- Include 6-10 evergreen Santa Catalina Mountains/Sonoran Desert flora-fauna/geology/astronomy facts. Label category FACT, NATURE, BIRDING, GEOLOGY, SKY ISLAND, or ASTRONOMY.
+- Include 6-10 Scout-friendly tips or camping hacks tied to Lawton S/A merit badges. Label category CAMPCRAFT, MERIT BADGE, OUTDOOR SKILLS, NATURE, STEM, or SAFETY.
+- Include 2-4 wholesome outdoor/bushcraft creator updates or tips if fresh and family-safe; prefer Pepper Steps if a current relevant result exists.
 - Include exactly one item from JokePool with source "Camp Humor" and link "N/A".
-- Prefer fresh, currently relevant items for the last 24-48 hours.
+- For any news item, include a source and link that support the item's current status as of ${today}.
+- Never include politics, outrage, tragedy, graphic crime, culture-war framing, partisan budget fights, or stale resolved controversies unless there is direct camp safety relevance today.
 - Keep every headline under 140 characters.
 `.trim();
 }
@@ -213,14 +339,30 @@ async function generateTicker(apiKey: string): Promise<NewsTicker> {
     // Keep the grounding tool, then validate and normalize the plain-text JSON ourselves.
     tools: [{ googleSearch: {} }] as never,
     generationConfig: {
-      temperature: 0.2
+      temperature: 0.2,
+      maxOutputTokens: 8192,
     } as never
   });
 
-  const result = await model.generateContent(buildTickerPrompt());
-  const responseText = result.response.text().trim();
-  const parsed = JSON.parse(extractJsonObject(responseText)) as unknown;
-  return normalizeGeneratedTicker(parsed);
+  const prompt = buildTickerPrompt();
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      const result = await model.generateContent(prompt);
+      const responseText = result.response.text().trim();
+      const parsed = JSON.parse(extractJsonObject(responseText)) as unknown;
+      return normalizeGeneratedTicker(parsed);
+    } catch (error) {
+      lastError = error;
+      if (attempt === 3 || !isRetriableGeminiError(error)) break;
+
+      console.warn(`Gemini ticker generation failed on attempt ${attempt}; retrying.`, error);
+      await wait(1000 * attempt * attempt);
+    }
+  }
+
+  throw lastError;
 }
 
 export async function GET(req: Request) {
