@@ -16,6 +16,10 @@ export default function EmbersBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
+    // 1. Accessibility: check if user prefers reduced motion
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReducedMotion) return;
+
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -23,6 +27,7 @@ export default function EmbersBackground() {
 
     const particles: Particle[] = [];
     let animationFrameId: number;
+    let isActive = true;
 
     const resize = () => {
       canvas.width = window.innerWidth;
@@ -53,6 +58,8 @@ export default function EmbersBackground() {
     }
 
     const draw = () => {
+      if (!isActive) return;
+
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
       for (let i = 0; i < particles.length; i++) {
@@ -86,10 +93,25 @@ export default function EmbersBackground() {
       animationFrameId = requestAnimationFrame(draw);
     };
 
-    draw();
+    // 2. Performance: Pause rendering when tab is hidden
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        isActive = false;
+        cancelAnimationFrame(animationFrameId);
+      } else {
+        if (!isActive) {
+          isActive = true;
+          animationFrameId = requestAnimationFrame(draw);
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    animationFrameId = requestAnimationFrame(draw);
 
     return () => {
       window.removeEventListener('resize', resize);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       cancelAnimationFrame(animationFrameId);
     };
   }, []);

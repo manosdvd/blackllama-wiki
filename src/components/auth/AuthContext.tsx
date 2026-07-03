@@ -1,9 +1,10 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { getAuth, onAuthStateChanged, User, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
+import { getAuth, onAuthStateChanged, User, signInWithPopup, GoogleAuthProvider, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { app, db } from '@/lib/firebase/client';
+import AuthModal from './AuthModal';
 import { canAccessVisibility as canAccessVisibilityForProfile, hasPermission as profileHasPermission } from '@/lib/auth/permissions';
 import type { ContentVisibility } from '@/types/content';
 import type { AdminPermission } from '@/types/permissions';
@@ -23,6 +24,11 @@ interface AuthContextType {
   canAccessVisibility: (visibility: ContentVisibility) => boolean;
   isAdmin: boolean;
   isModerator: boolean;
+  showAuthModal: boolean;
+  openAuthModal: () => void;
+  closeAuthModal: () => void;
+  loginWithEmail: (email: string, password: string) => Promise<void>;
+  registerWithEmail: (email: string, password: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -39,6 +45,11 @@ const AuthContext = createContext<AuthContextType>({
   canAccessVisibility: (visibility) => visibility === 'public',
   isAdmin: false,
   isModerator: false,
+  showAuthModal: false,
+  openAuthModal: () => {},
+  closeAuthModal: () => {},
+  loginWithEmail: async () => {},
+  registerWithEmail: async () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -49,6 +60,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isModerator, setIsModerator] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+
+  const openAuthModal = () => setShowAuthModal(true);
+  const closeAuthModal = () => setShowAuthModal(false);
+
+  const loginWithEmail = async (email: string, password: string) => {
+    const auth = getAuth(app);
+    await signInWithEmailAndPassword(auth, email, password);
+  };
+
+  const registerWithEmail = async (email: string, password: string) => {
+    const auth = getAuth(app);
+    await createUserWithEmailAndPassword(auth, email, password);
+  };
 
   const refreshProfileForUser = async (targetUser: User | null) => {
     if (!targetUser) {
@@ -145,9 +170,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         canAccessVisibility,
         isAdmin: isAdmin || !!profile?.isAdmin,
         isModerator,
+        showAuthModal,
+        openAuthModal,
+        closeAuthModal,
+        loginWithEmail,
+        registerWithEmail,
       }}
     >
       {children}
+      {showAuthModal && <AuthModal />}
     </AuthContext.Provider>
   );
 }

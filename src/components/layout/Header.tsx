@@ -1,11 +1,11 @@
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Menu } from 'lucide-react';
 import AlertsHUD from './AlertsHUD';
 import Ticker from './Ticker';
 import DyslexiaToggle from './DyslexiaToggle';
 import AuthButton from './AuthButton';
+import MobileMenu from './MobileMenu';
 import { getOfflineTickerItems } from '@/lib/tickerUtils';
 import styles from './Header.module.css';
 
@@ -44,9 +44,7 @@ export default async function Header() {
         <div className={styles.actions}>
           <DyslexiaToggle />
           <AuthButton />
-          <button className={`${styles.iconBtn} ${styles.mobileMenuBtn}`} aria-label="Menu">
-            <Menu size={24} />
-          </button>
+          <MobileMenu />
         </div>
       </div>
 

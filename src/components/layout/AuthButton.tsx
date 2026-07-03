@@ -6,7 +6,7 @@ import { useAuth } from '@/components/auth/AuthContext';
 import styles from './Header.module.css';
 
 export default function AuthButton() {
-  const { user, profile, loading, login, logout } = useAuth();
+  const { user, profile, loading, openAuthModal, logout } = useAuth();
 
   if (loading) {
     return (
@@ -35,7 +35,7 @@ export default function AuthButton() {
   return (
     <button 
       className={styles.iconBtn} 
-      onClick={login} 
+      onClick={openAuthModal} 
       title="Sign In"
       aria-label="Sign In"
     >

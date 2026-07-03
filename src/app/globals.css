@@ -31,6 +31,7 @@
   --stone-grey: #a8a29e;
   --charcoal-dark: #0c0a09;
   --charcoal-lighter: #1c1917;
+  --charcoal-darker: #080707;
 
   /* Theme Defaults (Dark Mode Primary) */
   --background: var(--charcoal-base);
