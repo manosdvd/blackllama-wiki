@@ -1,6 +1,12 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
-import { getFirestore, enableMultiTabIndexedDbPersistence } from "firebase/firestore";
+import {
+  getFirestore,
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+  type Firestore,
+} from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -15,17 +21,24 @@ const firebaseConfig = {
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
 const auth = getAuth(app);
-const db = getFirestore(app);
 
-// Enable offline persistence for Firestore (only runs on the client)
-if (typeof window !== "undefined") {
-  enableMultiTabIndexedDbPersistence(db).catch((err) => {
-    if (err.code == "failed-precondition") {
-      console.warn("Multiple tabs open, offline persistence can only be enabled in one tab at a time.");
-    } else if (err.code == "unimplemented") {
-      console.warn("The current browser does not support all of the features required to enable offline persistence.");
+function createFirestore(): Firestore {
+  if (typeof window === "undefined") return getFirestore(app);
+
+  try {
+    return initializeFirestore(app, {
+      localCache: persistentLocalCache({
+        tabManager: persistentMultipleTabManager(),
+      }),
+    });
+  } catch (err) {
+    if (err instanceof Error && !err.message.includes("already been called")) {
+      console.warn("Firestore persistent cache unavailable; falling back to default cache.", err);
     }
-  });
+    return getFirestore(app);
+  }
 }
+
+const db = createFirestore();
 
 export { app, auth, db };

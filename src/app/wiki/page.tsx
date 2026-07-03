@@ -14,6 +14,9 @@ export default function WikiIndexPage() {
   const [query, setQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [loadingArticles, setLoadingArticles] = useState(true);
+  const categoryById = useMemo(() => new Map(DEFAULT_WIKI_CATEGORIES.map((category) => [category.id, category])), []);
+
+  const categoryLabel = (id: string) => categoryById.get(id)?.name ?? id;
 
   useEffect(() => {
     if (loading) return;
@@ -45,14 +48,19 @@ export default function WikiIndexPage() {
 
   const categoryCounts = useMemo(() => {
     const counts = new Map<string, number>();
-    for (const article of articles) counts.set(article.categoryId, (counts.get(article.categoryId) ?? 0) + 1);
+    for (const article of articles) {
+      counts.set(article.categoryId, (counts.get(article.categoryId) ?? 0) + 1);
+      const parentId = categoryById.get(article.categoryId)?.parentId;
+      if (parentId) counts.set(parentId, (counts.get(parentId) ?? 0) + 1);
+    }
     return counts;
-  }, [articles]);
+  }, [articles, categoryById]);
 
   const filteredArticles = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
     return articles.filter((article) => {
-      const matchesCategory = categoryFilter === 'all' || article.categoryId === categoryFilter;
+      const parentId = categoryById.get(article.categoryId)?.parentId;
+      const matchesCategory = categoryFilter === 'all' || article.categoryId === categoryFilter || parentId === categoryFilter;
       const matchesQuery =
         !normalizedQuery ||
         [article.title, article.summary, article.plainTextSearch, article.tagIds.join(' ')]
@@ -61,7 +69,7 @@ export default function WikiIndexPage() {
           .includes(normalizedQuery);
       return matchesCategory && matchesQuery;
     });
-  }, [articles, categoryFilter, query]);
+  }, [articles, categoryById, categoryFilter, query]);
 
   const iconForCategory = (id: string) => {
     if (id.includes('emergency')) return <ShieldAlert className={styles.catIcon} />;
@@ -120,6 +128,7 @@ export default function WikiIndexPage() {
                 <div className={styles.catIconWrapper}>{iconForCategory(cat.id)}</div>
                 <div className={styles.catInfo}>
                   <h3>{cat.name}</h3>
+                  {cat.parentId && <span className={styles.catParent}>{categoryLabel(cat.parentId)}</span>}
                   <span className={styles.catCount}>{categoryCounts.get(cat.id) ?? 0} articles</span>
                 </div>
               </button>
@@ -147,7 +156,7 @@ export default function WikiIndexPage() {
                   <h3>{article.title}</h3>
                   <p className={styles.articleSummary}>{article.summary}</p>
                   <div className={styles.articleDetails}>
-                    <span className={styles.articleBadge}>{article.categoryId}</span>
+                    <span className={styles.articleBadge}>{categoryLabel(article.categoryId)}</span>
                     <span className={styles.articleAuthor}>{article.visibility}</span>
                     {article.isPinned && <span className={styles.articleDate}>Pinned</span>}
                   </div>

@@ -16,6 +16,9 @@ const Editor = dynamic(() => import('@/components/wiki/Editor'), {
   loading: () => <div className={styles.loadingEditor}>Loading Editor...</div>
 });
 
+const SELECTABLE_WIKI_CATEGORIES = DEFAULT_WIKI_CATEGORIES.filter((category) => !category.isSuperCategory);
+const DEFAULT_CATEGORY_ID = SELECTABLE_WIKI_CATEGORIES[0]?.id ?? DEFAULT_WIKI_CATEGORIES[0].id;
+
 function WikiEditPageContent() {
   const searchParams = useSearchParams();
   const articleId = searchParams.get('id') ?? undefined;
@@ -23,7 +26,7 @@ function WikiEditPageContent() {
   const [title, setTitle] = useState('');
   const [slug, setSlug] = useState('');
   const [summary, setSummary] = useState('');
-  const [categoryId, setCategoryId] = useState(DEFAULT_WIKI_CATEGORIES[0].id);
+  const [categoryId, setCategoryId] = useState(DEFAULT_CATEGORY_ID);
   const [visibility, setVisibility] = useState<ContentVisibility>('staff');
   const [status, setStatus] = useState<ContentStatus>('draft');
   const [tags, setTags] = useState('');
@@ -206,7 +209,11 @@ function WikiEditPageContent() {
           />
           <select className={styles.categorySelect} value={categoryId} onChange={(event) => setCategoryId(event.target.value)}>
             {DEFAULT_WIKI_CATEGORIES.map((category) => (
-              <option key={category.id} value={category.id}>{category.name}</option>
+              <option key={category.id} value={category.id} disabled={category.isSuperCategory}>
+                {category.parentId
+                  ? `${DEFAULT_WIKI_CATEGORIES.find((parent) => parent.id === category.parentId)?.name ?? category.parentId} / ${category.name}`
+                  : category.name}
+              </option>
             ))}
           </select>
         </div>

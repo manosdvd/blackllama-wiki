@@ -1,8 +1,7 @@
 'use client';
 
 import React, { useMemo, useEffect, useState, useRef } from 'react';
-import Link from 'next/link';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import { X, ExternalLink } from 'lucide-react';
 import styles from './Ticker.module.css';
@@ -13,10 +12,25 @@ interface TickerItem {
   url: string;
   category: string;
   source?: string;
+  position?: number;
 }
 
 interface TickerProps {
   items: TickerItem[];
+}
+
+function TickerLink({ url, className, children }: { url: string; className: string; children: React.ReactNode }) {
+  const isExternal = /^https?:\/\//i.test(url);
+  return (
+    <a
+      href={url}
+      className={className}
+      target={isExternal ? '_blank' : undefined}
+      rel={isExternal ? 'noopener noreferrer' : undefined}
+    >
+      {children}
+    </a>
+  );
 }
 
 export default function Ticker({ items }: TickerProps) {
@@ -39,7 +53,8 @@ export default function Ticker({ items }: TickerProps) {
   // Fetch live items from Firestore
   useEffect(() => {
     if (!db) return;
-    const unsubscribe = onSnapshot(collection(db, 'liveTicker'), (snapshot) => {
+    const liveTickerQuery = query(collection(db, 'liveTicker'), orderBy('position', 'asc'));
+    const unsubscribe = onSnapshot(liveTickerQuery, (snapshot) => {
       const live: TickerItem[] = [];
       snapshot.forEach((doc) => {
         live.push(doc.data() as TickerItem);
@@ -164,6 +179,8 @@ export default function Ticker({ items }: TickerProps) {
   const prevMobile = () => setMobileIndex((p) => (p - 1 + combinedItems.length) % combinedItems.length);
 
   if (combinedItems.length === 0) return null;
+  const safeMobileIndex = Math.min(mobileIndex, combinedItems.length - 1);
+  const mobileItem = combinedItems[safeMobileIndex];
 
   return (
     <div className={styles.tickerContainer}>
@@ -197,9 +214,9 @@ export default function Ticker({ items }: TickerProps) {
               [{item.source || 'Camp Lawton'}]
             </span>
             {item.url ? (
-              <Link href={item.url} className={styles.tickerLink}>
+              <TickerLink url={item.url} className={styles.tickerLink}>
                 {item.title}
-              </Link>
+              </TickerLink>
             ) : (
               <span className={styles.tickerText}>{item.title}</span>
             )}
@@ -219,20 +236,20 @@ export default function Ticker({ items }: TickerProps) {
         {combinedItems.length > 0 && (
           <div className={`${styles.tickerItem} ${styles.mobileItem}`} ref={mobileContainerRef}>
             <div 
-              key={mobileIndex} 
+              key={safeMobileIndex} 
               ref={mobileTextRef}
               className={`${styles.mobileItemInner} ${mobileShouldScroll ? styles.mobileMarquee : ''}`}
               style={{ '--scroll-amount': `-${mobileScrollAmount}px` } as React.CSSProperties}
             >
-              <span className={styles.tickerCategory} style={{ color: getCategoryColor(combinedItems[mobileIndex].category) }}>
-                [{combinedItems[mobileIndex].source || 'Camp Lawton'}]
+              <span className={styles.tickerCategory} style={{ color: getCategoryColor(mobileItem.category) }}>
+                [{mobileItem.source || 'Camp Lawton'}]
               </span>
-              {combinedItems[mobileIndex].url ? (
-                <Link href={combinedItems[mobileIndex].url} className={styles.tickerLink}>
-                  {combinedItems[mobileIndex].title}
-                </Link>
+              {mobileItem.url ? (
+                <TickerLink url={mobileItem.url} className={styles.tickerLink}>
+                  {mobileItem.title}
+                </TickerLink>
               ) : (
-                <span className={styles.tickerText}>{combinedItems[mobileIndex].title}</span>
+                <span className={styles.tickerText}>{mobileItem.title}</span>
               )}
             </div>
           </div>

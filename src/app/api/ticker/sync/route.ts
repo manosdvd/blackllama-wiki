@@ -1,29 +1,9 @@
 import { NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { FieldValue } from 'firebase-admin/firestore';
+import { getAdminAuth, getAdminDb } from '@/lib/firebase/admin';
 
-import { getApps, initializeApp, cert } from 'firebase-admin/app';
-import { getFirestore, FieldValue } from 'firebase-admin/firestore';
-import { getAuth } from 'firebase-admin/auth';
-
-// Initialize Firebase Admin (only once)
-if (!getApps().length) {
-  try {
-    // If we have a service account JSON string in env, use it.
-    // Otherwise fallback to default application credentials.
-    const serviceAccountStr = process.env.FIREBASE_SERVICE_ACCOUNT;
-    if (serviceAccountStr) {
-      const serviceAccount = JSON.parse(serviceAccountStr);
-      initializeApp({
-        credential: cert(serviceAccount)
-      });
-    } else {
-       // Just init without cert, relies on GOOGLE_APPLICATION_CREDENTIALS or it might fail in local dev
-       initializeApp();
-    }
-  } catch (e) {
-    console.warn("Firebase Admin Initialization Warning:", e);
-  }
-}
+export const runtime = 'nodejs';
 
 interface NewsTickerItem {
   category: string;
@@ -48,11 +28,14 @@ interface LiveTickerItem {
   category: string;
   source: string;
   sourceType: string;
+  position: number;
+  generatedAt: string;
   timestamp: FieldValue;
 }
 
+type TickerResponseItem = Omit<LiveTickerItem, 'timestamp'>;
+
 const TARGET_LOCATION = 'Camp Lawton, Mt Lemmon, Santa Catalina Mountains';
-const REFRESH_RATE_SECONDS = 3600;
 
 // Stripped of https://, www., and extra whitespace to reduce input tokens significantly.
 const COMPRESSED_FEEDS = [
@@ -91,55 +74,6 @@ const COMPRESSED_QUERIES = [
 
 const MINIFIED_JOKES = '["What do you call a funny mountain? Hill-arious.","Why don\'t eggs tell jokes? They might crack up!","Did you hear about the circus fire? It was in tents!"]';
 
-const newsTickerJsonSchema = {
-  type: 'object',
-  properties: {
-    ticker_metadata: {
-      type: 'object',
-      properties: {
-        generated_at: {
-          type: 'string',
-          description: 'ISO timestamp of generation'
-        },
-        target_location: {
-          type: 'string',
-          description: 'Geographic filter scope applied'
-        },
-        refresh_rate_seconds: {
-          type: 'integer'
-        }
-      },
-      required: ['generated_at', 'target_location', 'refresh_rate_seconds']
-    },
-    items: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          category: {
-            type: 'string',
-            description: 'Uppercase indicator, e.g., LOCAL INTEL, SCOUTING, HUMOR, DISPATCH'
-          },
-          headline: {
-            type: 'string',
-            description: 'Compressed, high-impact headline or dispatch text'
-          },
-          source: {
-            type: 'string',
-            description: 'The primary source or publication name'
-          },
-          link: {
-            type: 'string',
-            description: "Direct URL link to the piece, or 'N/A' if offline"
-          }
-        },
-        required: ['category', 'headline', 'source', 'link']
-      }
-    }
-  },
-  required: ['ticker_metadata', 'items']
-};
-
 function getPhoenixDateStamp(date = new Date()) {
   const parts = new Intl.DateTimeFormat('en-US', {
     timeZone: 'America/Phoenix',
@@ -163,10 +97,85 @@ function stripJsonMarkdown(text: string) {
     .trim();
 }
 
+function extractJsonObject(text: string) {
+  const stripped = stripJsonMarkdown(text);
+  const start = stripped.indexOf('{');
+  const end = stripped.lastIndexOf('}');
+  if (start === -1 || end === -1 || end <= start) return stripped;
+  return stripped.slice(start, end + 1);
+}
+
 function normalizeTickerLink(link: string) {
   const trimmed = (link || '').trim();
   if (!trimmed || trimmed.toUpperCase() === 'N/A') return '';
   return trimmed.startsWith('http://') || trimmed.startsWith('https://') ? trimmed : `https://${trimmed}`;
+}
+
+function textValue(value: unknown) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function normalizeTickerCategory(value: unknown) {
+  const category = textValue(value) || 'DISPATCH';
+  return category
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toUpperCase();
+}
+
+function normalizeGeneratedTicker(value: unknown): NewsTicker {
+  if (!value || typeof value !== 'object') {
+    throw new Error('Gemini returned a non-object ticker payload.');
+  }
+
+  const payload = value as Record<string, unknown>;
+  const metadata = payload.ticker_metadata && typeof payload.ticker_metadata === 'object'
+    ? payload.ticker_metadata as Record<string, unknown>
+    : {};
+  const rawItems = Array.isArray(payload.items) ? payload.items : [];
+  const items = rawItems
+    .map((item) => {
+      if (!item || typeof item !== 'object') return null;
+      const source = item as Record<string, unknown>;
+      const headline = textValue(source.headline ?? source.title ?? source.text);
+      if (!headline) return null;
+
+      return {
+        category: normalizeTickerCategory(source.category),
+        headline,
+        source: textValue(source.source) || 'Live Feed',
+        link: textValue(source.link ?? source.url),
+      };
+    })
+    .filter((item): item is NewsTickerItem => item !== null)
+    .slice(0, 12);
+
+  if (items.length === 0) {
+    throw new Error('Gemini returned ticker JSON without any usable items.');
+  }
+
+  return {
+    ticker_metadata: {
+      generated_at: textValue(metadata.generated_at) || new Date().toISOString(),
+      target_location: textValue(metadata.target_location) || TARGET_LOCATION,
+      refresh_rate_seconds: Number(metadata.refresh_rate_seconds) || 3600,
+    },
+    items,
+  };
+}
+
+function tickerResponseItem(item: LiveTickerItem): TickerResponseItem {
+  return {
+    id: item.id,
+    title: item.title,
+    url: item.url,
+    category: item.category,
+    source: item.source,
+    sourceType: item.sourceType,
+    position: item.position,
+    generatedAt: item.generatedAt,
+  };
 }
 
 function buildTickerPrompt() {
@@ -177,6 +186,13 @@ Window:Last 24-48h. If undated, verify ongoing relevance.
 Feeds:${COMPRESSED_FEEDS}
 Queries:${COMPRESSED_QUERIES}
 JokePool:${MINIFIED_JOKES}
+Return only one valid JSON object with this exact shape:
+{"ticker_metadata":{"generated_at":"ISO string","target_location":"string","refresh_rate_seconds":3600},"items":[{"category":"UPPERCASE LABEL","headline":"short ticker text","source":"publication/source name","link":"https://... or N/A"}]}
+Rules:
+- Return 6 to 10 items.
+- Include exactly one item from JokePool with source "Camp Humor" and link "N/A".
+- Prefer fresh, currently relevant items for the last 24-48 hours.
+- Keep every headline under 140 characters.
 `.trim();
 }
 
@@ -186,30 +202,25 @@ async function generateTicker(apiKey: string): Promise<NewsTicker> {
     'You are a real-time news ticker automation engine.',
     'Use the Google Search tool to pull the latest headlines fitting the provided feeds, themes, and queries.',
     'Select exactly 1 joke from the JokePool.',
-    'Output ONLY the raw JSON conforming precisely to the requested response schema.',
+    'Output ONLY raw valid JSON conforming precisely to the requested shape.',
     'Do not include markdown code fences or conversational text.'
   ].join(' ');
 
   const model = genAI.getGenerativeModel({
     model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
     systemInstruction,
+    // Gemini currently rejects Google Search tool use when JSON MIME/schema mode is enabled.
+    // Keep the grounding tool, then validate and normalize the plain-text JSON ourselves.
     tools: [{ googleSearch: {} }] as never,
     generationConfig: {
-      temperature: 0.2,
-      responseMimeType: 'application/json',
-      responseSchema: newsTickerJsonSchema
+      temperature: 0.2
     } as never
   });
 
   const result = await model.generateContent(buildTickerPrompt());
   const responseText = result.response.text().trim();
-  const parsed = JSON.parse(stripJsonMarkdown(responseText)) as NewsTicker;
-
-  if (!parsed.items || !Array.isArray(parsed.items) || parsed.items.length === 0) {
-    throw new Error('Gemini returned ticker JSON without any items.');
-  }
-
-  return parsed;
+  const parsed = JSON.parse(extractJsonObject(responseText)) as unknown;
+  return normalizeGeneratedTicker(parsed);
 }
 
 export async function GET(req: Request) {
@@ -229,7 +240,7 @@ export async function GET(req: Request) {
         if (authHeader && authHeader.startsWith('Bearer ')) {
           try {
             const token = authHeader.substring(7);
-            const decodedToken = await getAuth().verifyIdToken(token);
+            const decodedToken = await getAdminAuth().verifyIdToken(token);
             if (decodedToken && decodedToken.admin === true) {
               isAuthorized = true;
             }
@@ -249,7 +260,7 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'GEMINI_API_KEY not set' }, { status: 500 });
     }
 
-    const db = getFirestore();
+    const db = getAdminDb();
     
     // Throttle to 1 hour to protect free tier
     if (!force) {
@@ -270,43 +281,43 @@ export async function GET(req: Request) {
     }
 
     const generatedTicker = await generateTicker(apiKey);
+    const generatedAt = generatedTicker.ticker_metadata.generated_at || new Date().toISOString();
 
-    const liveItems: LiveTickerItem[] = generatedTicker.items.map((item: NewsTickerItem) => {
+    const liveItems: LiveTickerItem[] = generatedTicker.items.map((item: NewsTickerItem, index) => {
       return {
-        id: `live_${Math.random().toString(36).substr(2, 9)}`,
+        id: `live_${getPhoenixDateStamp()}_${String(index + 1).padStart(2, '0')}`,
         title: item.headline,
         url: normalizeTickerLink(item.link),
         category: item.category || 'DISPATCH',
         source: item.source || 'Live Feed',
         sourceType: 'live',
+        position: index,
+        generatedAt,
         timestamp: FieldValue.serverTimestamp()
       };
     });
+    const responseItems = liveItems.map(tickerResponseItem);
 
     // If Admin SDK is initialized and working, write to Firestore
     try {
       // We are requested to "Only show current/recent stuff"
-      // Delete old items in liveTicker
+      // Replace old items in liveTicker with the new generated set.
       const batch = db.batch();
       const snapshot = await db.collection('liveTicker').get();
       snapshot.docs.forEach((doc) => {
         batch.delete(doc.ref);
       });
-      await batch.commit();
-
-      // Insert new items
-      const newBatch = db.batch();
       liveItems.forEach((item: LiveTickerItem) => {
         const docRef = db.collection('liveTicker').doc(item.id);
-        newBatch.set(docRef, item);
+        batch.set(docRef, item);
       });
-      await newBatch.commit();
+      await batch.commit();
       
       return NextResponse.json({
         success: true,
         count: liveItems.length,
         metadata: generatedTicker.ticker_metadata,
-        items: liveItems
+        items: responseItems
       });
     } catch (e) {
       console.warn("Failed to write to Firestore via Admin SDK. Returning items directly.", e);
@@ -315,7 +326,7 @@ export async function GET(req: Request) {
         success: true,
         count: liveItems.length,
         metadata: generatedTicker.ticker_metadata,
-        items: liveItems,
+        items: responseItems,
         warning: 'Failed to write to DB server-side'
       });
     }

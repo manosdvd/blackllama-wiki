@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { ChevronLeft, Clock, Edit3, Shield, User } from 'lucide-react';
 import { useAuth } from '@/components/auth/AuthContext';
 import EditorOutput from '@/components/wiki/EditorOutput';
-import type { ContentItem } from '@/types/content';
+import { DEFAULT_WIKI_CATEGORIES, type ContentItem } from '@/types/content';
 import styles from './page.module.css';
 
 function dateLabel(value: unknown) {
@@ -16,6 +16,12 @@ function dateLabel(value: unknown) {
     if (seconds) return new Date(seconds * 1000).toLocaleDateString();
   }
   return 'Not recorded';
+}
+
+const categoryById = new Map(DEFAULT_WIKI_CATEGORIES.map((category) => [category.id, category]));
+
+function categoryLabel(id: string) {
+  return categoryById.get(id)?.name ?? id;
 }
 
 export default function WikiArticleClient({ id }: { id: string }) {
@@ -87,7 +93,7 @@ export default function WikiArticleClient({ id }: { id: string }) {
 
       <article className={styles.article}>
         <header className={styles.articleHeader}>
-          <div className={styles.categoryBadge}>{article.categoryId}</div>
+          <div className={styles.categoryBadge}>{categoryLabel(article.categoryId)}</div>
           <h1>{article.title}</h1>
           <p className={styles.summary}>{article.summary}</p>
           <div className={styles.metaData}>
