@@ -10,7 +10,7 @@ interface TickerItem {
   id: string;
   title: string;
   url: string;
-  category: string;
+  category?: string;
   source?: string;
   position?: number;
 }
@@ -96,8 +96,8 @@ export default function Ticker({ items }: TickerProps) {
     return [...activeLiveItems, ...shuffledLocalItems];
   }, [shuffledLocalItems, dbItems, apiItems]);
 
-  const getCategoryColor = (category: string) => {
-    const lower = category.toLowerCase();
+  const getCategoryColor = (category?: string) => {
+    const lower = (category || '').toLowerCase();
     if (lower.includes('weather') || lower.includes('safety') || lower.includes('alert')) return '#e74c3c'; // red
     if (lower.includes('nature') || lower.includes('forest')) return '#2ecc71'; // green
     if (lower.includes('astronomy') || lower.includes('space') || lower.includes('sky')) return '#9b59b6'; // purple
@@ -297,7 +297,7 @@ export default function Ticker({ items }: TickerProps) {
                         className={styles.modalCategoryBadge} 
                         style={{ backgroundColor: getCategoryColor(item.category), color: '#000' }}
                       >
-                        {item.category.replace('_', ' ')}
+                        {(item.category || 'LIVE').replace('_', ' ')}
                       </span>
                       <span className={styles.modalSource}>
                         {item.source || 'Camp Lawton'}

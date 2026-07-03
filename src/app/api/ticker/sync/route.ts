@@ -23,7 +23,7 @@ interface LiveTickerItem {
 }
 
 const TARGET_LOCATION = 'Camp Lawton, Mt Lemmon, Santa Catalina Mountains';
-const PRIMARY_GEMINI_TICKER_MODEL = 'gemini-2.5-flash';
+const PRIMARY_GEMINI_TICKER_MODEL = 'gemini-3.5-flash';
 const MAX_TICKER_ITEMS = 36;
 
 const COMPRESSED_FEEDS = [
@@ -89,8 +89,10 @@ JokePool: ${MINIFIED_JOKES}
 }
 
 async function generateTicker(apiKey: string) {
-  const ai = new GoogleGenAI({ apiKey });
+  // Initialize the new unified SDK client wrapper 
+  const ai = new GoogleGenAI({ apiKey }); 
   
+  // Define Schema natively via @google/genai Type enums 
   const tickerSchema: Schema = {
     type: Type.OBJECT,
     properties: {
@@ -123,6 +125,7 @@ async function generateTicker(apiKey: string) {
 
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
+      // Execute the request using the modern .models.generateContent() API
       const response = await ai.models.generateContent({
         model: PRIMARY_GEMINI_TICKER_MODEL,
         contents: prompt,
@@ -131,14 +134,13 @@ async function generateTicker(apiKey: string) {
           tools: [{ googleSearch: {} }],
           responseMimeType: 'application/json',
           responseSchema: tickerSchema,
-          temperature: 0.3 // Slightly increased to encourage more varied search behavior
+          temperature: 0.3 
         }
       });
 
       const parsed = JSON.parse(response.text?.trim() || '{}');
       if (!parsed.items || parsed.items.length === 0) throw new Error('Empty items array returned');
       
-      // Enforce max items slice
       parsed.items = parsed.items.slice(0, MAX_TICKER_ITEMS);
       return parsed;
     } catch (error) {
@@ -149,6 +151,20 @@ async function generateTicker(apiKey: string) {
     }
   }
   throw lastError;
+}
+
+type TickerResponseItem = Omit<LiveTickerItem, 'timestamp'>;
+
+function tickerResponseItem(item: LiveTickerItem): TickerResponseItem {
+  return {
+    id: item.id,
+    title: item.title,
+    url: item.url,
+    source: item.source,
+    sourceType: item.sourceType,
+    position: item.position,
+    generatedAt: item.generatedAt,
+  };
 }
 
 export async function GET(req: Request) {
@@ -170,7 +186,7 @@ export async function GET(req: Request) {
           try {
             const decodedToken = await getAdminAuth().verifyIdToken(token);
             isAdmin = decodedToken.admin === true;
-          } catch (e) { /* silent fail auth */ }
+          } catch { /* silent fail auth */ }
         }
         if (!isAdmin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
@@ -222,7 +238,7 @@ export async function GET(req: Request) {
         success: true,
         count: liveItems.length,
         metadata: generatedTicker.ticker_metadata,
-        items: liveItems.map(({ timestamp, ...rest }) => rest) // strip timestamp for client
+        items: liveItems.map(tickerResponseItem) // strip timestamp for client
       });
     } catch (e) {
       console.warn("Failed to write to Firestore.", e);
@@ -230,7 +246,7 @@ export async function GET(req: Request) {
         success: true,
         count: liveItems.length,
         warning: 'Failed to write to DB',
-        items: liveItems.map(({ timestamp, ...rest }) => rest)
+        items: liveItems.map(tickerResponseItem)
       });
     }
 
