@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { getAuth, onAuthStateChanged, User, signInWithPopup, GoogleAuthProvider, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import { getAuth, onAuthStateChanged, User, signInWithPopup, GoogleAuthProvider, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { doc, getDoc, getDocFromServer } from 'firebase/firestore';
 import { app, db } from '@/lib/firebase/client';
 import AuthModal from './AuthModal';
@@ -28,7 +28,7 @@ interface AuthContextType {
   openAuthModal: () => void;
   closeAuthModal: () => void;
   loginWithEmail: (email: string, password: string) => Promise<void>;
-  registerWithEmail: (email: string, password: string) => Promise<void>;
+  registerWithEmail: (email: string, password: string, displayName: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -70,9 +70,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await signInWithEmailAndPassword(auth, email, password);
   };
 
-  const registerWithEmail = async (email: string, password: string) => {
+  const registerWithEmail = async (email: string, password: string, displayName: string) => {
     const auth = getAuth(app);
-    await createUserWithEmailAndPassword(auth, email, password);
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    await updateProfile(userCredential.user, { displayName });
+    const idToken = await userCredential.user.getIdToken(true);
+    const response = await fetch('/api/auth/session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idToken, displayName }),
+    });
+    if (response.ok) {
+      const data = (await response.json()) as { profile?: UserProfile };
+      setProfile(data.profile ?? null);
+    } else {
+      await refreshProfileForUser(userCredential.user);
+    }
   };
 
   const refreshProfileForUser = async (targetUser: User | null) => {

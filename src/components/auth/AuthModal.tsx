@@ -10,6 +10,7 @@ export default function AuthModal() {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [visibleName, setVisibleName] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -45,7 +46,12 @@ export default function AuthModal() {
       if (mode === 'signin') {
         await loginWithEmail(email, password);
       } else {
-        await registerWithEmail(email, password);
+        if (!visibleName.trim()) {
+          setErrorMsg('Visible name is required.');
+          setIsSubmitting(false);
+          return;
+        }
+        await registerWithEmail(email, password, visibleName.trim());
       }
     } catch (err) {
       console.error(err);
@@ -128,6 +134,24 @@ export default function AuthModal() {
         )}
 
         <form onSubmit={handleSubmit} className={styles.form}>
+          {mode === 'signup' && (
+            <div className={styles.inputGroup}>
+              <label htmlFor="auth-name">VISIBLE NAME / RANGER CALLSIGN</label>
+              <div className={styles.inputWrapper}>
+                <Sparkles size={16} className={styles.inputIcon} />
+                <input
+                  id="auth-name"
+                  type="text"
+                  required
+                  placeholder="Ranger Smith"
+                  value={visibleName}
+                  onChange={(e) => setVisibleName(e.target.value)}
+                  disabled={isSubmitting}
+                />
+              </div>
+            </div>
+          )}
+
           <div className={styles.inputGroup}>
             <label htmlFor="auth-email">EMAIL ADDRESS</label>
             <div className={styles.inputWrapper}>

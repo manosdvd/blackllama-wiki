@@ -3,16 +3,15 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
-  BookOpen, FileText, MessageSquare, ShieldAlert, ShieldCheck,
-  LogOut, KeyRound, Radio, Phone, Wifi, Database,
-  ArrowRight, Clock, UserCheck
+  BookOpen, FileText, MessageSquare, Radio, Phone, Wifi, Database,
+  ArrowRight, Clock
 } from 'lucide-react';
 import { useAuth } from '@/components/auth/AuthContext';
 import type { ContentItem } from '@/types/content';
 import styles from './page.module.css';
 
 export default function Home() {
-  const { user, profile, openAuthModal, logout } = useAuth();
+  const { user, profile } = useAuth();
   const [articles, setArticles] = useState<ContentItem[]>([]);
   const [loadingArticles, setLoadingArticles] = useState(true);
   const [isOnline, setIsOnline] = useState<boolean>(() => {
@@ -66,7 +65,6 @@ export default function Home() {
 
   // Determine user role and corresponding description
   const roleName = profile?.portalMode ?? 'guest';
-  const displayName = profile?.preferredName || profile?.displayName || user?.email || 'Guest Visitor';
 
   return (
     <div className={styles.dashboardContainer}>
@@ -78,55 +76,6 @@ export default function Home() {
       <div className={styles.grid}>
         {/* Main Column */}
         <div className={styles.mainColumn}>
-          {/* Secure Welcome Card */}
-          <section className={styles.welcomeCard}>
-            <div className={styles.welcomeLeft}>
-              {user ? (
-                <>
-                  <div className={styles.avatar}>
-                    <UserCheck size={28} />
-                  </div>
-                  <div className={styles.welcomeInfo}>
-                    <h3>SECURE SESSION ACTIVE</h3>
-                    <p>
-                      Logged in as <span className={styles.boldText}>{displayName}</span>
-                    </p>
-                    <div className={styles.badgeRow}>
-                      <span className={styles.roleBadge}>{roleName}</span>
-                      <span className={styles.activeBadge}>ACTIVE</span>
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className={`${styles.avatar} ${styles.guestAvatar}`}>
-                    <ShieldAlert size={28} />
-                  </div>
-                  <div className={styles.welcomeInfo}>
-                    <h3>GUEST SESSION ACTIVE</h3>
-                    <p>Viewing public operations handbook data only.</p>
-                    <div className={styles.badgeRow}>
-                      <span className={`${styles.roleBadge} ${styles.guestBadge}`}>unauthenticated</span>
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-            <div className={styles.welcomeRight}>
-              {user ? (
-                <button onClick={logout} className={styles.authBtn} title="Sign Out">
-                  <LogOut size={16} />
-                  <span>Sign Out</span>
-                </button>
-              ) : (
-                <button onClick={openAuthModal} className={`${styles.authBtn} ${styles.loginBtn}`}>
-                  <KeyRound size={16} />
-                  <span>Authenticate</span>
-                </button>
-              )}
-            </div>
-          </section>
-
           {/* Quick Tasks & Contextual Actions */}
           <section className={styles.card}>
             <div className={styles.cardHeader}>

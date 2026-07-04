@@ -26,7 +26,7 @@ function fallbackProfileFromToken(decodedToken: DecodedIdToken): UserProfile {
     email: typeof decodedToken.email === 'string' ? decodedToken.email : null,
     displayName: typeof decodedToken.name === 'string' ? decodedToken.name : null,
     photoURL: typeof decodedToken.picture === 'string' ? decodedToken.picture : null,
-    portalMode: isTokenAdmin ? 'admin' : 'guest',
+    portalMode: isTokenAdmin ? 'admin' : 'staff',
     accountStatus: 'active',
     currentSeasonId: null,
     primarySeasonRole: null,
@@ -38,7 +38,7 @@ function fallbackProfileFromToken(decodedToken: DecodedIdToken): UserProfile {
 
 export async function POST(request: Request) {
   try {
-    const body = (await request.json()) as { idToken?: string };
+    const body = (await request.json()) as { idToken?: string; displayName?: string };
     if (!body.idToken) {
       return NextResponse.json({ error: 'Missing Firebase ID token.' }, { status: 400 });
     }
@@ -49,7 +49,7 @@ export async function POST(request: Request) {
     let warning: string | undefined;
 
     try {
-      profile = await upsertUserProfileFromToken(decodedToken);
+      profile = await upsertUserProfileFromToken(decodedToken, body.displayName);
     } catch (profileError) {
       console.error('Session profile upsert failed; using token-derived profile:', profileError);
       profile = fallbackProfileFromToken(decodedToken);

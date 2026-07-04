@@ -61,7 +61,7 @@ export function currentUserIsHealthy(currentUser: CurrentUser | null) {
   return isHealthyAccountStatus(currentUser.profile.accountStatus);
 }
 
-export async function upsertUserProfileFromToken(decodedToken: DecodedIdToken): Promise<UserProfile> {
+export async function upsertUserProfileFromToken(decodedToken: DecodedIdToken, clientDisplayName?: string): Promise<UserProfile> {
   const db = getAdminDb();
   const userRef = db.collection('users').doc(decodedToken.uid);
   const snapshot = await userRef.get();
@@ -71,7 +71,7 @@ export async function upsertUserProfileFromToken(decodedToken: DecodedIdToken): 
   const baseProfile = {
     uid: decodedToken.uid,
     email: typeof decodedToken.email === 'string' ? decodedToken.email : null,
-    displayName: typeof decodedToken.name === 'string' ? decodedToken.name : null,
+    displayName: clientDisplayName || (typeof decodedToken.name === 'string' ? decodedToken.name : null),
     photoURL: typeof decodedToken.picture === 'string' ? decodedToken.picture : null,
     updatedAt: FieldValue.serverTimestamp(),
     lastLoginAt: FieldValue.serverTimestamp(),
@@ -80,7 +80,7 @@ export async function upsertUserProfileFromToken(decodedToken: DecodedIdToken): 
   if (!snapshot.exists) {
     const profile: Omit<UserProfile, 'createdAt' | 'updatedAt' | 'lastLoginAt'> = {
       ...baseProfile,
-      portalMode: isTokenAdmin ? 'admin' : 'guest',
+      portalMode: isTokenAdmin ? 'admin' : 'staff',
       accountStatus: 'active',
       currentSeasonId: null,
       primarySeasonRole: null,
