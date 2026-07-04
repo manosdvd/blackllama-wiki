@@ -36,7 +36,8 @@ const COMPRESSED_FEEDS = [
   'allaboutbirds.org/news/feed', 'apod.nasa.gov/apod.rss', 'earthsky.org/feed', 
   'smithsonianmag.com/rss/science-nature',
   'archives.gov/global-pages/rss/news.xml', 'tucsonbirdalliance.blogspot.com/feeds/posts/default',
-  'freshoffthegrid.com/feed/', 'www.rei.com/blog/feed', 'wildlandtrekking.com/feed/'
+  'freshoffthegrid.com/feed/', 'www.rei.com/blog/feed', 'wildlandtrekking.com/feed/', 'thetrek.co/feed/',
+  'thehikinglife.com/feed/'
 ].join(',');
 
 const COMPRESSED_QUERIES = [
@@ -54,6 +55,7 @@ const COMPRESSED_QUERIES = [
   'Dictionary.com Word of the Day', 'Riddles.com Riddle of the Day(1 Q&A)',
   'This day in Scouting History', 'NationalDayCalendar', 'Arizona State Parks', '"World Scouting" latest',
   'Southern Arizona camping hiking backpacking', 
+  'tips and tricks hiking backpacking "wilderness first aid" climbing bushcraft pioneering'
 ].join(',');
 
 const MINIFIED_JOKES = '["What do you call a funny mountain? Hill-arious.","Why don\'t eggs tell jokes? They might crack up!","Did you hear about the circus fire? It was in tents!"]';
