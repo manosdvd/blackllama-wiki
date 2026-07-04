@@ -28,11 +28,15 @@ const MAX_TICKER_ITEMS = 36;
 
 const COMPRESSED_FEEDS = [
   'aztrail.org/feed', 'onscouting.org/feed', 'scoutlife.org/feed', 'scoutingwire.org/feed',
-  'scoutingnewsroom.org/feed', 'nasa.gov/feeds/iotd-feed', 'nasa.gov/feed', 'atlasobscura.com/feeds/latest',
+  'scoutingnewsroom.org/feed', 'nasa.gov/feeds/iotd-feed', 'nasa.gov/feed', 
+  'atlasobscura.com/feeds/latest',
   'goodnewsnetwork.org/feed', 'tucson.com/search/?f=rss&t=article&c=sports/outdoors', 'lnt.org/feed',
-  'fs.usda.gov/news/r3/news-events.xml', 'azgfd.com/feed', 'outsideonline.com/feed', 'audubon.org/rss.xml',
-  'allaboutbirds.org/news/feed', 'apod.nasa.gov/apod.rss', 'earthsky.org/feed', 'smithsonianmag.com/rss/science-nature',
-  'archives.gov/global-pages/rss/news.xml', 'tucsonbirdalliance.blogspot.com/feeds/posts/default'
+  'fs.usda.gov/news/r3/news-events.xml', 'azgfd.com/feed', 'outsideonline.com/feed', 
+  'audubon.org/rss.xml',
+  'allaboutbirds.org/news/feed', 'apod.nasa.gov/apod.rss', 'earthsky.org/feed', 
+  'smithsonianmag.com/rss/science-nature',
+  'archives.gov/global-pages/rss/news.xml', 'tucsonbirdalliance.blogspot.com/feeds/posts/default',
+  'freshoffthegrid.com/feed/', 'www.rei.com/blog/feed', 'wildlandtrekking.com/feed/'
 ].join(',');
 
 const COMPRESSED_QUERIES = [
@@ -48,7 +52,8 @@ const COMPRESSED_QUERIES = [
   'University of Arizona SkyCenter astronomy Mt Lemmon',
   'family friendly outdoor bushcraft YouTube camping tips latest',
   'Dictionary.com Word of the Day', 'Riddles.com Riddle of the Day(1 Q&A)',
-  'This day in Scouting History', 'NationalDayCalendar'
+  'This day in Scouting History', 'NationalDayCalendar', 'Arizona State Parks', '"World Scouting" latest',
+  'Southern Arizona camping hiking backpacking', 
 ].join(',');
 
 const MINIFIED_JOKES = '["What do you call a funny mountain? Hill-arious.","Why don\'t eggs tell jokes? They might crack up!","Did you hear about the circus fire? It was in tents!"]';

@@ -104,6 +104,49 @@ function kmToMiles(km: number): number {
   return km * 0.621371;
 }
 
+function envValue(...names: string[]) {
+  for (const name of names) {
+    const value = process.env[name]?.trim();
+    if (value) return value;
+  }
+  return undefined;
+}
+
+function classifyNWSAlert(event: string, severity: string): FireAlertLevel {
+  const text = `${event} ${severity}`.toLowerCase();
+
+  if (text.includes('evacuation')) return 'evacuation';
+  if (
+    text.includes('red flag warning')
+    || text.includes('extreme wind warning')
+    || text.includes('severe thunderstorm warning')
+    || text.includes('flash flood warning')
+    || text.includes('dust storm warning')
+    || text.includes('excessive heat warning')
+    || severity === 'Extreme'
+  ) return 'critical';
+
+  if (
+    text.includes('fire weather watch')
+    || text.includes('red flag')
+    || text.includes('severe thunderstorm watch')
+    || text.includes('flood warning')
+    || text.includes('high wind warning')
+    || text.includes('winter storm warning')
+    || severity === 'Severe'
+  ) return 'warning';
+
+  if (
+    text.includes('watch')
+    || text.includes('advisory')
+    || text.includes('wind')
+    || text.includes('heat')
+    || severity === 'Moderate'
+  ) return 'watch';
+
+  return 'info';
+}
+
 // ─── Source Fetchers ─────────────────────────────────────────────────────────
 
 async function fetchNWSAlerts(): Promise<{ items: FireAlertItem[]; health: SourceHealthStatus }> {
@@ -129,15 +172,7 @@ async function fetchNWSAlerts(): Promise<{ items: FireAlertItem[]; health: Sourc
       };
     }) => {
       const props = feature.properties;
-      const eventLower = (props.event || '').toLowerCase();
-
-      let level: FireAlertLevel = 'info';
-      if (eventLower.includes('evacuation')) level = 'evacuation';
-      else if (eventLower.includes('red flag warning') || eventLower.includes('fire weather watch') && props.severity === 'Extreme') level = 'critical';
-      else if (props.severity === 'Extreme' || props.severity === 'Severe') level = 'critical';
-      else if (eventLower.includes('fire') || eventLower.includes('red flag')) level = 'warning';
-      else if (props.severity === 'Moderate') level = 'warning';
-      else if (eventLower.includes('watch') || eventLower.includes('wind') || eventLower.includes('heat')) level = 'watch';
+      const level = classifyNWSAlert(props.event || '', props.severity || '');
 
       const actionability: Actionability = level === 'evacuation' ? 'follow-official-orders'
         : level === 'critical' ? 'contact-leadership'
@@ -473,8 +508,8 @@ async function fetchAirNow(airNowKey: string): Promise<{ items: FireAlertItem[];
 // ─── Main Route ──────────────────────────────────────────────────────────────
 
 export async function GET() {
-  const firmsKey = process.env.FIRMS_MAP_KEY;
-  const airNowKey = process.env.AIRNOW_API_KEY;
+  const firmsKey = envValue('FIRMS_MAP_KEY', 'NASA_FIRMS_MAP_KEY', 'FIRMS_API_KEY');
+  const airNowKey = envValue('AIRNOW_API_KEY', 'AIR_NOW_API_KEY');
 
   const db = getFirestore();
   let cachedData: FireAggregatorResponse | null = null;
