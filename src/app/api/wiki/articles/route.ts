@@ -167,6 +167,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ article: { id: docRef.id, ...article } }, { status: 201 });
   } catch (error) {
     console.error('Failed to create wiki article:', error);
-    return NextResponse.json({ error: 'Failed to create wiki article.' }, { status: 500 });
+    return NextResponse.json(
+      { error: `Failed to create wiki article: ${error instanceof Error ? error.message : String(error)}` },
+      { status: 500 }
+    );
   }
 }

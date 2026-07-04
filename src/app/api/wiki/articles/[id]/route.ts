@@ -163,7 +163,10 @@ export async function PATCH(request: Request, context: Context) {
     return NextResponse.json({ article: { id: updated.id, ...updated.data() } });
   } catch (error) {
     console.error('Failed to update wiki article:', error);
-    return NextResponse.json({ error: 'Failed to update wiki article.' }, { status: 500 });
+    return NextResponse.json(
+      { error: `Failed to update wiki article: ${error instanceof Error ? error.message : String(error)}` },
+      { status: 500 }
+    );
   }
 }
 

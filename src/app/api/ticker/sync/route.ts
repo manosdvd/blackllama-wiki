@@ -197,7 +197,9 @@ const COMPRESSED_QUERIES = [
   'Dictionary.com Word of the Day', 'Riddles.com Riddle of the Day (1 Question, click link for answer)',
   'This day in Scouting History', 'NationalDayCalendar', 'Arizona State Parks', '"World Scouting" latest',
   'Southern Arizona camping hiking backpacking',
-  'tips and tricks hiking backpacking "wilderness first aid" climbing bushcraft pioneering'
+  'tips and tricks hiking backpacking "wilderness first aid" climbing bushcraft pioneering', 
+  'YouTube channels LIKE NASA "NASA Jet Propulsion Laboratory" "Learn With NASA" SmarterEveryDay "Practical Engineering" "PBS Terra" "Deep Look" MinuteEarth "Nature on PBS" "National Park Service" "Arizona Game and Fish" "Arizona-Sonora Desert Museum" "The Desert Speaks" "Miranda Goes Outside!!" "Homemade Wanderlust" "Adventure Archives" MyLifeOutdoors JupiterHikes "SciShow Kids" "Crash Course Kids" "PBS Eons" "Journey to the Microcosmos" "Bizarre Beasts" "SciShow Space" SciShow "Crash Course"', 
+  'Include keywords: camping, hiking, trail, backpacking, outdoors, wildlife, desert, forest, mountain, nature, science, NASA, space, stars, engineering, park, conservation, ranger, gear, map, navigation, water, weather, ecology, animals; Exclude keywords: politics, war, murder, true crime, scandal, drama, sex, alcohol, drugs, weapon, gun, influencer, reaction, exposed, controversy, apocalypse'
 ].join(',');
 
 const MINIFIED_JOKES = '["What do you call a funny mountain? Hill-arious.","Why don\'t eggs tell jokes? They might crack up!","Did you hear about the circus fire? It was in tents!"]';
