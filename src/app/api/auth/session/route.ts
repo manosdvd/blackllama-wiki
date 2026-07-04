@@ -43,7 +43,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing Firebase ID token.' }, { status: 400 });
     }
 
-    const decodedToken = await getAdminAuth().verifyIdToken(body.idToken);
+    const adminAuth = await getAdminAuth();
+    const decodedToken = await adminAuth.verifyIdToken(body.idToken);
     let profile: UserProfile;
     let warning: string | undefined;
 
@@ -55,7 +56,7 @@ export async function POST(request: Request) {
       warning = 'profile-upsert-failed';
     }
 
-    const sessionCookie = await getAdminAuth().createSessionCookie(body.idToken, {
+    const sessionCookie = await adminAuth.createSessionCookie(body.idToken, {
       expiresIn: SESSION_MAX_AGE_SECONDS * 1000,
     });
 
