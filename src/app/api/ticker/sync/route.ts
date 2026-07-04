@@ -54,7 +54,7 @@ const FEED_URLS = [
   'smithsonianmag.com/rss/science-nature',
   'archives.gov/global-pages/rss/news.xml', 'tucsonbirdalliance.blogspot.com/feeds/posts/default',
   'freshoffthegrid.com/feed/', 'www.rei.com/blog/feed', 'wildlandtrekking.com/feed/', 'thetrek.co/feed/',
-  'thehikinglife.com/feed/'
+  'thehikinglife.com/feed/', 'https://nationaldaycalendar.com/rss'
 ];
 
 function getPhoenixDateStamp() {
