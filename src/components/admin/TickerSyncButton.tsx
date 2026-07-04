@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { getAuth } from 'firebase/auth';
+import { useAuth } from '@/components/auth/AuthContext';
 
 interface SyncResponse {
   success?: boolean;
@@ -32,8 +33,11 @@ async function parseSyncResponse(res: Response): Promise<SyncResponse> {
 }
 
 export default function TickerSyncButton() {
+  const { isAdmin } = useAuth();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<string | null>(null);
+
+  if (!isAdmin) return null;
 
   const handleSync = async () => {
     setLoading(true);

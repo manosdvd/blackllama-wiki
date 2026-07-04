@@ -3,6 +3,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
+import { getAuth } from 'firebase/auth';
+import { useAuth } from '@/components/auth/AuthContext';
 import { ExternalLink, X } from 'lucide-react';
 import styles from './Ticker.module.css';
 
@@ -79,6 +81,7 @@ function getCategoryColor(category?: string) {
 }
 
 export default function Ticker({ items }: TickerProps) {
+  const { isAdmin } = useAuth();
   const [dbItems, setDbItems] = useState<TickerItem[]>([]);
   const [apiItems, setApiItems] = useState<TickerItem[]>([]);
   const [shuffledLocalItems, setShuffledLocalItems] = useState<TickerItem[]>(items);
@@ -96,12 +99,22 @@ export default function Ticker({ items }: TickerProps) {
   const mobileContainerRef = useRef<HTMLDivElement>(null);
   const mobileTextRef = useRef<HTMLDivElement>(null);
 
-  const runSync = useCallback(async () => {
+  const runSync = useCallback(async (forceOverride?: boolean) => {
     setIsSyncing(true);
     setSyncResult(null);
 
+    const forceValue = typeof forceOverride === 'boolean' ? forceOverride : isAdmin;
+    const url = forceValue ? '/api/ticker/sync?force=true' : '/api/ticker/sync';
+
     try {
-      const res = await fetch(SYNC_URL, { cache: 'no-store' });
+      const headers: HeadersInit = {};
+      const auth = getAuth();
+      if (forceValue && auth.currentUser) {
+        const token = await auth.currentUser.getIdToken();
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const res = await fetch(url, { headers, cache: 'no-store' });
       const data = await parseSyncResponse(res);
 
       if (data.items && data.items.length > 0) {
@@ -122,7 +135,7 @@ export default function Ticker({ items }: TickerProps) {
     } finally {
       setIsSyncing(false);
     }
-  }, []);
+  }, [isAdmin]);
 
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
@@ -251,19 +264,21 @@ export default function Ticker({ items }: TickerProps) {
         CAMP FEED
       </button>
 
-      <button
-        onClick={() => {
-          setIsFeedOpen(true);
-          void runSync();
-        }}
-        disabled={isSyncing}
-        className={styles.tickerLabel}
-        aria-label="Refresh Camp Feed"
-        title="Refresh Camp Feed"
-        style={{ marginLeft: '0.25rem', opacity: isSyncing ? 0.65 : 1 }}
-      >
-        {isSyncing ? 'SYNC...' : 'SYNC'}
-      </button>
+      {isAdmin && (
+        <button
+          onClick={() => {
+            setIsFeedOpen(true);
+            void runSync(true);
+          }}
+          disabled={isSyncing}
+          className={styles.tickerLabel}
+          aria-label="Force Sync Camp Feed"
+          title="Force Sync Camp Feed"
+          style={{ marginLeft: '0.25rem', opacity: isSyncing ? 0.65 : 1 }}
+        >
+          {isSyncing ? 'SYNC...' : 'SYNC'}
+        </button>
+      )}
 
       <div className={styles.desktopArrows}>
         <button
@@ -354,7 +369,7 @@ export default function Ticker({ items }: TickerProps) {
             <div className={styles.modalHeader}>
               <h2 id="feed-modal-title" className={styles.modalTitle}>CAMP FEED BULLETIN</h2>
               <button
-                onClick={() => void runSync()}
+                onClick={() => void runSync(isAdmin)}
                 disabled={isSyncing}
                 style={{
                   background: 'var(--pine-green)',
@@ -368,7 +383,7 @@ export default function Ticker({ items }: TickerProps) {
                   opacity: isSyncing ? 0.65 : 1,
                 }}
               >
-                {isSyncing ? 'Syncing...' : 'Refresh Feed'}
+                {isSyncing ? 'Syncing...' : isAdmin ? 'Force Sync Feed' : 'Refresh Feed'}
               </button>
               <button
                 ref={closeButtonRef}
