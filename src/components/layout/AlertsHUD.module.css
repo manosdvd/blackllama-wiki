@@ -492,3 +492,37 @@
   .sourceHealthBar { gap: 0.4rem; padding: 0.2rem 0.6rem; }
   .lastChecked { display: none; }
 }
+
+.weatherLink {
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  border-radius: 4px;
+}
+.weatherLink:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.clickableAlertCard {
+  cursor: pointer;
+  text-decoration: none !important;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+.clickableAlertCard:hover {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.alertLinkFake {
+  font-size: 0.72rem;
+  color: #60a5fa;
+  text-decoration: none;
+  opacity: 0.8;
+  transition: opacity 0.2s;
+  align-self: flex-start;
+  margin-top: 0.2rem;
+}
+.clickableAlertCard:hover .alertLinkFake {
+  opacity: 1;
+  text-decoration: underline;
+}

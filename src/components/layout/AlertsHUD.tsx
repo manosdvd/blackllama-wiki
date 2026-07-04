@@ -161,7 +161,12 @@ export default function AlertsHUD() {
   };
 
   const renderWeatherBlock = () => (
-    <div className={styles.weatherBlock}>
+    <a
+      href="https://forecast.weather.gov/MapClick.php?lat=32.39806&amp;lon=-110.725"
+      target="_blank"
+      rel="noopener noreferrer"
+      className={`${styles.weatherBlock} ${styles.weatherLink}`}
+    >
       <div className={styles.weatherPrimary}>
         <ThermometerSun size={14} />
         <span className={styles.weatherTemp}>{weather?.temp || '--'}</span>
@@ -172,33 +177,54 @@ export default function AlertsHUD() {
         <span><Droplets size={11} /> {weather?.humidity || '--'}</span>
         <span>Rain: {weather?.precipChance || '--'}</span>
       </div>
-    </div>
+    </a>
   );
 
-  const renderAlertCard = (alert: FireAlertItem, index: number) => (
-    <article
-      key={alert.id}
-      className={`${styles.alertCard} ${styles[alert.level] || styles.info} ${index === activeAlertIndex ? styles.activeAlert : ''}`}
-    >
-      <div className={styles.hudIconWrapper}>
-        {getIcon(alert.level, alert.source)}
-      </div>
-      <div className={styles.hudContent}>
-        <div className={styles.hudHeader}>
-          <span className={styles.hudSource}>{alert.title}</span>
-          {alert.source && (
-            <span className={styles.sourceTag}>{SOURCE_LABELS[alert.source] ?? alert.source}</span>
+  const renderAlertCard = (alert: FireAlertItem, index: number) => {
+    const cardContent = (
+      <>
+        <div className={styles.hudIconWrapper}>
+          {getIcon(alert.level, alert.source)}
+        </div>
+        <div className={styles.hudContent}>
+          <div className={styles.hudHeader}>
+            <span className={styles.hudSource}>{alert.title}</span>
+            {alert.source && (
+              <span className={styles.sourceTag}>{SOURCE_LABELS[alert.source] ?? alert.source}</span>
+            )}
+          </div>
+          <p className={styles.hudMessage}>{alert.message}</p>
+          {alert.url && (
+            <span className={styles.alertLinkFake}>
+              View official source ↗
+            </span>
           )}
         </div>
-        <p className={styles.hudMessage}>{alert.message}</p>
-        {alert.url && (
-          <a href={alert.url} target="_blank" rel="noopener noreferrer" className={styles.alertLink}>
-            View official source ↗
-          </a>
-        )}
-      </div>
-    </article>
-  );
+      </>
+    );
+
+    const cardClass = `${styles.alertCard} ${styles[alert.level] || styles.info} ${index === activeAlertIndex ? styles.activeAlert : ''} ${alert.url ? styles.clickableAlertCard : ''}`;
+
+    if (alert.url) {
+      return (
+        <a
+          key={alert.id}
+          href={alert.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={cardClass}
+        >
+          {cardContent}
+        </a>
+      );
+    }
+
+    return (
+      <article key={alert.id} className={cardClass}>
+        {cardContent}
+      </article>
+    );
+  };
 
   return (
     <div className={styles.hudContainer}>

@@ -194,7 +194,7 @@ const COMPRESSED_QUERIES = [
   'Southern Arizona Rescue Association training safety',
   'University of Arizona SkyCenter astronomy Mt Lemmon',
   'family friendly outdoor bushcraft YouTube camping tips latest',
-  'Dictionary.com Word of the Day', 'Riddles.com Riddle of the Day(1 Q&A)',
+  'Dictionary.com Word of the Day', 'Riddles.com Riddle of the Day (1 Question, click link for answer)',
   'This day in Scouting History', 'NationalDayCalendar', 'Arizona State Parks', '"World Scouting" latest',
   'Southern Arizona camping hiking backpacking',
   'tips and tricks hiking backpacking "wilderness first aid" climbing bushcraft pioneering'
@@ -222,7 +222,7 @@ Rules:
 4. Freshness & Relevance: Prefer current or recently verified content. Omit resolved issues or past events.
 5. Zero Filler: NO generic placeholders. Every headline must contain a specific, verified fact, tip, or update.
 6. Strict Accuracy: Do not make up links, events, or statuses. If unsure, skip it.
-7. Content Mix: Add useful local mountain updates, Scouting America/world Scouting items, outdoor skills, local nature facts, and exactly one joke from JokePool only if it fits.
+7. Content Mix: Add useful local mountain updates, Scouting America/world Scouting items, outdoor skills, and local nature facts.
 8. Avoid duplicating RSS baseline items.
 
 RSS Baseline Already Available:
