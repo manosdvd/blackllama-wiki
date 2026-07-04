@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "seed:handbook": "node scripts/seed-handbook.mjs",
+    "import:wiki:full": "node scripts/import-wiki-pages.mjs",
     "set:admin": "node scripts/set-admin.mjs"
   },
   "dependencies": {
