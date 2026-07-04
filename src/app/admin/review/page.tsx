@@ -4,6 +4,8 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/components/auth/AuthContext';
 import type { ApplicationDecisionPayload, StaffApplication } from '@/types/applications';
 import styles from './page.module.css';
+import { doc, getDoc, getDocFromServer } from 'firebase/firestore';
+import { db } from '@/lib/firebase/client';
 
 export default function AdminReviewQueue() {
   const { user, loading, hasPermission, profile } = useAuth();
@@ -11,6 +13,65 @@ export default function AdminReviewQueue() {
   const [loadingApplications, setLoadingApplications] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [diagLogs, setDiagLogs] = useState<string[]>([]);
+
+  const runDiagnostics = async () => {
+    setDiagLogs(['Starting diagnostics...']);
+    if (!user) {
+      setDiagLogs(prev => [...prev, 'Error: No user logged in.']);
+      return;
+    }
+    try {
+      setDiagLogs(prev => [...prev, 'Fetching Firebase ID token...']);
+      const token = await user.getIdToken(true);
+      setDiagLogs(prev => [...prev, `Token fetched successfully (length: ${token.length})`]);
+
+      setDiagLogs(prev => [...prev, 'Checking ID token claims...']);
+      const tokenResult = await user.getIdTokenResult();
+      setDiagLogs(prev => [...prev, `Claims: ${JSON.stringify(tokenResult.claims)}`]);
+
+      setDiagLogs(prev => [...prev, 'POSTing to /api/auth/session...']);
+      const response = await fetch('/api/auth/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken: token }),
+      });
+      setDiagLogs(prev => [...prev, `POST /api/auth/session response status: ${response.status}`]);
+      if (response.ok) {
+        const data = await response.json();
+        setDiagLogs(prev => [...prev, `POST response data: ${JSON.stringify(data)}`]);
+      } else {
+        const text = await response.text();
+        setDiagLogs(prev => [...prev, `POST response error: ${text}`]);
+      }
+
+      setDiagLogs(prev => [...prev, 'Fetching profile from Firestore using getDocFromServer...']);
+      try {
+        const docRef = doc(db, 'users', user.uid);
+        const snap = await getDocFromServer(docRef);
+        setDiagLogs(prev => [...prev, `Firestore getDocFromServer snapshot exists: ${snap.exists()}`]);
+        if (snap.exists()) {
+          setDiagLogs(prev => [...prev, `Firestore profile data: ${JSON.stringify(snap.data())}`]);
+        }
+      } catch (err: any) {
+        setDiagLogs(prev => [...prev, `Firestore getDocFromServer error: ${err.message || String(err)}`]);
+      }
+
+      setDiagLogs(prev => [...prev, 'Fetching profile from Firestore using getDoc...']);
+      try {
+        const docRef = doc(db, 'users', user.uid);
+        const snap = await getDoc(docRef);
+        setDiagLogs(prev => [...prev, `Firestore getDoc snapshot exists: ${snap.exists()}`]);
+        if (snap.exists()) {
+          setDiagLogs(prev => [...prev, `Firestore profile data: ${JSON.stringify(snap.data())}`]);
+        }
+      } catch (err: any) {
+        setDiagLogs(prev => [...prev, `Firestore getDoc error: ${err.message || String(err)}`]);
+      }
+    } catch (err: any) {
+      setDiagLogs(prev => [...prev, `Diagnostics critical error: ${err.message || String(err)}`]);
+    }
+  };
 
   const canReview = hasPermission('canReviewApplications');
 
@@ -100,6 +161,30 @@ export default function AdminReviewQueue() {
                 <p style={{ margin: '0 0 5px 0' }}><strong>Profile.portalMode:</strong> {profile.portalMode || 'NULL'}</p>
                 <p style={{ margin: '0 0 0 0' }}><strong>Permissions list:</strong> {JSON.stringify(profile.adminPermissions)}</p>
               </>
+            )}
+            <button 
+              onClick={runDiagnostics}
+              style={{
+                marginTop: '15px',
+                padding: '8px 16px',
+                background: '#dc2626',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontWeight: 'bold',
+                fontSize: '0.8rem'
+              }}
+            >
+              Run Access Diagnostics
+            </button>
+            {diagLogs.length > 0 && (
+              <div style={{ marginTop: '15px', padding: '10px', background: '#0e0b09', border: '1px solid #443', borderRadius: '4px', maxHeight: '200px', overflowY: 'auto' }}>
+                <h5 style={{ margin: '0 0 5px 0', color: '#fb923c' }}>Diagnostic Logs:</h5>
+                {diagLogs.map((log, idx) => (
+                  <p key={idx} style={{ margin: '0 0 3px 0', fontFamily: 'monospace', fontSize: '0.75rem', whiteSpace: 'pre-wrap' }}>{log}</p>
+                ))}
+              </div>
             )}
           </div>
         </header>
