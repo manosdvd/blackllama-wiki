@@ -7,6 +7,7 @@
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit",
     "seed:handbook": "node scripts/seed-handbook.mjs",
     "import:wiki:full": "node scripts/import-wiki-pages.mjs",
     "set:admin": "node scripts/set-admin.mjs"

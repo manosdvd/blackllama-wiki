@@ -1,4 +1,4 @@
-exports.handler = async function(event, context) {
+exports.handler = async function() {
   const siteUrl = process.env.URL || 'http://localhost:3000';
   console.log(`[Sync Ticker Cron] Triggered. Site URL: ${siteUrl}`);
 

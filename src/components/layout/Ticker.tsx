@@ -37,7 +37,6 @@ interface SyncResponse {
   items?: TickerItem[];
 }
 
-const SYNC_URL = '/api/ticker/sync?force=true';
 const OFFLINE_ITEM_LIMIT_WHEN_LIVE = 10;
 
 function TickerLink({ url, className, children }: { url: string; className: string; children: React.ReactNode }) {
@@ -181,17 +180,50 @@ export default function Ticker({ items }: TickerProps) {
 
   useEffect(() => {
     if (combinedItems.length <= 1) return;
-    const interval = setInterval(() => {
-      setMobileIndex((prev) => (prev + 1) % combinedItems.length);
-    }, 7000);
-    return () => clearInterval(interval);
+    
+    let intervalId: NodeJS.Timeout;
+    let isActive = true;
+
+    const startInterval = () => {
+      intervalId = setInterval(() => {
+        if (isActive) {
+          setMobileIndex((prev) => (prev + 1) % combinedItems.length);
+        }
+      }, 7000);
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        isActive = false;
+        clearInterval(intervalId);
+      } else {
+        if (!isActive) {
+          isActive = true;
+          startInterval();
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    startInterval();
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      clearInterval(intervalId);
+    };
   }, [combinedItems]);
 
   useEffect(() => {
     if (!scrollRef.current || displayItems.length === 0) return;
+
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReducedMotion) return;
+
     let animationId: number;
+    let isActive = true;
 
     const scroll = () => {
+      if (!isActive) return;
       if (scrollRef.current && !isHovered) {
         scrollRef.current.scrollLeft += 0.4;
         if (scrollRef.current.scrollLeft >= scrollRef.current.scrollWidth / 2) {
@@ -201,8 +233,25 @@ export default function Ticker({ items }: TickerProps) {
       animationId = requestAnimationFrame(scroll);
     };
 
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        isActive = false;
+        cancelAnimationFrame(animationId);
+      } else {
+        if (!isActive) {
+          isActive = true;
+          animationId = requestAnimationFrame(scroll);
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
     animationId = requestAnimationFrame(scroll);
-    return () => cancelAnimationFrame(animationId);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      cancelAnimationFrame(animationId);
+    };
   }, [displayItems, isHovered]);
 
   useEffect(() => {

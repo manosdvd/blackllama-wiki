@@ -44,3 +44,5 @@ camp-lawton-staff-hub-firebase-adminsdk-fbsvc-439f443121.json
 .env.local
 dev_server.log
 sync_output.json
+public/sw.js
+public/workbox-*.js
