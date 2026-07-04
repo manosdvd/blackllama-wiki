@@ -8,7 +8,7 @@ import {
   type App,
   type ServiceAccount,
 } from 'firebase-admin/app';
-import { getAuth } from 'firebase-admin/auth';
+import type { Auth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
 
 function serviceAccountFromJson(json: string): ServiceAccount {
@@ -74,6 +74,7 @@ export function getAdminDb() {
   return getFirestore(getAdminApp());
 }
 
-export function getAdminAuth() {
+export async function getAdminAuth(): Promise<Auth> {
+  const { getAuth } = await import('firebase-admin/auth');
   return getAuth(getAdminApp());
 }

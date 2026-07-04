@@ -20,7 +20,8 @@ export async function verifyRequestUser(request: Request): Promise<CurrentUser |
   const token = bearerTokenFromRequest(request);
   if (!token) return null;
 
-  const decodedToken = await getAdminAuth().verifyIdToken(token);
+  const adminAuth = await getAdminAuth();
+  const decodedToken = await adminAuth.verifyIdToken(token);
   const profile = await getUserProfile(decodedToken.uid);
 
   return { decodedToken, profile };
