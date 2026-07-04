@@ -21,7 +21,7 @@ interface LiveTickerItem {
 }
 
 const TARGET_LOCATION = 'Camp Lawton, Mt Lemmon, Santa Catalina Mountains';
-const PRIMARY_GEMINI_TICKER_MODEL = process.env.GEMINI_TICKER_MODEL || 'gemini-2.5-flash';
+const PRIMARY_GEMINI_TICKER_MODEL = process.env.GEMINI_TICKER_MODEL || 'gemini-3.1-flash-lite';
 const DEFAULT_SYNC_THROTTLE_MS = 55 * 60 * 1000;
 const PUBLIC_FORCE_COOLDOWN_MS = 4 * 60 * 60 * 1000;
 const GEMINI_TIMEOUT_MS = 8_000;
