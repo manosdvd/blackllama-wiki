@@ -4,7 +4,6 @@ import dynamic from 'next/dynamic';
 import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import type { OutputData } from '@editorjs/editorjs';
 import { useAuth } from '@/components/auth/AuthContext';
 import { slugify } from '@/lib/content/editorText';
 import { DEFAULT_WIKI_CATEGORIES, type ContentItem, type ContentStatus, type ContentVisibility, type EditorData } from '@/types/content';
@@ -92,8 +91,8 @@ function WikiEditPageContent() {
     [tags],
   );
 
-  const handleEditorChange = useCallback((data: OutputData) => {
-    setEditorData(data as EditorData);
+  const handleEditorChange = useCallback((data: EditorData) => {
+    setEditorData(data);
   }, []);
 
   const saveArticle = async (nextStatus: ContentStatus) => {
@@ -148,6 +147,36 @@ function WikiEditPageContent() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!articleId) return;
+    if (!window.confirm('Are you sure you want to delete this article? This action cannot be undone.')) {
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+    setMessage(null);
+
+    try {
+      const token = await user?.getIdToken();
+      const response = await fetch(`/api/wiki/articles/${encodeURIComponent(articleId)}`, {
+        method: 'DELETE',
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to delete article.');
+
+      setMessage('Article deleted successfully. Redirecting...');
+      setTimeout(() => {
+        window.location.href = '/wiki';
+      }, 1500);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+      setSaving(false);
+    }
+  };
+
   if (loading || loadingArticle) {
     return <div className={styles.container}>Loading editor...</div>;
   }
@@ -175,6 +204,11 @@ function WikiEditPageContent() {
           {existingArticle && <p className={styles.subtleMeta}>Current status: {status}</p>}
         </div>
         <div className={styles.actions}>
+          {existingArticle && (
+            <button className={styles.deleteBtn} onClick={handleDelete} disabled={saving}>
+              Delete
+            </button>
+          )}
           <button className={styles.saveBtn} onClick={() => saveArticle('draft')} disabled={saving}>Save Draft</button>
           <button className={styles.saveBtn} onClick={() => saveArticle('in_review')} disabled={saving}>Submit for Review</button>
           <button className={styles.publishBtn} onClick={() => saveArticle('published')} disabled={saving || !canPublish}>Publish</button>
@@ -250,7 +284,7 @@ function WikiEditPageContent() {
         </div>
         
         <div className={styles.editorArea}>
-          <Editor key={existingArticle?.id ?? 'new'} initialData={editorData as OutputData} onChange={handleEditorChange} />
+          <Editor key={existingArticle?.id ?? 'new'} initialData={editorData} onChange={handleEditorChange} />
         </div>
       </div>
     </div>

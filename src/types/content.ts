@@ -115,22 +115,12 @@ export interface ContentWritePayload {
 
 export const DEFAULT_WIKI_CATEGORIES: WikiCategory[] = [
   {
-    id: 'training',
-    slug: 'training',
-    name: 'Training',
-    description: 'How-tos, required trainings, and staff learning paths.',
-    color: '#0f766e',
-    sortOrder: 10,
-    isSuperCategory: true,
-  },
-  {
     id: 'camp-staff-culture-training',
     slug: 'camp-staff-culture-training',
-    name: 'Camp Staff Culture & Training',
-    description: 'Mission, staff culture, chain of command, teaching methods, and staff-life references.',
+    name: 'Camp Culture & Training',
+    description: 'Mission, staff culture, chain of command, teaching methods, required trainings, and staff-life references.',
     color: '#14b8a6',
     sortOrder: 11,
-    parentId: 'training',
   },
   {
     id: 'policies-procedures',

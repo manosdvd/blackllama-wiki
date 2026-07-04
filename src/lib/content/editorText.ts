@@ -59,5 +59,10 @@ export function slugify(value: string) {
 
 export function findWikiLinks(text: string) {
   const matches = text.matchAll(/\[\[([^\]]+)\]\]/g);
-  return [...matches].map((match) => match[1].trim()).filter(Boolean);
+  return [...matches]
+    .map((match) => {
+      const parts = match[1].split('|');
+      return parts[0].trim();
+    })
+    .filter(Boolean);
 }

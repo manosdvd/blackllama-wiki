@@ -166,3 +166,44 @@ export async function PATCH(request: Request, context: Context) {
     return NextResponse.json({ error: 'Failed to update wiki article.' }, { status: 500 });
   }
 }
+
+export async function DELETE(request: Request, context: Context) {
+  try {
+    const currentUser = await verifyRequestUser(request);
+    if (!currentUser || !currentUserIsHealthy(currentUser)) {
+      return NextResponse.json({ error: 'Sign in is required.' }, { status: 401 });
+    }
+
+    const { id } = await context.params;
+    const snapshot = await getArticleByIdOrSlug(id);
+    if (!snapshot?.exists) return NextResponse.json({ error: 'Article not found.' }, { status: 404 });
+
+    const before = { id: snapshot.id, ...snapshot.data() } as ContentItem;
+    const canDelete =
+      currentUserHasPermission(currentUser, 'canPublishWiki') ||
+      currentUserHasPermission(currentUser, 'canArchiveWiki') ||
+      before.createdByUid === currentUser.decodedToken.uid;
+
+    if (!canDelete) {
+      return NextResponse.json({ error: 'You do not have permission to delete this article.' }, { status: 403 });
+    }
+
+    // Delete the article doc
+    await snapshot.ref.delete();
+
+    // Log in the audit logs
+    await writeAuditLog({
+      actorUid: currentUser.decodedToken.uid,
+      action: 'DELETED_WIKI_ARTICLE',
+      targetType: 'contentItem',
+      targetId: snapshot.id,
+      before: { title: before.title, status: before.status, visibility: before.visibility },
+      after: null,
+    });
+
+    return NextResponse.json({ success: true, message: 'Article deleted successfully.' });
+  } catch (error) {
+    console.error('Failed to delete wiki article:', error);
+    return NextResponse.json({ error: 'Failed to delete wiki article.' }, { status: 500 });
+  }
+}

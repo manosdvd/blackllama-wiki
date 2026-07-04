@@ -224,3 +224,14 @@
     padding: 1.5rem;
   }
 }
+
+.content :global(.wiki-link) {
+  color: var(--lantern-gold) !important;
+  text-decoration: underline !important;
+  font-weight: 600;
+  transition: color 0.2s;
+}
+
+.content :global(.wiki-link:hover) {
+  color: var(--campfire-amber) !important;
+}
