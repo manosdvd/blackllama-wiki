@@ -15,6 +15,10 @@ export default function AdminReviewQueue() {
   const [error, setError] = useState<string | null>(null);
   const [diagLogs, setDiagLogs] = useState<string[]>([]);
 
+  const diagnosticErrorMessage = (err: unknown) => (
+    err instanceof Error ? err.message : String(err)
+  );
+
   const runDiagnostics = async () => {
     setDiagLogs(['Starting diagnostics...']);
     if (!user) {
@@ -53,8 +57,8 @@ export default function AdminReviewQueue() {
         if (snap.exists()) {
           setDiagLogs(prev => [...prev, `Firestore profile data: ${JSON.stringify(snap.data())}`]);
         }
-      } catch (err: any) {
-        setDiagLogs(prev => [...prev, `Firestore getDocFromServer error: ${err.message || String(err)}`]);
+      } catch (err: unknown) {
+        setDiagLogs(prev => [...prev, `Firestore getDocFromServer error: ${diagnosticErrorMessage(err)}`]);
       }
 
       setDiagLogs(prev => [...prev, 'Fetching profile from Firestore using getDoc...']);
@@ -65,11 +69,11 @@ export default function AdminReviewQueue() {
         if (snap.exists()) {
           setDiagLogs(prev => [...prev, `Firestore profile data: ${JSON.stringify(snap.data())}`]);
         }
-      } catch (err: any) {
-        setDiagLogs(prev => [...prev, `Firestore getDoc error: ${err.message || String(err)}`]);
+      } catch (err: unknown) {
+        setDiagLogs(prev => [...prev, `Firestore getDoc error: ${diagnosticErrorMessage(err)}`]);
       }
-    } catch (err: any) {
-      setDiagLogs(prev => [...prev, `Diagnostics critical error: ${err.message || String(err)}`]);
+    } catch (err: unknown) {
+      setDiagLogs(prev => [...prev, `Diagnostics critical error: ${diagnosticErrorMessage(err)}`]);
     }
   };
 

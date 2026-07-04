@@ -7,7 +7,7 @@ import { app, db } from '@/lib/firebase/client';
 import AuthModal from './AuthModal';
 import { canAccessVisibility as canAccessVisibilityForProfile, hasPermission as profileHasPermission } from '@/lib/auth/permissions';
 import type { ContentVisibility } from '@/types/content';
-import type { AdminPermission } from '@/types/permissions';
+import { ADMIN_PERMISSIONS, type AdminPermission } from '@/types/permissions';
 import type { AccountStatus, PortalMode, UserProfile } from '@/types/users';
 
 interface AuthContextType {
@@ -150,7 +150,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await signOut(auth);
   };
 
-  const permissions = useMemo(() => profile?.adminPermissions ?? [], [profile]);
+  const permissions = useMemo(() => (
+    isAdmin ? [...ADMIN_PERMISSIONS] : profile?.adminPermissions ?? []
+  ), [isAdmin, profile]);
   const portalMode = profile?.portalMode ?? 'guest';
   const accountStatus = profile?.accountStatus ?? null;
 
@@ -158,8 +160,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await refreshProfileForUser(user);
   };
 
-  const hasPermission = (permission: AdminPermission) => profileHasPermission(profile, permission);
-  const canAccessVisibility = (visibility: ContentVisibility) => canAccessVisibilityForProfile(profile, visibility);
+  const hasPermission = (permission: AdminPermission) => (
+    isAdmin || profileHasPermission(profile, permission)
+  );
+  const canAccessVisibility = (visibility: ContentVisibility) => (
+    isAdmin || canAccessVisibilityForProfile(profile, visibility)
+  );
 
   return (
     <AuthContext.Provider
