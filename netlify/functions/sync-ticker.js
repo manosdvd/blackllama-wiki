@@ -6,8 +6,8 @@ exports.handler = async function(event, context) {
   const syncUrl = `${siteUrl}/api/ticker/sync?force=true${secretParam}`;
 
   try {
-    console.log(`[Sync Ticker Cron] Fetching ${siteUrl}/api/ticker/sync...`);
-    const res = await fetch(syncUrl, { method: 'GET' });
+    console.log(`[Sync Ticker Cron] Fetching ${syncUrl.replace(secretParam, '&secret=***')}...`);
+    const res = await fetch(syncUrl, { method: 'GET', cache: 'no-store' });
     
     if (!res.ok) {
       const errorText = await res.text();
@@ -15,10 +15,23 @@ exports.handler = async function(event, context) {
     }
 
     const data = await res.json();
-    console.log('[Sync Ticker Cron] Success. Response data:', JSON.stringify(data));
+    console.log('[Sync Ticker Cron] Success. Response data:', JSON.stringify({
+      success: data.success,
+      count: data.count,
+      warning: data.warning,
+      syncRunId: data.syncRunId,
+      firstItemId: data.firstItemId,
+    }));
+
     return {
       statusCode: 200,
-      body: JSON.stringify({ success: true, count: data.count, warning: data.warning })
+      body: JSON.stringify({
+        success: true,
+        count: data.count,
+        warning: data.warning,
+        syncRunId: data.syncRunId,
+        firstItemId: data.firstItemId,
+      })
     };
   } catch (error) {
     console.error('[Sync Ticker Cron] Error fetching sync endpoint:', error);

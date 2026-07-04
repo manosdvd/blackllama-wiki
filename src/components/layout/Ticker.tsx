@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useEffect, useState, useRef } from 'react';
+import React, { useMemo, useEffect, useState, useRef, useCallback } from 'react';
 import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import { X, ExternalLink } from 'lucide-react';
@@ -12,12 +12,31 @@ interface TickerItem {
   url: string;
   category?: string;
   source?: string;
+  sourceType?: string;
   position?: number;
+  generatedAt?: string;
+  syncRunId?: string;
 }
 
 interface TickerProps {
   items: TickerItem[];
 }
+
+interface SyncResponse {
+  success?: boolean;
+  count?: number;
+  message?: string;
+  error?: string;
+  warning?: string;
+  latestId?: string;
+  syncRunId?: string | null;
+  firstItemId?: string | null;
+  currentItemCount?: number;
+  items?: TickerItem[];
+}
+
+const PUBLIC_SYNC_URL = '/api/ticker/sync?force=true&public=true';
+const PUBLIC_SYNC_INTERVAL_MS = 4 * 60 * 60 * 1000;
 
 function TickerLink({ url, className, children }: { url: string; className: string; children: React.ReactNode }) {
   const isExternal = /^https?:\/\//i.test(url);
@@ -40,6 +59,8 @@ export default function Ticker({ items }: TickerProps) {
   const [mobileIndex, setMobileIndex] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
   const [isFeedOpen, setIsFeedOpen] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   
   const feedButtonRef = useRef<HTMLButtonElement>(null);
@@ -50,38 +71,71 @@ export default function Ticker({ items }: TickerProps) {
   const [mobileScrollAmount, setMobileScrollAmount] = useState(0);
   const [mobileShouldScroll, setMobileShouldScroll] = useState(false);
 
-  // Fetch live items from Firestore
+  const runPublicSync = useCallback(async (manual = false) => {
+    if (manual) {
+      setIsSyncing(true);
+      setSyncResult(null);
+    }
+
+    try {
+      const res = await fetch(PUBLIC_SYNC_URL, { cache: 'no-store' });
+      const data = (await res.json()) as SyncResponse;
+
+      if (data.items && data.items.length > 0) {
+        setApiItems(data.items);
+      }
+
+      if (manual) {
+        const debugId = data.syncRunId || data.firstItemId || data.latestId || data.items?.[0]?.id;
+        const countText = typeof data.count === 'number'
+          ? `${data.count} items`
+          : typeof data.currentItemCount === 'number'
+            ? `${data.currentItemCount} current items`
+            : data.message || 'sync checked';
+        const statusText = res.ok && data.success ? countText : `Error: ${data.error || data.warning || 'Unknown error'}`;
+        setSyncResult(`${statusText}${debugId ? ` · ID: ${debugId}` : ''}`);
+      }
+    } catch (e: unknown) {
+      if (manual) {
+        setSyncResult(`Fetch failed: ${e instanceof Error ? e.message : String(e)}`);
+      }
+      console.error(e);
+    } finally {
+      if (manual) {
+        setIsSyncing(false);
+      }
+    }
+  }, []);
+
+  // Fetch live items from Firestore and kick the public sync timer.
   useEffect(() => {
-    if (!db) return;
-    const liveTickerQuery = query(collection(db, 'liveTicker'), orderBy('position', 'asc'));
-    const unsubscribe = onSnapshot(liveTickerQuery, (snapshot) => {
-      const live: TickerItem[] = [];
-      snapshot.forEach((doc) => {
-        live.push(doc.data() as TickerItem);
+    let unsubscribe: (() => void) | undefined;
+
+    if (db) {
+      const liveTickerQuery = query(collection(db, 'liveTicker'), orderBy('position', 'asc'));
+      unsubscribe = onSnapshot(liveTickerQuery, (snapshot) => {
+        const live: TickerItem[] = [];
+        snapshot.forEach((doc) => {
+          const data = doc.data() as TickerItem;
+          live.push({ ...data, id: data.id || doc.id });
+        });
+        setDbItems(live);
       });
-      setDbItems(live);
-    });
+    }
 
-    // Auto-sync on load (Server has a 55-minute throttle, so this is safe)
-    const fetchSync = async () => {
-      try {
-        const res = await fetch('/api/ticker/sync');
-        const data = await res.json();
-        if (data.items && data.items.length > 0) {
-          setApiItems(data.items);
-        }
-      } catch (e) { console.error(e); }
-    };
-    fetchSync();
+    // Public front-page sync. The API still protects this with a short server-side cooldown.
+    void runPublicSync(false);
 
-    // Auto-sync hourly
-    const interval = setInterval(fetchSync, 3600 * 1000);
+    // Keep the public ticker nudging itself several times per day even if the Netlify cron misses.
+    const interval = setInterval(() => {
+      void runPublicSync(false);
+    }, PUBLIC_SYNC_INTERVAL_MS);
 
     return () => {
-      unsubscribe();
+      unsubscribe?.();
       clearInterval(interval);
     };
-  }, []);
+  }, [runPublicSync]);
 
   // Shuffle local items client-side only to avoid hydration mismatch
   useEffect(() => {
@@ -192,6 +246,20 @@ export default function Ticker({ items }: TickerProps) {
       >
         CAMP FEED
       </button>
+
+      <button
+        onClick={() => {
+          setIsFeedOpen(true);
+          void runPublicSync(true);
+        }}
+        disabled={isSyncing}
+        className={styles.tickerLabel}
+        aria-label="Force sync Camp Feed"
+        title="Force sync Camp Feed"
+        style={{ marginLeft: '0.25rem', opacity: isSyncing ? 0.65 : 1 }}
+      >
+        {isSyncing ? 'SYNC...' : 'SYNC'}
+      </button>
       
       <div className={styles.desktopArrows}>
         <button 
@@ -209,7 +277,7 @@ export default function Ticker({ items }: TickerProps) {
         onTouchEnd={() => setIsHovered(false)}
       >
         {displayItems.map((item, index) => (
-          <div key={`${item.id}-${index}`} className={styles.tickerItem}>
+          <div key={`${item.id}-${index}`} className={styles.tickerItem} title={item.id ? `Ticker ID: ${item.id}` : undefined}>
             <span className={styles.tickerCategory} style={{ color: getCategoryColor(item.category) }}>
               [{item.source || 'Camp Lawton'}]
             </span>
@@ -234,7 +302,7 @@ export default function Ticker({ items }: TickerProps) {
       <div className={styles.tickerMobileContent}>
         <button onClick={prevMobile} className={styles.arrowBtn}>◀</button>
         {combinedItems.length > 0 && (
-          <div className={`${styles.tickerItem} ${styles.mobileItem}`} ref={mobileContainerRef}>
+          <div className={`${styles.tickerItem} ${styles.mobileItem}`} ref={mobileContainerRef} title={mobileItem.id ? `Ticker ID: ${mobileItem.id}` : undefined}>
             <div 
               key={safeMobileIndex} 
               ref={mobileTextRef}
@@ -276,6 +344,23 @@ export default function Ticker({ items }: TickerProps) {
           >
             <div className={styles.modalHeader}>
               <h2 id="feed-modal-title" className={styles.modalTitle}>CAMP FEED BULLETIN</h2>
+              <button
+                onClick={() => void runPublicSync(true)}
+                disabled={isSyncing}
+                style={{
+                  background: 'var(--pine-green)',
+                  color: 'white',
+                  border: 'none',
+                  padding: '0.4rem 0.65rem',
+                  cursor: isSyncing ? 'not-allowed' : 'pointer',
+                  borderRadius: '4px',
+                  marginLeft: 'auto',
+                  marginRight: '0.5rem',
+                  opacity: isSyncing ? 0.65 : 1,
+                }}
+              >
+                {isSyncing ? 'Syncing...' : 'Force Sync'}
+              </button>
               <button 
                 ref={closeButtonRef}
                 onClick={() => {
@@ -288,20 +373,30 @@ export default function Ticker({ items }: TickerProps) {
                 <X size={20} />
               </button>
             </div>
+            {syncResult && (
+              <p style={{ margin: '0.5rem 1rem 0', fontSize: '0.8rem', color: 'var(--lantern-gold)' }}>
+                {syncResult}
+              </p>
+            )}
             <div className={styles.modalBody}>
               <div className={styles.modalList}>
                 {combinedItems.map((item) => (
-                  <div key={item.id} className={styles.modalItem}>
+                  <div key={item.id} className={styles.modalItem} title={item.id ? `Ticker ID: ${item.id}` : undefined}>
                     <div className={styles.modalItemMeta}>
                       <span 
                         className={styles.modalCategoryBadge} 
                         style={{ backgroundColor: getCategoryColor(item.category), color: '#000' }}
                       >
-                        {(item.category || 'LIVE').replace('_', ' ')}
+                        {(item.category || item.sourceType || 'LIVE').replace('_', ' ')}
                       </span>
                       <span className={styles.modalSource}>
                         {item.source || 'Camp Lawton'}
                       </span>
+                      {item.id && (
+                        <span className={styles.modalSource}>
+                          ID: {item.id}
+                        </span>
+                      )}
                     </div>
                     <div className={styles.modalItemContent}>
                       {item.url ? (

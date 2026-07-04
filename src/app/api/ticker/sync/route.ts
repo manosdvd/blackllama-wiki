@@ -19,12 +19,14 @@ interface LiveTickerItem {
   sourceType: string;
   position: number;
   generatedAt: string;
+  syncRunId: string;
   timestamp: FieldValue;
 }
 
 const TARGET_LOCATION = 'Camp Lawton, Mt Lemmon, Santa Catalina Mountains';
 const PRIMARY_GEMINI_TICKER_MODEL = 'gemini-3.5-flash';
-const MAX_TICKER_ITEMS = 36;
+const DEFAULT_SYNC_THROTTLE_MS = 55 * 60 * 1000;
+const PUBLIC_FORCE_COOLDOWN_MS = 10 * 60 * 1000;
 
 const COMPRESSED_FEEDS = [
   'aztrail.org/feed', 'onscouting.org/feed', 'scoutlife.org/feed', 'scoutingwire.org/feed',
@@ -96,10 +98,8 @@ JokePool: ${MINIFIED_JOKES}
 }
 
 async function generateTicker(apiKey: string) {
-  // Initialize the new unified SDK client wrapper 
   const ai = new GoogleGenAI({ apiKey }); 
   
-  // Define Schema natively via @google/genai Type enums 
   const tickerSchema: Schema = {
     type: Type.OBJECT,
     properties: {
@@ -132,7 +132,6 @@ async function generateTicker(apiKey: string) {
 
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
-      // Execute the request using the modern .models.generateContent() API
       const response = await ai.models.generateContent({
         model: PRIMARY_GEMINI_TICKER_MODEL,
         contents: prompt,
@@ -146,9 +145,11 @@ async function generateTicker(apiKey: string) {
       });
 
       const parsed = JSON.parse(response.text?.trim() || '{}');
-      if (!parsed.items || parsed.items.length === 0) throw new Error('Empty items array returned');
-      
-      parsed.items = parsed.items.slice(0, MAX_TICKER_ITEMS);
+      if (!Array.isArray(parsed.items) || parsed.items.length === 0) {
+        throw new Error('Empty items array returned');
+      }
+
+      // Intentionally do not cap the returned item count here. The prompt controls the target range.
       return parsed;
     } catch (error) {
       lastError = error;
@@ -171,6 +172,7 @@ function tickerResponseItem(item: LiveTickerItem): TickerResponseItem {
     sourceType: item.sourceType,
     position: item.position,
     generatedAt: item.generatedAt,
+    syncRunId: item.syncRunId,
   };
 }
 
@@ -178,15 +180,16 @@ export async function GET(req: Request) {
   try {
     const url = new URL(req.url);
     const force = url.searchParams.get('force') === 'true';
+    const publicForce = force && ['true', '1'].includes((url.searchParams.get('public') || '').toLowerCase());
     const apiKey = process.env.GEMINI_API_KEY;
 
     if (!apiKey) return NextResponse.json({ error: 'GEMINI_API_KEY not set' }, { status: 500 });
 
     const cronSecret = process.env.CRON_SECRET;
     if (cronSecret) {
-      const isAuthorized = req.headers.get('x-cron-secret') === cronSecret || url.searchParams.get('secret') === cronSecret;
+      const isCronAuthorized = req.headers.get('x-cron-secret') === cronSecret || url.searchParams.get('secret') === cronSecret;
       
-      if (!isAuthorized) {
+      if (!isCronAuthorized) {
         const token = req.headers.get('Authorization')?.substring(7);
         let isAdmin = false;
         if (token) {
@@ -195,34 +198,51 @@ export async function GET(req: Request) {
             isAdmin = decodedToken.admin === true;
           } catch { /* silent fail auth */ }
         }
-        if (!isAdmin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        if (!isAdmin && !publicForce) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
     }
 
     const db = getAdminDb();
+    const shouldUseCooldown = !force || publicForce;
+    const cooldownMs = publicForce ? PUBLIC_FORCE_COOLDOWN_MS : DEFAULT_SYNC_THROTTLE_MS;
     
-    if (!force) {
-      const latestSnap = await db.collection('liveTicker').orderBy('timestamp', 'desc').limit(1).get();
+    if (shouldUseCooldown) {
+      // No Firestore query limit here on purpose: this exposes the full current set size for debugging.
+      const latestSnap = await db.collection('liveTicker').orderBy('timestamp', 'desc').get();
       if (!latestSnap.empty) {
-        const latestDoc = latestSnap.docs[0].data();
-        const ageMs = Date.now() - (latestDoc.timestamp?.toMillis?.() || 0);
-        if (ageMs < 55 * 60 * 1000) {
-          return NextResponse.json({ success: true, message: 'Recently synced.' });
+        const latestDoc = latestSnap.docs[0];
+        const latestData = latestDoc.data();
+        const ageMs = Date.now() - (latestData.timestamp?.toMillis?.() || 0);
+        if (ageMs < cooldownMs) {
+          return NextResponse.json({
+            success: true,
+            message: 'Recently synced.',
+            latestId: latestData.id || latestDoc.id,
+            syncRunId: latestData.syncRunId || null,
+            latestGeneratedAt: latestData.generatedAt || null,
+            ageMs,
+            cooldownMs,
+            currentItemCount: latestSnap.size,
+            force,
+            publicForce,
+          });
         }
       }
     }
 
     const generatedTicker = await generateTicker(apiKey);
     const generatedAt = generatedTicker.ticker_metadata.generated_at || new Date().toISOString();
+    const syncRunId = `sync_${getPhoenixDateStamp()}_${Date.now()}`;
 
     const liveItems: LiveTickerItem[] = generatedTicker.items.map((item: NewsTickerItem, index: number) => ({
-      id: `live_${getPhoenixDateStamp()}_${String(index + 1).padStart(2, '0')}`,
+      id: `${syncRunId}_${String(index + 1).padStart(2, '0')}`,
       title: item.headline,
       url: normalizeTickerLink(item.link),
       source: item.source || 'Live Feed',
       sourceType: 'live',
       position: index,
       generatedAt,
+      syncRunId,
       timestamp: FieldValue.serverTimestamp()
     }));
 
@@ -244,14 +264,18 @@ export async function GET(req: Request) {
       return NextResponse.json({
         success: true,
         count: liveItems.length,
+        syncRunId,
+        firstItemId: liveItems[0]?.id || null,
         metadata: generatedTicker.ticker_metadata,
-        items: liveItems.map(tickerResponseItem) // strip timestamp for client
+        items: liveItems.map(tickerResponseItem)
       });
     } catch (e) {
-      console.warn("Failed to write to Firestore.", e);
+      console.warn('Failed to write to Firestore.', e);
       return NextResponse.json({
         success: true,
         count: liveItems.length,
+        syncRunId,
+        firstItemId: liveItems[0]?.id || null,
         warning: 'Failed to write to DB',
         items: liveItems.map(tickerResponseItem)
       });
