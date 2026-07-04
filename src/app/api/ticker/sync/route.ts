@@ -198,7 +198,7 @@ function dedupeTickerItems(items: NewsTickerItem[]) {
 
 async function generateRssTicker() {
   const Parser = (await import('rss-parser')).default;
-  const parser = new Parser<unknown, ParsedRssItem>();
+  const parser = new Parser<Record<string, unknown>, ParsedRssItem>();
   const now = Date.now();
 
   const feedResults = await Promise.allSettled(
