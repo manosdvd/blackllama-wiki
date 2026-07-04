@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { currentUserHasPermission, verifyRequestUser } from '@/lib/server/auth';
 
 export const runtime = 'nodejs';
 
@@ -47,7 +48,6 @@ type ParsedRssItem = {
 const TARGET_LOCATION = 'Camp Lawton, Mt Lemmon, Santa Catalina Mountains';
 const PRIMARY_GEMINI_TICKER_MODEL = process.env.GEMINI_TICKER_MODEL || 'gemini-3.1-flash-lite';
 const DEFAULT_SYNC_THROTTLE_MS = 55 * 60 * 1000;
-const PUBLIC_FORCE_COOLDOWN_MS = 4 * 60 * 60 * 1000;
 const GEMINI_TIMEOUT_MS = 8_000;
 const RSS_FEED_TIMEOUT_MS = 6_000;
 const RSS_ITEMS_PER_FEED = 3;
@@ -332,6 +332,24 @@ function mergeTickerItems(rssItems: NewsTickerItem[], aiItems: NewsTickerItem[])
   ]).slice(0, TICKER_MAX_ITEMS);
 }
 
+async function authorizeTickerSync(request: Request, cronSecret: string | undefined) {
+  const url = new URL(request.url);
+  const suppliedCronSecret = request.headers.get('x-cron-secret') || url.searchParams.get('secret');
+
+  if (cronSecret && suppliedCronSecret === cronSecret) {
+    return { authorized: true, actor: 'cron' as const };
+  }
+
+  const currentUser = await verifyRequestUser(request).catch(() => null);
+  const isAdmin = !!currentUser && (
+    currentUser.decodedToken.admin === true ||
+    currentUser.profile?.isAdmin === true ||
+    currentUserHasPermission(currentUser, 'canManageSystemSettings')
+  );
+
+  return { authorized: isAdmin, actor: isAdmin ? 'admin' as const : 'anonymous' as const };
+}
+
 type TickerResponseItem = Omit<LiveTickerItem, 'timestamp'>;
 
 function tickerResponseItem(item: LiveTickerItem): TickerResponseItem {
@@ -351,7 +369,6 @@ export async function GET(req: Request) {
   try {
     const url = new URL(req.url);
     const force = url.searchParams.get('force') === 'true';
-    const publicForce = force && ['true', '1'].includes((url.searchParams.get('public') || '').toLowerCase());
     const apiKey = process.env.GEMINI_API_KEY;
 
     if (url.searchParams.get('health') === 'true') {
@@ -364,22 +381,19 @@ export async function GET(req: Request) {
       });
     }
 
+    const syncAuthorization = await authorizeTickerSync(req, process.env.CRON_SECRET);
+    if (!syncAuthorization.authorized) {
+      return NextResponse.json({ error: 'Admin authorization or cron secret is required to sync the ticker.' }, { status: 401 });
+    }
+
     const [{ getAdminDbOnly }, { FieldValue }] = await Promise.all([
       import('@/lib/firebase/adminDb'),
       import('firebase-admin/firestore'),
     ]);
 
-    const cronSecret = process.env.CRON_SECRET;
-    if (cronSecret) {
-      const isCronAuthorized = req.headers.get('x-cron-secret') === cronSecret || url.searchParams.get('secret') === cronSecret;
-      if (!isCronAuthorized && !publicForce) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-      }
-    }
-
     const db = getAdminDbOnly();
-    const shouldUseCooldown = !force || publicForce;
-    const cooldownMs = publicForce ? PUBLIC_FORCE_COOLDOWN_MS : DEFAULT_SYNC_THROTTLE_MS;
+    const shouldUseCooldown = !force;
+    const cooldownMs = DEFAULT_SYNC_THROTTLE_MS;
     
     if (shouldUseCooldown) {
       const latestSnap = await db.collection('liveTicker').orderBy('timestamp', 'desc').limit(1).get();
@@ -397,10 +411,10 @@ export async function GET(req: Request) {
             currentItemCount: latestData.syncRunId
               ? (await db.collection('liveTicker').where('syncRunId', '==', latestData.syncRunId).count().get()).data().count
               : undefined,
+            syncActor: syncAuthorization.actor,
             ageMs,
             cooldownMs,
             force,
-            publicForce,
           });
         }
       }
@@ -473,12 +487,14 @@ export async function GET(req: Request) {
         rssFailedFeedCount: rssTicker.failedFeedCount,
         aiStatus,
         aiError,
+        syncActor: syncAuthorization.actor,
         metadata: {
           generated_at: generatedAt,
           target_location: TARGET_LOCATION,
           rss_feed_count: rssTicker.feedCount,
           rss_failed_feed_count: rssTicker.failedFeedCount,
           ai_status: aiStatus,
+          sync_actor: syncAuthorization.actor,
         },
         items: liveItems.map(tickerResponseItem)
       });
@@ -493,6 +509,7 @@ export async function GET(req: Request) {
         rssFailedFeedCount: rssTicker.failedFeedCount,
         aiStatus,
         aiError,
+        syncActor: syncAuthorization.actor,
         warning: 'Failed to write to DB',
         items: liveItems.map(tickerResponseItem)
       });
