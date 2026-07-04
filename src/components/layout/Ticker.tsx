@@ -1,10 +1,8 @@
 'use client';
 
 import React, { useMemo, useEffect, useState, useRef, useCallback } from 'react';
-import { getAuth } from 'firebase/auth';
 import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
-import { useAuth } from '@/components/auth/AuthContext';
 import { X, ExternalLink } from 'lucide-react';
 import styles from './Ticker.module.css';
 
@@ -37,7 +35,7 @@ interface SyncResponse {
   items?: TickerItem[];
 }
 
-const ADMIN_SYNC_URL = '/api/ticker/sync?force=true';
+const SYNC_URL = '/api/ticker/sync?force=true';
 
 function TickerLink({ url, className, children }: { url: string; className: string; children: React.ReactNode }) {
   const isExternal = /^https?:\/\//i.test(url);
@@ -71,7 +69,6 @@ async function parseSyncResponse(res: Response): Promise<SyncResponse> {
 }
 
 export default function Ticker({ items }: TickerProps) {
-  const { user, isAdmin } = useAuth();
   const [dbItems, setDbItems] = useState<TickerItem[]>([]);
   const [apiItems, setApiItems] = useState<TickerItem[]>([]);
   const [shuffledLocalItems, setShuffledLocalItems] = useState<TickerItem[]>(items);
@@ -90,24 +87,12 @@ export default function Ticker({ items }: TickerProps) {
   const [mobileScrollAmount, setMobileScrollAmount] = useState(0);
   const [mobileShouldScroll, setMobileShouldScroll] = useState(false);
 
-  const runAdminSync = useCallback(async () => {
+  const runSync = useCallback(async () => {
     setIsSyncing(true);
     setSyncResult(null);
 
     try {
-      if (!isAdmin || !user) {
-        setSyncResult('Admin sign-in required.');
-        return;
-      }
-
-      const auth = getAuth();
-      const token = await (auth.currentUser || user).getIdToken(true);
-      const res = await fetch(ADMIN_SYNC_URL, {
-        cache: 'no-store',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const res = await fetch(SYNC_URL, { cache: 'no-store' });
       const data = await parseSyncResponse(res);
 
       if (data.items && data.items.length > 0) {
@@ -128,7 +113,7 @@ export default function Ticker({ items }: TickerProps) {
     } finally {
       setIsSyncing(false);
     }
-  }, [isAdmin, user]);
+  }, []);
 
   // Fetch live items from Firestore. Background refresh is handled by the Netlify scheduled function.
   useEffect(() => {
@@ -261,21 +246,19 @@ export default function Ticker({ items }: TickerProps) {
         CAMP FEED
       </button>
 
-      {isAdmin && (
-        <button
-          onClick={() => {
-            setIsFeedOpen(true);
-            void runAdminSync();
-          }}
-          disabled={isSyncing}
-          className={styles.tickerLabel}
-          aria-label="Force sync Camp Feed"
-          title="Force sync Camp Feed"
-          style={{ marginLeft: '0.25rem', opacity: isSyncing ? 0.65 : 1 }}
-        >
-          {isSyncing ? 'SYNC...' : 'SYNC'}
-        </button>
-      )}
+      <button
+        onClick={() => {
+          setIsFeedOpen(true);
+          void runSync();
+        }}
+        disabled={isSyncing}
+        className={styles.tickerLabel}
+        aria-label="Refresh Camp Feed"
+        title="Refresh Camp Feed"
+        style={{ marginLeft: '0.25rem', opacity: isSyncing ? 0.65 : 1 }}
+      >
+        {isSyncing ? 'SYNC...' : 'SYNC'}
+      </button>
       
       <div className={styles.desktopArrows}>
         <button 
@@ -360,25 +343,23 @@ export default function Ticker({ items }: TickerProps) {
           >
             <div className={styles.modalHeader}>
               <h2 id="feed-modal-title" className={styles.modalTitle}>CAMP FEED BULLETIN</h2>
-              {isAdmin && (
-                <button
-                  onClick={() => void runAdminSync()}
-                  disabled={isSyncing}
-                  style={{
-                    background: 'var(--pine-green)',
-                    color: 'white',
-                    border: 'none',
-                    padding: '0.4rem 0.65rem',
-                    cursor: isSyncing ? 'not-allowed' : 'pointer',
-                    borderRadius: '4px',
-                    marginLeft: 'auto',
-                    marginRight: '0.5rem',
-                    opacity: isSyncing ? 0.65 : 1,
-                  }}
-                >
-                  {isSyncing ? 'Syncing...' : 'Force Sync'}
-                </button>
-              )}
+              <button
+                onClick={() => void runSync()}
+                disabled={isSyncing}
+                style={{
+                  background: 'var(--pine-green)',
+                  color: 'white',
+                  border: 'none',
+                  padding: '0.4rem 0.65rem',
+                  cursor: isSyncing ? 'not-allowed' : 'pointer',
+                  borderRadius: '4px',
+                  marginLeft: 'auto',
+                  marginRight: '0.5rem',
+                  opacity: isSyncing ? 0.65 : 1,
+                }}
+              >
+                {isSyncing ? 'Syncing...' : 'Refresh Feed'}
+              </button>
               <button 
                 ref={closeButtonRef}
                 onClick={() => {
@@ -391,7 +372,7 @@ export default function Ticker({ items }: TickerProps) {
                 <X size={20} />
               </button>
             </div>
-            {isAdmin && syncResult && (
+            {syncResult && (
               <p style={{ margin: '0.5rem 1rem 0', fontSize: '0.8rem', color: 'var(--lantern-gold)' }}>
                 {syncResult}
               </p>
