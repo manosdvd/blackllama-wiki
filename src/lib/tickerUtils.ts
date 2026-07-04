@@ -7,6 +7,18 @@ interface OfflineTickerItem {
   url: string;
   category: string;
   enabled: boolean;
+  sourceType?: string;
+}
+
+async function readJsonFile<T>(relativePath: string, fallback: T): Promise<T> {
+  try {
+    const jsonPath = path.join(process.cwd(), relativePath);
+    const fileContents = await fs.readFile(jsonPath, 'utf8');
+    return JSON.parse(fileContents) as T;
+  } catch (err) {
+    console.warn(`Failed to parse ${relativePath}:`, err);
+    return fallback;
+  }
 }
 
 function stableHash(input: string) {
@@ -36,23 +48,23 @@ function selectOneOfflineItemPerCategory(items: OfflineTickerItem[]) {
 }
 
 export async function getOfflineTickerItems() {
-  try {
-    const jsonPath = path.join(process.cwd(), 'tickerFeeds.json');
-    const fileContents = await fs.readFile(jsonPath, 'utf8');
-    const data = JSON.parse(fileContents);
-    
-    const enabledItems = ((data.offlineTicker || []) as OfflineTickerItem[]).filter((item) => item.enabled);
-    const selectedItems = selectOneOfflineItemPerCategory(enabledItems);
+  const [tickerConfig, quoteItems] = await Promise.all([
+    readJsonFile<{ offlineTicker?: OfflineTickerItem[] }>('tickerFeeds.json', { offlineTicker: [] }),
+    readJsonFile<OfflineTickerItem[]>('src/data/offlineQuoteTicker.json', []),
+  ]);
 
-    return selectedItems.map((item) => ({
-      id: item.id,
-      title: item.title,
-      url: item.url,
-      category: item.category,
-      sourceType: 'offline'
-    }));
-  } catch (err) {
-    console.error('Failed to parse ticker feeds:', err);
-    return [];
-  }
+  const enabledItems = [
+    ...(tickerConfig.offlineTicker || []),
+    ...quoteItems,
+  ].filter((item) => item.enabled);
+
+  const selectedItems = selectOneOfflineItemPerCategory(enabledItems);
+
+  return selectedItems.map((item) => ({
+    id: item.id,
+    title: item.title,
+    url: item.url,
+    category: item.category,
+    sourceType: item.sourceType || 'offline'
+  }));
 }
