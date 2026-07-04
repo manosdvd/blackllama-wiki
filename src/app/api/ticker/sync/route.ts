@@ -23,7 +23,7 @@ interface LiveTickerItem {
 const TARGET_LOCATION = 'Camp Lawton, Mt Lemmon, Santa Catalina Mountains';
 const PRIMARY_GEMINI_TICKER_MODEL = process.env.GEMINI_TICKER_MODEL || 'gemini-2.5-flash';
 const DEFAULT_SYNC_THROTTLE_MS = 55 * 60 * 1000;
-const PUBLIC_FORCE_COOLDOWN_MS = 10 * 60 * 1000;
+const PUBLIC_FORCE_COOLDOWN_MS = 4 * 60 * 60 * 1000;
 const GEMINI_TIMEOUT_MS = 8_000;
 
 const COMPRESSED_FEEDS = [
@@ -76,6 +76,21 @@ function timeoutAfter(ms: number) {
   return new Promise<never>((_, reject) => {
     setTimeout(() => reject(new Error(`Gemini ticker generation timed out after ${ms}ms`)), ms);
   });
+}
+
+function isGeminiQuotaError(error: unknown) {
+  return /quota|RESOURCE_EXHAUSTED|429|rate-limit|rate limit/i.test(String(error));
+}
+
+function extractRetryAfterSeconds(error: unknown) {
+  const message = String(error);
+  const retryDelayMatch = message.match(/retryDelay"\s*:\s*"(\d+)s"/i);
+  if (retryDelayMatch?.[1]) return Number(retryDelayMatch[1]);
+
+  const retryInMatch = message.match(/retry in\s+([\d.]+)s/i);
+  if (retryInMatch?.[1]) return Math.ceil(Number(retryInMatch[1]));
+
+  return null;
 }
 
 function extractTickerJson(rawText: string) {
@@ -153,7 +168,8 @@ async function generateTicker(apiKey: string) {
     } catch (error) {
       lastError = error;
       const msg = String(error);
-      if (attempt === 2 || !/(429|500|502|503|504|timeout|timed out|rate limit)/i.test(msg)) break;
+      if (isGeminiQuotaError(error)) break;
+      if (attempt === 2 || !/(500|502|503|504|timeout|timed out)/i.test(msg)) break;
       await wait(1000 * attempt);
     }
   }
@@ -283,6 +299,16 @@ export async function GET(req: Request) {
 
   } catch (err) {
     console.error('Ticker sync error:', err);
+
+    if (isGeminiQuotaError(err)) {
+      return NextResponse.json({
+        success: false,
+        error: 'Gemini quota exceeded. The ticker will keep showing the most recent cached feed until quota resets.',
+        retryAfterSeconds: extractRetryAfterSeconds(err),
+        model: PRIMARY_GEMINI_TICKER_MODEL,
+      }, { status: 429 });
+    }
+
     return NextResponse.json({ error: String(err) }, { status: 500 });
   }
 }
