@@ -78,6 +78,26 @@ function timeoutAfter(ms: number) {
   });
 }
 
+function extractTickerJson(rawText: string) {
+  const cleaned = rawText
+    .trim()
+    .replace(/^```json\s*/i, '')
+    .replace(/^```\s*/i, '')
+    .replace(/```$/i, '')
+    .trim();
+
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    const start = cleaned.indexOf('{');
+    const end = cleaned.lastIndexOf('}');
+    if (start >= 0 && end > start) {
+      return JSON.parse(cleaned.slice(start, end + 1));
+    }
+    throw new Error(`Gemini did not return parseable JSON. Raw response starts: ${cleaned.slice(0, 240)}`);
+  }
+}
+
 function buildTickerPrompt() {
   const today = getPhoenixDateStamp();
 
@@ -88,12 +108,14 @@ Today: ${today} America/Phoenix
 Mission: Generate a real-time news ticker (24-36 items) focusing on local mountain updates, Scouting America news, and outdoor/camping skills.
 
 Rules:
-1. Format: Each item must ONLY provide a Headline, the Source name, and the direct Link URL. No categories.
-2. Freshness & Relevance: News must be from the last 24-48 hours and currently relevant. Omit resolved issues or past events.
-3. Zero Filler: NO generic placeholders (e.g., "Check the website for updates"). Every headline must contain a specific, verified fact, tip, or update.
-4. Strict Accuracy: Do not make up links, events, or statuses. If a source has nothing new, skip it entirely.
-5. Broad Variety: Use the provided feeds and queries to check for content, but look in other related places whenever possible.
-6. Content Mix: Blend breaking local updates with evergreen outdoor skills, local nature facts, and exactly one joke from the JokePool.
+1. Return ONLY a raw JSON object. Do not wrap it in markdown. Do not add explanation.
+2. JSON shape must be: {"ticker_metadata":{"generated_at":"ISO string","target_location":"string"},"items":[{"headline":"string","source":"string","link":"https://..."}]}
+3. Each item must ONLY provide a headline, source name, and direct link URL. No categories.
+4. Freshness & Relevance: News must be from the last 24-48 hours and currently relevant. Omit resolved issues or past events.
+5. Zero Filler: NO generic placeholders (e.g., "Check the website for updates"). Every headline must contain a specific, verified fact, tip, or update.
+6. Strict Accuracy: Do not make up links, events, or statuses. If a source has nothing new, skip it entirely.
+7. Broad Variety: Use the provided feeds and queries to check for content, but look in other related places whenever possible.
+8. Content Mix: Blend breaking local updates with evergreen outdoor skills, local nature facts, and exactly one joke from the JokePool.
 
 Feeds Baseline: ${COMPRESSED_FEEDS}
 Query Baseline: ${COMPRESSED_QUERIES}
@@ -102,36 +124,8 @@ JokePool: ${MINIFIED_JOKES}
 }
 
 async function generateTicker(apiKey: string) {
-  const { GoogleGenAI, Type } = await import('@google/genai');
+  const { GoogleGenAI } = await import('@google/genai');
   const ai = new GoogleGenAI({ apiKey });
-  
-  const tickerSchema = {
-    type: Type.OBJECT,
-    properties: {
-      ticker_metadata: {
-        type: Type.OBJECT,
-        properties: {
-          generated_at: { type: Type.STRING },
-          target_location: { type: Type.STRING }
-        },
-        required: ['generated_at', 'target_location']
-      },
-      items: {
-        type: Type.ARRAY,
-        items: {
-          type: Type.OBJECT,
-          properties: {
-            headline: { type: Type.STRING },
-            source: { type: Type.STRING },
-            link: { type: Type.STRING }
-          },
-          required: ['headline', 'source', 'link']
-        }
-      }
-    },
-    required: ['ticker_metadata', 'items']
-  };
-
   const prompt = buildTickerPrompt();
   let lastError: unknown;
 
@@ -142,17 +136,15 @@ async function generateTicker(apiKey: string) {
           model: PRIMARY_GEMINI_TICKER_MODEL,
           contents: prompt,
           config: {
-            systemInstruction: 'You are a real-time news ticker automation engine. Use Google Search to pull the latest headlines. Output ONLY raw JSON. No conversational text.',
+            systemInstruction: 'You are a real-time news ticker automation engine. Use Google Search to pull the latest headlines. Return only raw JSON text. No markdown and no conversational text.',
             tools: [{ googleSearch: {} }],
-            responseMimeType: 'application/json',
-            responseSchema: tickerSchema,
             temperature: 0.3,
           }
         }),
         timeoutAfter(GEMINI_TIMEOUT_MS),
       ]);
 
-      const parsed = JSON.parse(response.text?.trim() || '{}');
+      const parsed = extractTickerJson(response.text || '{}');
       if (!Array.isArray(parsed.items) || parsed.items.length === 0) {
         throw new Error('Empty items array returned');
       }
