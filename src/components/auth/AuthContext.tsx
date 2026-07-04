@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { getAuth, onAuthStateChanged, User, signInWithPopup, GoogleAuthProvider, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, getDocFromServer } from 'firebase/firestore';
 import { app, db } from '@/lib/firebase/client';
 import AuthModal from './AuthModal';
 import { canAccessVisibility as canAccessVisibilityForProfile, hasPermission as profileHasPermission } from '@/lib/auth/permissions';
@@ -81,8 +81,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    const snapshot = await getDoc(doc(db, 'users', targetUser.uid));
-    setProfile(snapshot.exists() ? (snapshot.data() as UserProfile) : null);
+    try {
+      // Force fetching from server to bypass offline cache and get the latest role/claims
+      const snapshot = await getDocFromServer(doc(db, 'users', targetUser.uid));
+      setProfile(snapshot.exists() ? (snapshot.data() as UserProfile) : null);
+    } catch (e) {
+      console.warn("Failed to fetch profile from server, falling back to cache:", e);
+      const snapshot = await getDoc(doc(db, 'users', targetUser.uid));
+      setProfile(snapshot.exists() ? (snapshot.data() as UserProfile) : null);
+    }
   };
 
   useEffect(() => {
