@@ -83,7 +83,8 @@ export async function PATCH(request: Request, context: Context) {
 
     if (payload.isAdmin !== undefined || payload.adminPreset !== undefined || payload.adminPermissions !== undefined) {
       const permissions = updated.adminPermissions ?? [];
-      await getAdminAuth().setCustomUserClaims(uid, {
+      const adminAuth = await getAdminAuth();
+      await adminAuth.setCustomUserClaims(uid, {
         admin: !!updated.isAdmin,
         editor: permissions.includes('canEditWiki') || permissions.includes('canPublishWiki'),
         moderator: permissions.includes('canModerateCommunity'),
