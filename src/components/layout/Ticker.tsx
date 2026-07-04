@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useMemo, useEffect, useState, useRef, useCallback } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
-import { X, ExternalLink } from 'lucide-react';
+import { ExternalLink, X } from 'lucide-react';
 import styles from './Ticker.module.css';
 
 interface TickerItem {
@@ -36,6 +36,7 @@ interface SyncResponse {
 }
 
 const SYNC_URL = '/api/ticker/sync?force=true';
+const OFFLINE_ITEM_LIMIT_WHEN_LIVE = 10;
 
 function TickerLink({ url, className, children }: { url: string; className: string; children: React.ReactNode }) {
   const isExternal = /^https?:\/\//i.test(url);
@@ -68,6 +69,15 @@ async function parseSyncResponse(res: Response): Promise<SyncResponse> {
   }
 }
 
+function getCategoryColor(category?: string) {
+  const lower = (category || '').toLowerCase();
+  if (lower.includes('weather') || lower.includes('safety') || lower.includes('alert')) return '#e74c3c';
+  if (lower.includes('nature') || lower.includes('forest')) return '#2ecc71';
+  if (lower.includes('astronomy') || lower.includes('space') || lower.includes('sky')) return '#9b59b6';
+  if (lower.includes('scout') || lower.includes('useful') || lower.includes('local')) return '#f1c40f';
+  return 'var(--lantern-gold, #f7b733)';
+}
+
 export default function Ticker({ items }: TickerProps) {
   const [dbItems, setDbItems] = useState<TickerItem[]>([]);
   const [apiItems, setApiItems] = useState<TickerItem[]>([]);
@@ -77,15 +87,14 @@ export default function Ticker({ items }: TickerProps) {
   const [isFeedOpen, setIsFeedOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<string | null>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
-  
-  const feedButtonRef = useRef<HTMLButtonElement>(null);
-  const closeButtonRef = useRef<HTMLButtonElement>(null);
-  
-  const mobileContainerRef = useRef<HTMLDivElement>(null);
-  const mobileTextRef = useRef<HTMLDivElement>(null);
   const [mobileScrollAmount, setMobileScrollAmount] = useState(0);
   const [mobileShouldScroll, setMobileShouldScroll] = useState(false);
+
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const feedButtonRef = useRef<HTMLButtonElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const mobileContainerRef = useRef<HTMLDivElement>(null);
+  const mobileTextRef = useRef<HTMLDivElement>(null);
 
   const runSync = useCallback(async () => {
     setIsSyncing(true);
@@ -115,7 +124,6 @@ export default function Ticker({ items }: TickerProps) {
     }
   }, []);
 
-  // Fetch live items from Firestore. Background refresh is handled by the Netlify scheduled function.
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
 
@@ -136,7 +144,6 @@ export default function Ticker({ items }: TickerProps) {
     };
   }, []);
 
-  // Shuffle local items client-side only to avoid hydration mismatch
   useEffect(() => {
     const timer = setTimeout(() => {
       setShuffledLocalItems([...items].sort(() => 0.5 - Math.random()));
@@ -146,17 +153,13 @@ export default function Ticker({ items }: TickerProps) {
 
   const combinedItems = useMemo(() => {
     const activeLiveItems = dbItems.length > 0 ? dbItems : apiItems;
-    return [...activeLiveItems, ...shuffledLocalItems];
-  }, [shuffledLocalItems, dbItems, apiItems]);
+    const hasLiveFeedContent = activeLiveItems.length > 0;
+    const localItems = hasLiveFeedContent
+      ? shuffledLocalItems.slice(0, OFFLINE_ITEM_LIMIT_WHEN_LIVE)
+      : shuffledLocalItems;
 
-  const getCategoryColor = (category?: string) => {
-    const lower = (category || '').toLowerCase();
-    if (lower.includes('weather') || lower.includes('safety') || lower.includes('alert')) return '#e74c3c'; // red
-    if (lower.includes('nature') || lower.includes('forest')) return '#2ecc71'; // green
-    if (lower.includes('astronomy') || lower.includes('space') || lower.includes('sky')) return '#9b59b6'; // purple
-    if (lower.includes('scout') || lower.includes('useful') || lower.includes('local')) return '#f1c40f'; // yellow
-    return 'var(--lantern-gold, #f7b733)'; // fallback
-  };
+    return [...activeLiveItems, ...localItems];
+  }, [apiItems, dbItems, shuffledLocalItems]);
 
   const displayItems = useMemo(() => {
     if (combinedItems.length === 0) return [];
@@ -174,6 +177,7 @@ export default function Ticker({ items }: TickerProps) {
   useEffect(() => {
     if (!scrollRef.current || displayItems.length === 0) return;
     let animationId: number;
+
     const scroll = () => {
       if (scrollRef.current && !isHovered) {
         scrollRef.current.scrollLeft += 0.4;
@@ -183,46 +187,46 @@ export default function Ticker({ items }: TickerProps) {
       }
       animationId = requestAnimationFrame(scroll);
     };
+
     animationId = requestAnimationFrame(scroll);
     return () => cancelAnimationFrame(animationId);
-  }, [isHovered, displayItems]);
+  }, [displayItems, isHovered]);
 
-  // Measure overflow for mobile marquee scroll
   useEffect(() => {
-    if (mobileContainerRef.current && mobileTextRef.current) {
-      const timer = setTimeout(() => {
-        if (mobileContainerRef.current && mobileTextRef.current) {
-          const containerWidth = mobileContainerRef.current.clientWidth;
-          const textWidth = mobileTextRef.current.scrollWidth;
-          const overflow = textWidth - containerWidth;
-          
-          if (overflow > 0) {
-            setMobileScrollAmount(overflow + 30); // 30px safety padding
-            setMobileShouldScroll(true);
-          } else {
-            setMobileScrollAmount(0);
-            setMobileShouldScroll(false);
-          }
-        }
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [mobileIndex, combinedItems]);
+    if (!mobileContainerRef.current || !mobileTextRef.current) return;
 
-  // Escape key and outside click handling for modal accessibility
+    const timer = setTimeout(() => {
+      if (!mobileContainerRef.current || !mobileTextRef.current) return;
+
+      const containerWidth = mobileContainerRef.current.clientWidth;
+      const textWidth = mobileTextRef.current.scrollWidth;
+      const overflow = textWidth - containerWidth;
+
+      if (overflow > 0) {
+        setMobileScrollAmount(overflow + 30);
+        setMobileShouldScroll(true);
+      } else {
+        setMobileScrollAmount(0);
+        setMobileShouldScroll(false);
+      }
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, [combinedItems, mobileIndex]);
+
   useEffect(() => {
     if (!isFeedOpen) return;
-    
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setIsFeedOpen(false);
         feedButtonRef.current?.focus();
       }
     };
-    
+
     window.addEventListener('keydown', handleKeyDown);
     closeButtonRef.current?.focus();
-    
+
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
@@ -232,12 +236,13 @@ export default function Ticker({ items }: TickerProps) {
   const prevMobile = () => setMobileIndex((p) => (p - 1 + combinedItems.length) % combinedItems.length);
 
   if (combinedItems.length === 0) return null;
+
   const safeMobileIndex = Math.min(mobileIndex, combinedItems.length - 1);
   const mobileItem = combinedItems[safeMobileIndex];
 
   return (
     <div className={styles.tickerContainer}>
-      <button 
+      <button
         ref={feedButtonRef}
         onClick={() => setIsFeedOpen(true)}
         className={styles.tickerLabel}
@@ -259,15 +264,19 @@ export default function Ticker({ items }: TickerProps) {
       >
         {isSyncing ? 'SYNC...' : 'SYNC'}
       </button>
-      
+
       <div className={styles.desktopArrows}>
-        <button 
-          onClick={() => { if (scrollRef.current) scrollRef.current.scrollLeft -= 300; setIsHovered(true); setTimeout(() => setIsHovered(false), 2000); }} 
+        <button
+          onClick={() => {
+            if (scrollRef.current) scrollRef.current.scrollLeft -= 300;
+            setIsHovered(true);
+            setTimeout(() => setIsHovered(false), 2000);
+          }}
           className={styles.desktopArrowBtn}
         >◀</button>
       </div>
-      
-      <div 
+
+      <div
         className={styles.tickerContent}
         ref={scrollRef}
         onMouseEnter={() => setIsHovered(true)}
@@ -290,52 +299,53 @@ export default function Ticker({ items }: TickerProps) {
           </div>
         ))}
       </div>
-      
+
       <div className={styles.desktopArrows}>
-        <button 
-          onClick={() => { if (scrollRef.current) scrollRef.current.scrollLeft += 300; setIsHovered(true); setTimeout(() => setIsHovered(false), 2000); }} 
+        <button
+          onClick={() => {
+            if (scrollRef.current) scrollRef.current.scrollLeft += 300;
+            setIsHovered(true);
+            setTimeout(() => setIsHovered(false), 2000);
+          }}
           className={styles.desktopArrowBtn}
         >▶</button>
       </div>
-      
+
       <div className={styles.tickerMobileContent}>
         <button onClick={prevMobile} className={styles.arrowBtn}>◀</button>
-        {combinedItems.length > 0 && (
-          <div className={`${styles.tickerItem} ${styles.mobileItem}`} ref={mobileContainerRef} title={mobileItem.id ? `Ticker ID: ${mobileItem.id}` : undefined}>
-            <div 
-              key={safeMobileIndex} 
-              ref={mobileTextRef}
-              className={`${styles.mobileItemInner} ${mobileShouldScroll ? styles.mobileMarquee : ''}`}
-              style={{ '--scroll-amount': `-${mobileScrollAmount}px` } as React.CSSProperties}
-            >
-              <span className={styles.tickerCategory} style={{ color: getCategoryColor(mobileItem.category) }}>
-                [{mobileItem.source || 'Camp Lawton'}]
-              </span>
-              {mobileItem.url ? (
-                <TickerLink url={mobileItem.url} className={styles.tickerLink}>
-                  {mobileItem.title}
-                </TickerLink>
-              ) : (
-                <span className={styles.tickerText}>{mobileItem.title}</span>
-              )}
-            </div>
+        <div className={`${styles.tickerItem} ${styles.mobileItem}`} ref={mobileContainerRef} title={mobileItem.id ? `Ticker ID: ${mobileItem.id}` : undefined}>
+          <div
+            key={safeMobileIndex}
+            ref={mobileTextRef}
+            className={`${styles.mobileItemInner} ${mobileShouldScroll ? styles.mobileMarquee : ''}`}
+            style={{ '--scroll-amount': `-${mobileScrollAmount}px` } as React.CSSProperties}
+          >
+            <span className={styles.tickerCategory} style={{ color: getCategoryColor(mobileItem.category) }}>
+              [{mobileItem.source || 'Camp Lawton'}]
+            </span>
+            {mobileItem.url ? (
+              <TickerLink url={mobileItem.url} className={styles.tickerLink}>
+                {mobileItem.title}
+              </TickerLink>
+            ) : (
+              <span className={styles.tickerText}>{mobileItem.title}</span>
+            )}
           </div>
-        )}
+        </div>
         <button onClick={nextMobile} className={styles.arrowBtn}>▶</button>
       </div>
 
-      {/* Floating Window Modal */}
       {isFeedOpen && (
-        <div 
-          className={styles.modalOverlay} 
+        <div
+          className={styles.modalOverlay}
           onClick={() => {
             setIsFeedOpen(false);
             feedButtonRef.current?.focus();
           }}
           role="presentation"
         >
-          <div 
-            className={styles.modalContainer} 
+          <div
+            className={styles.modalContainer}
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
@@ -360,7 +370,7 @@ export default function Ticker({ items }: TickerProps) {
               >
                 {isSyncing ? 'Syncing...' : 'Refresh Feed'}
               </button>
-              <button 
+              <button
                 ref={closeButtonRef}
                 onClick={() => {
                   setIsFeedOpen(false);
@@ -382,8 +392,8 @@ export default function Ticker({ items }: TickerProps) {
                 {combinedItems.map((item) => (
                   <div key={item.id} className={styles.modalItem} title={item.id ? `Ticker ID: ${item.id}` : undefined}>
                     <div className={styles.modalItemMeta}>
-                      <span 
-                        className={styles.modalCategoryBadge} 
+                      <span
+                        className={styles.modalCategoryBadge}
                         style={{ backgroundColor: getCategoryColor(item.category), color: '#000' }}
                       >
                         {(item.category || item.sourceType || 'LIVE').replace('_', ' ')}
@@ -399,10 +409,10 @@ export default function Ticker({ items }: TickerProps) {
                     </div>
                     <div className={styles.modalItemContent}>
                       {item.url ? (
-                        <a 
-                          href={item.url} 
-                          target="_blank" 
-                          rel="noopener noreferrer" 
+                        <a
+                          href={item.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
                           className={styles.modalItemLink}
                         >
                           <span className={styles.modalItemText}>{item.title}</span>
