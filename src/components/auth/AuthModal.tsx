@@ -60,7 +60,14 @@ export default function AuthModal() {
           friendlyMessage = 'Password must be at least 6 characters.';
         } else if (code === 'auth/invalid-email') {
           friendlyMessage = 'Invalid email format.';
+        } else if (code === 'auth/operation-not-allowed') {
+          friendlyMessage = 'Email/Password sign-in is not enabled in Firebase Console.';
+        } else {
+          const message = 'message' in err ? String((err as { message: string }).message) : '';
+          friendlyMessage = `Error (${code}): ${message || 'Authentication error'}`;
         }
+      } else if (err) {
+        friendlyMessage = String(err);
       }
       setErrorMsg(friendlyMessage);
     } finally {
