@@ -52,6 +52,23 @@ function TickerLink({ url, className, children }: { url: string; className: stri
   );
 }
 
+async function parseSyncResponse(res: Response): Promise<SyncResponse> {
+  const text = await res.text();
+
+  if (!text) {
+    return res.ok ? { success: true } : { success: false, error: `HTTP ${res.status} ${res.statusText}` };
+  }
+
+  try {
+    return JSON.parse(text) as SyncResponse;
+  } catch {
+    return {
+      success: false,
+      error: `HTTP ${res.status} ${res.statusText}: ${text.slice(0, 240)}`,
+    };
+  }
+}
+
 export default function Ticker({ items }: TickerProps) {
   const [dbItems, setDbItems] = useState<TickerItem[]>([]);
   const [apiItems, setApiItems] = useState<TickerItem[]>([]);
@@ -79,7 +96,7 @@ export default function Ticker({ items }: TickerProps) {
 
     try {
       const res = await fetch(PUBLIC_SYNC_URL, { cache: 'no-store' });
-      const data = (await res.json()) as SyncResponse;
+      const data = await parseSyncResponse(res);
 
       if (data.items && data.items.length > 0) {
         setApiItems(data.items);
@@ -92,7 +109,7 @@ export default function Ticker({ items }: TickerProps) {
           : typeof data.currentItemCount === 'number'
             ? `${data.currentItemCount} current items`
             : data.message || 'sync checked';
-        const statusText = res.ok && data.success ? countText : `Error: ${data.error || data.warning || 'Unknown error'}`;
+        const statusText = res.ok && data.success !== false ? countText : `Error: ${data.error || data.warning || 'Unknown error'}`;
         setSyncResult(`${statusText}${debugId ? ` · ID: ${debugId}` : ''}`);
       }
     } catch (e: unknown) {
