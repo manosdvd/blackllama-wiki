@@ -4,6 +4,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { getAdminAuth, getAdminDb } from '@/lib/firebase/admin';
 
 export const runtime = 'nodejs';
+export const maxDuration = 60;
 
 interface NewsTickerItem {
   headline: string;
@@ -149,7 +150,6 @@ async function generateTicker(apiKey: string) {
         throw new Error('Empty items array returned');
       }
 
-      // Intentionally do not cap the returned item count here. The prompt controls the target range.
       return parsed;
     } catch (error) {
       lastError = error;
@@ -207,8 +207,8 @@ export async function GET(req: Request) {
     const cooldownMs = publicForce ? PUBLIC_FORCE_COOLDOWN_MS : DEFAULT_SYNC_THROTTLE_MS;
     
     if (shouldUseCooldown) {
-      // No Firestore query limit here on purpose: this exposes the full current set size for debugging.
-      const latestSnap = await db.collection('liveTicker').orderBy('timestamp', 'desc').get();
+      // Keep this lookup light. The public page may call it often, and unbounded reads can make the sync endpoint fragile.
+      const latestSnap = await db.collection('liveTicker').orderBy('timestamp', 'desc').limit(1).get();
       if (!latestSnap.empty) {
         const latestDoc = latestSnap.docs[0];
         const latestData = latestDoc.data();
@@ -222,7 +222,6 @@ export async function GET(req: Request) {
             latestGeneratedAt: latestData.generatedAt || null,
             ageMs,
             cooldownMs,
-            currentItemCount: latestSnap.size,
             force,
             publicForce,
           });
@@ -249,11 +248,9 @@ export async function GET(req: Request) {
     try {
       const batch = db.batch();
       
-      // Delete old ticker items
       const snapshot = await db.collection('liveTicker').get();
       snapshot.docs.forEach((doc) => batch.delete(doc.ref));
       
-      // Write new ticker items
       liveItems.forEach((item) => {
         const docRef = db.collection('liveTicker').doc(item.id);
         batch.set(docRef, item);
