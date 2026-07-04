@@ -6,7 +6,7 @@ import type { ApplicationDecisionPayload, StaffApplication } from '@/types/appli
 import styles from './page.module.css';
 
 export default function AdminReviewQueue() {
-  const { user, loading, hasPermission } = useAuth();
+  const { user, loading, hasPermission, profile } = useAuth();
   const [applications, setApplications] = useState<StaffApplication[]>([]);
   const [loadingApplications, setLoadingApplications] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
@@ -87,6 +87,21 @@ export default function AdminReviewQueue() {
         <header className={styles.pageHeader}>
           <h1>Admin Review Queue</h1>
           <p>Application review access is required. Sign in with an admin account from the header.</p>
+          <div style={{ marginTop: '20px', padding: '15px', background: '#1e1b18', border: '1px solid #dc2626', borderRadius: '4px', fontSize: '0.85rem' }}>
+            <h4 style={{ color: '#f87171', margin: '0 0 10px 0' }}>DEBUG ACCESS CONTROLS:</h4>
+            <p style={{ margin: '0 0 5px 0' }}><strong>User UID:</strong> {user ? user.uid : 'NULL (Not logged in)'}</p>
+            <p style={{ margin: '0 0 5px 0' }}><strong>User Email:</strong> {user ? user.email : 'NULL'}</p>
+            <p style={{ margin: '0 0 5px 0' }}><strong>Profile Loaded:</strong> {profile ? 'YES' : 'NO'}</p>
+            {profile && (
+              <>
+                <p style={{ margin: '0 0 5px 0' }}><strong>Profile.isAdmin:</strong> {profile.isAdmin ? 'TRUE' : 'FALSE'}</p>
+                <p style={{ margin: '0 0 5px 0' }}><strong>Profile.adminPreset:</strong> {profile.adminPreset || 'NULL'}</p>
+                <p style={{ margin: '0 0 5px 0' }}><strong>Profile.accountStatus:</strong> {profile.accountStatus || 'NULL'}</p>
+                <p style={{ margin: '0 0 5px 0' }}><strong>Profile.portalMode:</strong> {profile.portalMode || 'NULL'}</p>
+                <p style={{ margin: '0 0 0 0' }}><strong>Permissions list:</strong> {JSON.stringify(profile.adminPermissions)}</p>
+              </>
+            )}
+          </div>
         </header>
       </div>
     );
