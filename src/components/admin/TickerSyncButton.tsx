@@ -14,6 +14,23 @@ interface SyncResponse {
   latestId?: string;
 }
 
+async function parseSyncResponse(res: Response): Promise<SyncResponse> {
+  const text = await res.text();
+
+  if (!text) {
+    return res.ok ? { success: true } : { success: false, error: `HTTP ${res.status} ${res.statusText}` };
+  }
+
+  try {
+    return JSON.parse(text) as SyncResponse;
+  } catch {
+    return {
+      success: false,
+      error: `HTTP ${res.status} ${res.statusText}: ${text.slice(0, 240)}`,
+    };
+  }
+}
+
 export default function TickerSyncButton() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<string | null>(null);
@@ -30,9 +47,9 @@ export default function TickerSyncButton() {
       }
 
       const res = await fetch('/api/ticker/sync?force=true', { headers, cache: 'no-store' });
-      const data = (await res.json()) as SyncResponse;
+      const data = await parseSyncResponse(res);
       const debugId = data.syncRunId || data.firstItemId || data.latestId;
-      if (res.ok && data.success) {
+      if (res.ok && data.success !== false) {
         const countText = typeof data.count === 'number' ? `Synced ${data.count} items successfully!` : data.message || 'Sync checked.';
         setResult(`${countText}${debugId ? ` ID: ${debugId}` : ''}`);
       } else {
