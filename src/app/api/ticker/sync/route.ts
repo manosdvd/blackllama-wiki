@@ -53,7 +53,7 @@ const FEED_URLS = [
   'allaboutbirds.org/news/feed', 'apod.nasa.gov/apod.rss', 'earthsky.org/feed',
   'smithsonianmag.com/rss/science-nature',
   'archives.gov/global-pages/rss/news.xml', 'tucsonbirdalliance.blogspot.com/feeds/posts/default',
-  'freshoffthegrid.com/feed/', 'www.rei.com/blog/feed', 'wildlandtrekking.com/feed/', 'thetrek.co/feed/',
+  'freshoffthegrid.com/feed/', 'www.rei.com/blog/feed', 'wildlandtrekking.com/feed/',
   'thehikinglife.com/feed/', 'https://nationaldaycalendar.com/rss'
 ];
 
