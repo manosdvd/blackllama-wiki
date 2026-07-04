@@ -3,9 +3,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import styles from './AlertsHUD.module.css';
 import {
-  AlertTriangle, Flame, CloudLightning, Info, Pause, Play,
+  AlertTriangle, Flame, CloudLightning, Info,
   Wind, Droplets, ThermometerSun, MapPin, CheckCircle, Satellite,
-  Trees, Activity,
+  Trees, Activity, ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import type {
   FireAggregatorResponse,
@@ -30,7 +30,6 @@ const SOURCE_LABELS: Record<FireAlertSource, string> = {
 export default function AlertsHUD() {
   const [data, setData] = useState<FireAggregatorResponse | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [isPaused, setIsPaused] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
 
@@ -89,12 +88,12 @@ export default function AlertsHUD() {
 
   // 4. Auto-rotate through alerts
   useEffect(() => {
-    if (!data || data.alerts.length <= 1 || isPaused) return;
+    if (!data || data.alerts.length <= 1) return;
     const interval = setInterval(() => {
       setCurrentIndex(prev => (prev + 1) % data.alerts.length);
     }, 12000);
     return () => clearInterval(interval);
-  }, [data, isPaused]);
+  }, [data]);
 
   // Reset index when alert list changes
   useEffect(() => {
@@ -148,64 +147,106 @@ export default function AlertsHUD() {
   const alerts: FireAlertItem[] = data.alerts;
   const weather: WeatherSnapshot | null = data.weather;
   const isAllClear = alerts.length === 0;
+  const activeAlertIndex = Math.min(currentIndex, Math.max(alerts.length - 1, 0));
+  const activeLevel = isAllClear ? 'normal' : alerts[0]?.level || 'info';
 
-  let currentAlert: FireAlertItem;
-  if (isAllClear) {
-    currentAlert = {
-      id: 'nominal-weather',
-      level: 'normal',
-      source: 'NWS',
-      title: 'Mt. Lemmon Weather Forecast',
-      message: weather ? weather.detailedForecast : 'No active emergency alerts for the Camp Lawton area.',
-      updatedAt: new Date().toISOString(),
-      confidence: 'official',
-      actionability: 'monitor',
-    };
-  } else {
-    currentAlert = alerts[Math.min(currentIndex, alerts.length - 1)] || null;
-  }
+  const nextAlert = () => {
+    if (alerts.length <= 1) return;
+    setCurrentIndex(prev => (prev + 1) % alerts.length);
+  };
 
-  if (!currentAlert) return null;
+  const previousAlert = () => {
+    if (alerts.length <= 1) return;
+    setCurrentIndex(prev => (prev - 1 + alerts.length) % alerts.length);
+  };
+
+  const renderWeatherBlock = () => (
+    <div className={styles.weatherBlock}>
+      <div className={styles.weatherPrimary}>
+        <ThermometerSun size={14} />
+        <span className={styles.weatherTemp}>{weather?.temp || '--'}</span>
+        <span className={styles.weatherCond}>{weather?.condition || 'Weather unavailable'}</span>
+      </div>
+      <div className={styles.weatherStats}>
+        <span><Wind size={11} /> {weather?.wind || '--'}</span>
+        <span><Droplets size={11} /> {weather?.humidity || '--'}</span>
+        <span>Rain: {weather?.precipChance || '--'}</span>
+      </div>
+    </div>
+  );
+
+  const renderAlertCard = (alert: FireAlertItem, index: number) => (
+    <article
+      key={alert.id}
+      className={`${styles.alertCard} ${styles[alert.level] || styles.info} ${index === activeAlertIndex ? styles.activeAlert : ''}`}
+    >
+      <div className={styles.hudIconWrapper}>
+        {getIcon(alert.level, alert.source)}
+      </div>
+      <div className={styles.hudContent}>
+        <div className={styles.hudHeader}>
+          <span className={styles.hudSource}>{alert.title}</span>
+          {alert.source && (
+            <span className={styles.sourceTag}>{SOURCE_LABELS[alert.source] ?? alert.source}</span>
+          )}
+        </div>
+        <p className={styles.hudMessage}>{alert.message}</p>
+        {alert.url && (
+          <a href={alert.url} target="_blank" rel="noopener noreferrer" className={styles.alertLink}>
+            View official source ↗
+          </a>
+        )}
+      </div>
+    </article>
+  );
 
   return (
     <div className={styles.hudContainer}>
-      <div className={`${styles.hudBar} ${styles[currentAlert.level] || styles.info}`}>
-
-        {/* Icon */}
-        <div className={styles.hudIconWrapper}>
-          {getIcon(currentAlert.level, currentAlert.source)}
-        </div>
-
-        {/* Main content */}
-        <div className={styles.hudContent}>
-          <div className={styles.hudHeader}>
-            <span className={styles.hudSource}>{currentAlert.title}</span>
-            {currentAlert.source && (
-              <span className={styles.sourceTag}>{SOURCE_LABELS[currentAlert.source] ?? currentAlert.source}</span>
-            )}
-          </div>
-          <p className={styles.hudMessage}>{currentAlert.message}</p>
-          {currentAlert.url && (
-            <a href={currentAlert.url} target="_blank" rel="noopener noreferrer" className={styles.alertLink}>
-              View official source ↗
-            </a>
-          )}
-        </div>
-
-        {/* Weather snapshot — shown when available */}
-        {weather && (
-          <div className={styles.weatherBlock}>
-            <div className={styles.weatherPrimary}>
-              <ThermometerSun size={14} />
-              <span className={styles.weatherTemp}>{weather.temp}</span>
-              <span className={styles.weatherCond}>{weather.condition}</span>
+      <div className={`${styles.hudBar} ${styles[activeLevel] || styles.info} ${isAllClear ? styles.allClearMode : styles.alertMode}`}>
+        {isAllClear ? (
+          <>
+            {renderWeatherBlock()}
+            <div className={styles.allClearPanel}>
+              <CheckCircle className={styles.icon} />
+              <div className={styles.hudContent}>
+                <div className={styles.hudHeader}>
+                  <span className={styles.hudSource}>No active emergency alerts</span>
+                  <span className={styles.sourceTag}>Camp Lawton</span>
+                </div>
+                <p className={styles.hudMessage}>
+                  {weather?.detailedForecast || 'Fire, weather, smoke, and forest feeds are nominal for the Camp Lawton area.'}
+                </p>
+              </div>
             </div>
-            <div className={styles.weatherStats}>
-              <span><Wind size={11} /> {weather.wind}</span>
-              <span><Droplets size={11} /> {weather.humidity}</span>
-              <span>Rain: {weather.precipChance}</span>
+          </>
+        ) : (
+          <>
+            <button
+              type="button"
+              className={styles.mobileAlertArrow}
+              onClick={previousAlert}
+              disabled={alerts.length <= 1}
+              aria-label="Previous alert"
+            >
+              <ChevronLeft size={18} />
+            </button>
+
+            <div className={styles.alertQueue}>
+              {alerts.map(renderAlertCard)}
             </div>
-          </div>
+
+            <button
+              type="button"
+              className={styles.mobileAlertArrow}
+              onClick={nextAlert}
+              disabled={alerts.length <= 1}
+              aria-label="Next alert"
+            >
+              <ChevronRight size={18} />
+            </button>
+
+            {renderWeatherBlock()}
+          </>
         )}
 
         {/* Location + time */}
@@ -219,17 +260,9 @@ export default function AlertsHUD() {
           </div>
         </div>
 
-        {/* Controls */}
         {!isAllClear && alerts.length > 1 && (
-          <div className={styles.hudControls}>
-            <span className={styles.hudCounter}>{currentIndex + 1} / {alerts.length}</span>
-            <button
-              className={styles.togglePauseBtn}
-              onClick={() => setIsPaused(!isPaused)}
-              title={isPaused ? 'Resume Rotation' : 'Freeze Rotation'}
-            >
-              {isPaused ? <Play size={16} /> : <Pause size={16} />}
-            </button>
+          <div className={styles.mobileAlertCounter}>
+            {activeAlertIndex + 1} / {alerts.length}
           </div>
         )}
       </div>
