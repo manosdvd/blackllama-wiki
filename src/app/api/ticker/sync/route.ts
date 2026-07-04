@@ -1,10 +1,6 @@
 import { NextResponse } from 'next/server';
-import { GoogleGenAI, Type, Schema } from '@google/genai';
-import { FieldValue } from 'firebase-admin/firestore';
-import { getAdminAuth, getAdminDb } from '@/lib/firebase/admin';
 
 export const runtime = 'nodejs';
-export const maxDuration = 60;
 
 interface NewsTickerItem {
   headline: string;
@@ -21,13 +17,14 @@ interface LiveTickerItem {
   position: number;
   generatedAt: string;
   syncRunId: string;
-  timestamp: FieldValue;
+  timestamp: unknown;
 }
 
 const TARGET_LOCATION = 'Camp Lawton, Mt Lemmon, Santa Catalina Mountains';
-const PRIMARY_GEMINI_TICKER_MODEL = 'gemini-3.5-flash';
+const PRIMARY_GEMINI_TICKER_MODEL = process.env.GEMINI_TICKER_MODEL || 'gemini-2.5-flash';
 const DEFAULT_SYNC_THROTTLE_MS = 55 * 60 * 1000;
 const PUBLIC_FORCE_COOLDOWN_MS = 10 * 60 * 1000;
+const GEMINI_TIMEOUT_MS = 8_000;
 
 const COMPRESSED_FEEDS = [
   'aztrail.org/feed', 'onscouting.org/feed', 'scoutlife.org/feed', 'scoutingwire.org/feed',
@@ -75,6 +72,12 @@ function normalizeTickerLink(link: string) {
 
 const wait = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
+function timeoutAfter(ms: number) {
+  return new Promise<never>((_, reject) => {
+    setTimeout(() => reject(new Error(`Gemini ticker generation timed out after ${ms}ms`)), ms);
+  });
+}
+
 function buildTickerPrompt() {
   const today = getPhoenixDateStamp();
 
@@ -99,9 +102,10 @@ JokePool: ${MINIFIED_JOKES}
 }
 
 async function generateTicker(apiKey: string) {
-  const ai = new GoogleGenAI({ apiKey }); 
+  const { GoogleGenAI, Type } = await import('@google/genai');
+  const ai = new GoogleGenAI({ apiKey });
   
-  const tickerSchema: Schema = {
+  const tickerSchema = {
     type: Type.OBJECT,
     properties: {
       ticker_metadata: {
@@ -131,19 +135,22 @@ async function generateTicker(apiKey: string) {
   const prompt = buildTickerPrompt();
   let lastError: unknown;
 
-  for (let attempt = 1; attempt <= 3; attempt++) {
+  for (let attempt = 1; attempt <= 2; attempt++) {
     try {
-      const response = await ai.models.generateContent({
-        model: PRIMARY_GEMINI_TICKER_MODEL,
-        contents: prompt,
-        config: {
-          systemInstruction: 'You are a real-time news ticker automation engine. Use Google Search to pull the latest headlines. Output ONLY raw JSON. No conversational text.',
-          tools: [{ googleSearch: {} }],
-          responseMimeType: 'application/json',
-          responseSchema: tickerSchema,
-          temperature: 0.3 
-        }
-      });
+      const response = await Promise.race([
+        ai.models.generateContent({
+          model: PRIMARY_GEMINI_TICKER_MODEL,
+          contents: prompt,
+          config: {
+            systemInstruction: 'You are a real-time news ticker automation engine. Use Google Search to pull the latest headlines. Output ONLY raw JSON. No conversational text.',
+            tools: [{ googleSearch: {} }],
+            responseMimeType: 'application/json',
+            responseSchema: tickerSchema,
+            temperature: 0.3,
+          }
+        }),
+        timeoutAfter(GEMINI_TIMEOUT_MS),
+      ]);
 
       const parsed = JSON.parse(response.text?.trim() || '{}');
       if (!Array.isArray(parsed.items) || parsed.items.length === 0) {
@@ -154,7 +161,7 @@ async function generateTicker(apiKey: string) {
     } catch (error) {
       lastError = error;
       const msg = String(error);
-      if (attempt === 3 || !/(429|500|502|503|504|timeout|rate limit)/i.test(msg)) break;
+      if (attempt === 2 || !/(429|500|502|503|504|timeout|timed out|rate limit)/i.test(msg)) break;
       await wait(1000 * attempt);
     }
   }
@@ -183,7 +190,21 @@ export async function GET(req: Request) {
     const publicForce = force && ['true', '1'].includes((url.searchParams.get('public') || '').toLowerCase());
     const apiKey = process.env.GEMINI_API_KEY;
 
+    if (url.searchParams.get('health') === 'true') {
+      return NextResponse.json({
+        success: true,
+        route: 'ticker-sync',
+        hasGeminiKey: Boolean(apiKey),
+        model: PRIMARY_GEMINI_TICKER_MODEL,
+      });
+    }
+
     if (!apiKey) return NextResponse.json({ error: 'GEMINI_API_KEY not set' }, { status: 500 });
+
+    const [{ getAdminAuth, getAdminDb }, { FieldValue }] = await Promise.all([
+      import('@/lib/firebase/admin'),
+      import('firebase-admin/firestore'),
+    ]);
 
     const cronSecret = process.env.CRON_SECRET;
     if (cronSecret) {
@@ -207,7 +228,6 @@ export async function GET(req: Request) {
     const cooldownMs = publicForce ? PUBLIC_FORCE_COOLDOWN_MS : DEFAULT_SYNC_THROTTLE_MS;
     
     if (shouldUseCooldown) {
-      // Keep this lookup light. The public page may call it often, and unbounded reads can make the sync endpoint fragile.
       const latestSnap = await db.collection('liveTicker').orderBy('timestamp', 'desc').limit(1).get();
       if (!latestSnap.empty) {
         const latestDoc = latestSnap.docs[0];
