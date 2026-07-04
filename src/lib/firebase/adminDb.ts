@@ -13,7 +13,7 @@ import { getFirestore } from 'firebase-admin/firestore';
 function serviceAccountFromJson(json: string): ServiceAccount {
   const parsed = JSON.parse(json) as ServiceAccount;
   if (typeof parsed.privateKey === 'string') {
-    parsed.privateKey = parsed.privateKey.replace(/\n/g, '\n');
+    parsed.privateKey = parsed.privateKey.replace(/\\n/g, '\n');
   }
   return parsed;
 }
@@ -45,7 +45,7 @@ export function getAdminDbApp(): App {
       credential: cert({
         projectId,
         clientEmail,
-        privateKey: privateKey.replace(/\n/g, '\n'),
+        privateKey: privateKey.replace(/\\n/g, '\n'),
       }),
       projectId,
     });
