@@ -201,29 +201,20 @@ export async function GET(req: Request) {
 
     if (!apiKey) return NextResponse.json({ error: 'GEMINI_API_KEY not set' }, { status: 500 });
 
-    const [{ getAdminAuth, getAdminDb }, { FieldValue }] = await Promise.all([
-      import('@/lib/firebase/admin'),
+    const [{ getAdminDbOnly }, { FieldValue }] = await Promise.all([
+      import('@/lib/firebase/adminDb'),
       import('firebase-admin/firestore'),
     ]);
 
     const cronSecret = process.env.CRON_SECRET;
     if (cronSecret) {
       const isCronAuthorized = req.headers.get('x-cron-secret') === cronSecret || url.searchParams.get('secret') === cronSecret;
-      
-      if (!isCronAuthorized) {
-        const token = req.headers.get('Authorization')?.substring(7);
-        let isAdmin = false;
-        if (token) {
-          try {
-            const decodedToken = await getAdminAuth().verifyIdToken(token);
-            isAdmin = decodedToken.admin === true;
-          } catch { /* silent fail auth */ }
-        }
-        if (!isAdmin && !publicForce) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      if (!isCronAuthorized && !publicForce) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
     }
 
-    const db = getAdminDb();
+    const db = getAdminDbOnly();
     const shouldUseCooldown = !force || publicForce;
     const cooldownMs = publicForce ? PUBLIC_FORCE_COOLDOWN_MS : DEFAULT_SYNC_THROTTLE_MS;
     
