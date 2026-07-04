@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
   BookOpen, FileText, MessageSquare, Radio, Phone, Wifi, Database,
-  ArrowRight, Clock
+  ArrowRight, Clock, ShieldCheck
 } from 'lucide-react';
 import { useAuth } from '@/components/auth/AuthContext';
 import type { ContentItem } from '@/types/content';
