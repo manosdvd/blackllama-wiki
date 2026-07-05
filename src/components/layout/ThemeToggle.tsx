@@ -4,31 +4,22 @@ import React, { useEffect, useState } from 'react';
 import { Sun, Moon } from 'lucide-react';
 import styles from './Header.module.css';
 
+function getInitialTheme(): 'dark' | 'light' {
+  if (typeof window === 'undefined') return 'dark';
+  return localStorage.getItem('theme') === 'light' ? 'light' : 'dark';
+}
+
 export default function ThemeToggle() {
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const [theme, setTheme] = useState<'dark' | 'light'>(getInitialTheme);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const stored = localStorage.getItem('theme');
-    if (stored === 'light') {
-      setTheme('light');
-      document.documentElement.classList.add('light-theme');
-    } else {
-      setTheme('dark');
-      document.documentElement.classList.remove('light-theme');
-    }
-  }, []);
+    document.documentElement.classList.toggle('light-theme', theme === 'light');
+  }, [theme]);
 
   const toggleTheme = () => {
     const nextTheme = theme === 'dark' ? 'light' : 'dark';
     setTheme(nextTheme);
     localStorage.setItem('theme', nextTheme);
-
-    if (nextTheme === 'light') {
-      document.documentElement.classList.add('light-theme');
-    } else {
-      document.documentElement.classList.remove('light-theme');
-    }
   };
 
   const label = theme === 'dark' ? 'Light Theme' : 'Dark Theme';
