@@ -56,7 +56,6 @@ export default function Ticker({ items }: TickerProps) {
   const [mobileIndex, setMobileIndex] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
   const [isFeedOpen, setIsFeedOpen] = useState(false);
-  const [syncResult, setSyncResult] = useState<string | null>(null);
   const [mobileScrollAmount, setMobileScrollAmount] = useState(0);
   const [mobileShouldScroll, setMobileShouldScroll] = useState(false);
 
@@ -80,8 +79,7 @@ export default function Ticker({ items }: TickerProps) {
   const mobileTextRef = useRef<HTMLDivElement>(null);
 
   // Sync is performed automatically by the Netlify cron function (6am, 12pm, 5pm MST).
-  // Manual admin sync has been removed from the UI; this placeholder retains setSyncResult for
-  // any future use of the result banner without dead state warnings.
+  // Manual admin sync has been removed from the UI.
 
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
@@ -397,11 +395,6 @@ export default function Ticker({ items }: TickerProps) {
                 <X size={20} />
               </button>
             </div>
-            {syncResult && (
-              <p style={{ margin: '0.5rem 1rem 0', fontSize: '0.8rem', color: 'var(--lantern-gold)' }}>
-                {syncResult}
-              </p>
-            )}
             <div className={styles.modalBody}>
               <div className={styles.modalList}>
                 {combinedItems.map((item) => (

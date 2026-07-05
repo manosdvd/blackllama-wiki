@@ -1,26 +1,24 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Sun, Moon } from 'lucide-react';
 import styles from './Header.module.css';
 
-function getInitialTheme(): 'dark' | 'light' {
-  if (typeof window === 'undefined') return 'dark';
-  return localStorage.getItem('theme') === 'light' ? 'light' : 'dark';
-}
-
 export default function ThemeToggle() {
-  // Initialise from localStorage synchronously-ish to avoid flash of wrong theme
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const isInitialized = useRef(false);
 
-  // 1. Read stored preference on first mount and update state once
+  // Initialize from localStorage on first mount only
   useEffect(() => {
+    if (isInitialized.current) return;
+    isInitialized.current = true;
+    
     const stored = localStorage.getItem('theme');
     const initial = stored === 'light' ? 'light' : 'dark';
     setTheme(initial);
   }, []);
 
-  // 2. Sync DOM class whenever theme state changes (handles both initial + toggles)
+  // Sync DOM class whenever theme state changes
   useEffect(() => {
     if (theme === 'light') {
       document.documentElement.classList.add('light-theme');

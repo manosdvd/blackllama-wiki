@@ -378,7 +378,7 @@ export async function GET(req: Request) {
 
     const db = getAdminDbOnly();
 
-    const logErrorToDb = async (errorMsg: string, errData: any) => {
+    const logErrorToDb = async (errorMsg: string, errData: Error | string | unknown) => {
       try {
         await db.collection('errorLogs').add({
           context: 'ticker_sync',
