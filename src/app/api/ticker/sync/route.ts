@@ -285,42 +285,46 @@ async function generateAiTicker(apiKey: string, rssItems: NewsTickerItem[]) {
   const prompt = buildTickerPrompt(rssItems);
   let lastError: unknown;
 
-  for (let attempt = 1; attempt <= 2; attempt++) {
-    try {
-      const response = await Promise.race([
-        ai.models.generateContent({
-          model: 'gemini-2.5-flash-lite',
-          contents: prompt,
-          config: {
-            systemInstruction: 'You are an optional AI supplement for an RSS-first ticker. Return only raw JSON text. No markdown and no conversational text.',
-            tools: [{ googleSearch: {} }],
-            temperature: 0.3,
-          }
-        }),
-        timeoutAfter(8000), // GEMINI_TIMEOUT_MS = 8000
-      ]);
+  const modelsToTry = ['gemini-2.5-flash-lite', 'gemini-2.5-flash'];
 
-      const parsed = extractTickerJson(response.text || '{}');
-      if (!Array.isArray(parsed.items) || parsed.items.length === 0) {
-        throw new Error('Empty items array returned');
+  for (const model of modelsToTry) {
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        const response = await Promise.race([
+          ai.models.generateContent({
+            model,
+            contents: prompt,
+            config: {
+              systemInstruction: 'You are an optional AI supplement for an RSS-first ticker. Return only raw JSON text. No markdown and no conversational text.',
+              tools: [{ googleSearch: {} }],
+              temperature: 0.3,
+            }
+          }),
+          timeoutAfter(8000), // GEMINI_TIMEOUT_MS = 8000
+        ]);
+
+        const parsed = extractTickerJson(response.text || '{}');
+        if (!Array.isArray(parsed.items) || parsed.items.length === 0) {
+          throw new Error('Empty items array returned');
+        }
+
+        parsed.items = parsed.items
+          .filter((item) => item.headline && item.link)
+          .slice(0, 8)
+          .map((item) => ({
+            headline: trimHeadline(item.headline),
+            source: cleanText(item.source || 'AI Supplement'),
+            link: normalizeTickerLink(item.link),
+          }));
+
+        return parsed;
+      } catch (error) {
+        lastError = error;
+        const msg = String(error);
+        if (isGeminiQuotaError(error)) break; // Move to next model
+        if (attempt === 2 || !/(500|502|503|504|timeout|timed out)/i.test(msg)) break; // Move to next model
+        await wait(1000 * attempt);
       }
-
-      parsed.items = parsed.items
-        .filter((item) => item.headline && item.link)
-        .slice(0, 8)
-        .map((item) => ({
-          headline: trimHeadline(item.headline),
-          source: cleanText(item.source || 'AI Supplement'),
-          link: normalizeTickerLink(item.link),
-        }));
-
-      return parsed;
-    } catch (error) {
-      lastError = error;
-      const msg = String(error);
-      if (isGeminiQuotaError(error)) break;
-      if (attempt === 2 || !/(500|502|503|504|timeout|timed out)/i.test(msg)) break;
-      await wait(1000 * attempt);
     }
   }
   throw lastError;
@@ -328,8 +332,8 @@ async function generateAiTicker(apiKey: string, rssItems: NewsTickerItem[]) {
 
 function mergeTickerItems(rssItems: NewsTickerItem[], aiItems: NewsTickerItem[]) {
   return dedupeTickerItems([
-    ...rssItems,
     ...aiItems,
+    ...rssItems,
   ]).slice(0, 36);
 }
 
@@ -359,7 +363,7 @@ export async function GET(req: Request) {
         success: true,
         route: 'ticker-sync',
         hasGeminiKey: Boolean(apiKey),
-        model: 'gemini-2.5-flash-lite',
+        model: 'gemini-2.5-flash-lite (with fallback)',
         rssFeeds: FEED_URLS.length,
         maxAgeHours: 24,
       });
@@ -546,7 +550,7 @@ export async function GET(req: Request) {
         success: false,
         error: 'Gemini quota exceeded before RSS fallback could complete. The ticker will keep showing the most recent cached feed until quota resets.',
         retryAfterSeconds: extractRetryAfterSeconds(err),
-        model: 'gemini-2.5-flash-lite',
+        model: 'gemini-2.5-flash-lite (with fallback)',
       }, { status: 429 });
     }
 

@@ -10,18 +10,11 @@ function getInitialTheme(): 'dark' | 'light' {
 }
 
 export default function ThemeToggle() {
-<<<<<<< Updated upstream
-  const [theme, setTheme] = useState<'dark' | 'light'>(getInitialTheme);
-=======
   // Initialise from localStorage synchronously-ish to avoid flash of wrong theme
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
->>>>>>> Stashed changes
 
   // 1. Read stored preference on first mount and update state once
   useEffect(() => {
-<<<<<<< Updated upstream
-    document.documentElement.classList.toggle('light-theme', theme === 'light');
-=======
     const stored = localStorage.getItem('theme');
     const initial = stored === 'light' ? 'light' : 'dark';
     setTheme(initial);
@@ -34,7 +27,6 @@ export default function ThemeToggle() {
     } else {
       document.documentElement.classList.remove('light-theme');
     }
->>>>>>> Stashed changes
   }, [theme]);
 
   const toggleTheme = () => {
