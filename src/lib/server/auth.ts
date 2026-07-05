@@ -18,6 +18,14 @@ export function bearerTokenFromRequest(request: Request) {
   return authHeader.slice('Bearer '.length).trim();
 }
 
+export function firebaseIdTokenFromRequest(request: Request) {
+  return request.headers.get('x-firebase-id-token') ?? request.headers.get('X-Firebase-ID-Token');
+}
+
+export function requestIdTokenFromRequest(request: Request) {
+  return bearerTokenFromRequest(request) || firebaseIdTokenFromRequest(request);
+}
+
 export function sessionCookieFromRequest(request: Request) {
   const cookieHeader = request.headers.get('cookie');
   if (!cookieHeader) return null;
@@ -31,15 +39,23 @@ export function sessionCookieFromRequest(request: Request) {
   return decodeURIComponent(sessionPair.slice(SESSION_COOKIE_NAME.length + 1));
 }
 
+export function authDebugFromRequest(request: Request) {
+  return {
+    hasAuthorizationHeader: !!(request.headers.get('authorization') ?? request.headers.get('Authorization')),
+    hasFirebaseIdTokenHeader: !!firebaseIdTokenFromRequest(request),
+    hasSessionCookie: !!sessionCookieFromRequest(request),
+  };
+}
+
 export async function verifyRequestUser(request: Request): Promise<CurrentUser | null> {
   const adminAuth = await getAdminAuth();
-  const bearerToken = bearerTokenFromRequest(request);
-  const sessionCookie = !bearerToken ? sessionCookieFromRequest(request) : null;
+  const idToken = requestIdTokenFromRequest(request);
+  const sessionCookie = !idToken ? sessionCookieFromRequest(request) : null;
 
-  if (!bearerToken && !sessionCookie) return null;
+  if (!idToken && !sessionCookie) return null;
 
-  const decodedToken = bearerToken
-    ? await adminAuth.verifyIdToken(bearerToken)
+  const decodedToken = idToken
+    ? await adminAuth.verifyIdToken(idToken)
     : await adminAuth.verifySessionCookie(sessionCookie as string, true);
   const profile = await getUserProfile(decodedToken.uid);
 
