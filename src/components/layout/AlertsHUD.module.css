@@ -333,6 +333,12 @@
   letter-spacing: 0.04em;
 }
 
+.healthDotWrapper {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .healthDot {
   width: 7px;
   height: 7px;
@@ -344,6 +350,13 @@
 .dotDegraded{ background-color: #f59e0b; }
 .dotError   { background-color: #ef4444; }
 .dotMissing { background-color: #4a4a4a; }
+
+.healthDotLabel {
+  font-size: 0.6rem;
+  font-family: monospace;
+  color: #7a7672;
+  text-transform: uppercase;
+}
 
 .lastChecked {
   font-size: 0.6rem;

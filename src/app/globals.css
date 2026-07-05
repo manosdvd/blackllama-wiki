@@ -19,30 +19,52 @@
 @import url('https://fonts.cdnfonts.com/css/opendyslexic');
 
 :root {
-  /* Rustic Command Center Palette */
-  --charcoal-base: #0c0a09;
+  /* Softened Dark Theme Defaults (Reduces eye strain & halation) */
+  --charcoal-base: #121212;
   --canvas-tan: #f5f5f4;
-  --pine-green: #064e3b;
-  --pine-green-light: #0f766e;
-  --campfire-amber: #d97706;
-  --lantern-gold: #eab308;
-  --red-ember: #991b1b;
-  --emergency-red: #dc2626;
+  --pine-green: #1b4d3e;
+  --pine-green-light: #5be2a7; /* Desaturated green accent */
+  --campfire-amber: #e58c35; /* Desaturated orange accent */
+  --lantern-gold: #f5c453; /* Desaturated gold */
+  --red-ember: #ff6b6b; /* Desaturated red */
+  --emergency-red: #ff7676; /* Desaturated warning red */
   --stone-grey: #a8a29e;
-  --charcoal-dark: #0c0a09;
-  --charcoal-lighter: #1c1917;
-  --charcoal-darker: #080707;
+  --charcoal-dark: #121212;
+  --charcoal-lighter: #2a2a2a;
+  --charcoal-darker: #0a0a0a;
 
-  /* Theme Defaults (Dark Mode Primary) */
   --background: var(--charcoal-base);
   --foreground: var(--canvas-tan);
-  --surface: #1c1917; /* slightly lighter than base for cards */
-  --surface-border: #292524;
+  --surface: #1e1e1e; /* Card background */
+  --surface-border: #2e2e2e;
+  --embers-opacity: 0.6;
   
   /* Typography Scale */
   --font-base: 16px;
   --letter-spacing: normal;
   --word-spacing: normal;
+}
+
+html.light-theme {
+  /* Warm Canvas Light Theme */
+  --charcoal-base: #fdfcf7;
+  --canvas-tan: #1c1917;
+  --pine-green: #0b503c;
+  --pine-green-light: #064e3b;
+  --campfire-amber: #b45309; /* Darker orange for high contrast on light background */
+  --lantern-gold: #854d0e; /* Darker gold/brown for readability */
+  --red-ember: #991b1b;
+  --emergency-red: #b91c1c;
+  --stone-grey: #625c58;
+  --charcoal-dark: #f5f3eb;
+  --charcoal-lighter: #e7e5e4;
+  --charcoal-darker: #fafaf9;
+
+  --background: var(--charcoal-base);
+  --foreground: var(--canvas-tan);
+  --surface: #f5f3eb;
+  --surface-border: #d6d3d1;
+  --embers-opacity: 0.15;
 }
 
 

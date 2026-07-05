@@ -365,7 +365,11 @@ export async function GET(req: Request) {
       });
     }
 
-    if (force) {
+    const cronSecret = process.env.CRON_SECRET;
+    const requestSecret = url.searchParams.get('secret');
+    const isCronAuthorized = !!(cronSecret && requestSecret && cronSecret === requestSecret);
+
+    if (force && !isCronAuthorized) {
       const { verifyRequestUser, currentUserHasPermission } = await import('@/lib/server/auth');
       const currentUser = await verifyRequestUser(req).catch((err) => {
         console.error('Ticker sync auth token verification failed:', err);

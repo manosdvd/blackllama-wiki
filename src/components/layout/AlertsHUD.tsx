@@ -126,7 +126,12 @@ export default function AlertsHUD() {
       'missing-key': styles.dotMissing,
     }[status] || styles.dotMissing;
     const label = { ok: 'OK', degraded: 'Delayed', error: 'Error', 'missing-key': 'No Key' }[status];
-    return <span className={`${styles.healthDot} ${cls}`} title={label} />;
+    return (
+      <span className={styles.healthDotWrapper}>
+        <span className={`${styles.healthDot} ${cls}`} aria-hidden="true" title={label} />
+        <span className={styles.healthDotLabel}>{label}</span>
+      </span>
+    );
   };
 
   // ─── Loading state ───────────────────────────────────────────────────────

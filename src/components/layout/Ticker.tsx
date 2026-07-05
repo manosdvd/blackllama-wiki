@@ -331,22 +331,6 @@ export default function Ticker({ items }: TickerProps) {
         CAMP FEED
       </button>
 
-      {isAdmin && (
-        <button
-          onClick={() => {
-            setIsFeedOpen(true);
-            void runSync(true);
-          }}
-          disabled={isSyncing}
-          className={styles.tickerLabel}
-          aria-label="Force Sync Camp Feed"
-          title="Force Sync Camp Feed"
-          style={{ marginLeft: '0.25rem', opacity: isSyncing ? 0.65 : 1 }}
-        >
-          {isSyncing ? 'SYNC...' : 'SYNC'}
-        </button>
-      )}
-
       <div className={styles.desktopArrows}>
         <button
           onClick={() => {
@@ -435,23 +419,6 @@ export default function Ticker({ items }: TickerProps) {
           >
             <div className={styles.modalHeader}>
               <h2 id="feed-modal-title" className={styles.modalTitle}>CAMP FEED BULLETIN</h2>
-              <button
-                onClick={() => void runSync(isAdmin)}
-                disabled={isSyncing}
-                style={{
-                  background: 'var(--pine-green)',
-                  color: 'white',
-                  border: 'none',
-                  padding: '0.4rem 0.65rem',
-                  cursor: isSyncing ? 'not-allowed' : 'pointer',
-                  borderRadius: '4px',
-                  marginLeft: 'auto',
-                  marginRight: '0.5rem',
-                  opacity: isSyncing ? 0.65 : 1,
-                }}
-              >
-                {isSyncing ? 'Syncing...' : isAdmin ? 'Force Sync Feed' : 'Refresh Feed'}
-              </button>
               <button
                 ref={closeButtonRef}
                 onClick={() => {

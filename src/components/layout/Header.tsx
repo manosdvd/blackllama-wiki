@@ -4,6 +4,7 @@ import Image from 'next/image';
 import AlertsHUD from './AlertsHUD';
 import Ticker from './Ticker';
 import DyslexiaToggle from './DyslexiaToggle';
+import ThemeToggle from './ThemeToggle';
 import AuthButton from './AuthButton';
 import MobileMenu from './MobileMenu';
 import { getOfflineTickerItems } from '@/lib/tickerUtils';
@@ -42,6 +43,7 @@ export default async function Header() {
         </nav>
 
         <div className={styles.actions}>
+          <ThemeToggle />
           <DyslexiaToggle />
           <AuthButton />
           <MobileMenu />

@@ -6,5 +6,5 @@
   height: 100vh;
   pointer-events: none;
   z-index: -1; /* place behind everything */
-  opacity: 0.6; /* subtle */
+  opacity: var(--embers-opacity, 0.6); /* subtle, themed */
 }

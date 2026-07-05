@@ -9,4 +9,4 @@
   package = "@netlify/plugin-nextjs"
 
 [functions."sync-ticker"]
-  schedule = "0 15 * * *"
+  schedule = "0 0,13,19 * * *"

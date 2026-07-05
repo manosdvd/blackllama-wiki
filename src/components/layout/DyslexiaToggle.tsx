@@ -37,6 +37,7 @@ export default function DyslexiaToggle() {
       aria-label="Toggle Dyslexia Mode"
     >
       <Type size={20} />
+      <span className={styles.toggleLabel}>DYSLEXIA</span>
     </button>
   );
 }
