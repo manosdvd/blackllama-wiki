@@ -107,7 +107,7 @@
   padding: 1rem;
 }
 
-@media (max-width: 760px) {
+@media (max-width: 768px) {
   .pageHeader,
   .contentRow {
     grid-template-columns: 1fr;

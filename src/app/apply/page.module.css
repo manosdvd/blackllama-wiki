@@ -328,7 +328,10 @@
   color: var(--foreground);
 }
 
-@media (max-width: 480px) {
+@media (max-width: 768px) {
+  .container {
+    padding: 1rem;
+  }
   .reviewGrid {
     grid-template-columns: 1fr;
     gap: 0.5rem;

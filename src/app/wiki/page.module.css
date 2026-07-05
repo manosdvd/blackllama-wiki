@@ -93,7 +93,10 @@
   outline-offset: 2px;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 768px) {
+  .container {
+    padding: 1rem;
+  }
   .layout {
     grid-template-columns: 1fr;
   }
@@ -113,7 +116,7 @@
   gap: 1.5rem;
 }
 
-@media (max-width: 500px) {
+@media (max-width: 480px) {
   .categoryGrid {
     grid-template-columns: 1fr;
   }
@@ -263,7 +266,7 @@
   color: #fecaca;
 }
 
-@media (max-width: 700px) {
+@media (max-width: 768px) {
   .searchPanel {
     grid-template-columns: 1fr;
   }

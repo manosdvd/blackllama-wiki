@@ -253,7 +253,7 @@
   color: #fecaca;
 }
 
-@media (max-width: 780px) {
+@media (max-width: 768px) {
   .queueItem,
   .itemActions {
     align-items: flex-start;

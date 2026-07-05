@@ -59,3 +59,12 @@
   color: rgba(245, 245, 244, 0.7);
   line-height: 1.45;
 }
+
+@media (max-width: 768px) {
+  .container {
+    padding: 1rem;
+  }
+  .pageHeader h1 {
+    font-size: 2rem;
+  }
+}
