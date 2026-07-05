@@ -4,7 +4,7 @@
 // - 19:00 UTC = 12:00 PM America/Phoenix
 // - 00:00 UTC = 5:00 PM America/Phoenix on the previous local date
 export const config = {
-  schedule: '0 0,13,19 * * *',
+  schedule: '0 */2 * * *',
 };
 
 export default async function syncTicker() {

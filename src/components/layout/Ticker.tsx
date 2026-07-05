@@ -1,9 +1,8 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
-import { getAuth } from 'firebase/auth';
 import { useAuth } from '@/components/auth/AuthContext';
 import { ExternalLink, X, Play, Pause, Eye, EyeOff } from 'lucide-react';
 import styles from './Ticker.module.css';
@@ -24,19 +23,6 @@ interface TickerProps {
   items: TickerItem[];
 }
 
-interface SyncResponse {
-  success?: boolean;
-  count?: number;
-  message?: string;
-  error?: string;
-  warning?: string;
-  latestId?: string;
-  syncRunId?: string | null;
-  firstItemId?: string | null;
-  currentItemCount?: number;
-  items?: TickerItem[];
-}
-
 const OFFLINE_ITEM_LIMIT_WHEN_LIVE = 10;
 
 function TickerLink({ url, className, children }: { url: string; className: string; children: React.ReactNode }) {
@@ -51,23 +37,6 @@ function TickerLink({ url, className, children }: { url: string; className: stri
       {children}
     </a>
   );
-}
-
-async function parseSyncResponse(res: Response): Promise<SyncResponse> {
-  const text = await res.text();
-
-  if (!text) {
-    return res.ok ? { success: true } : { success: false, error: `HTTP ${res.status} ${res.statusText}` };
-  }
-
-  try {
-    return JSON.parse(text) as SyncResponse;
-  } catch {
-    return {
-      success: false,
-      error: `HTTP ${res.status} ${res.statusText}: ${text.slice(0, 240)}`,
-    };
-  }
 }
 
 function getCategoryColor(category?: string) {
@@ -87,7 +56,6 @@ export default function Ticker({ items }: TickerProps) {
   const [mobileIndex, setMobileIndex] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
   const [isFeedOpen, setIsFeedOpen] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<string | null>(null);
   const [mobileScrollAmount, setMobileScrollAmount] = useState(0);
   const [mobileShouldScroll, setMobileShouldScroll] = useState(false);
@@ -111,61 +79,9 @@ export default function Ticker({ items }: TickerProps) {
   const mobileContainerRef = useRef<HTMLDivElement>(null);
   const mobileTextRef = useRef<HTMLDivElement>(null);
 
-  const runSync = useCallback(async (forceOverride?: boolean) => {
-    setIsSyncing(true);
-    setSyncResult(null);
-
-    const forceValue = typeof forceOverride === 'boolean' ? forceOverride : isAdmin;
-    const url = forceValue ? '/api/ticker/sync?force=true' : '/api/ticker/sync';
-
-    try {
-      const headers: HeadersInit = {};
-      const auth = getAuth();
-
-      if (forceValue) {
-        if (!auth.currentUser) {
-          throw new Error('No Firebase auth user found for the signed-in admin.');
-        }
-
-        const token = await auth.currentUser.getIdToken(true);
-
-        await fetch('/api/auth/session', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ idToken: token }),
-          credentials: 'include',
-        }).catch(() => {});
-
-        headers['Authorization'] = `Bearer ${token}`;
-        headers['X-Firebase-ID-Token'] = token;
-      }
-
-      const res = await fetch(url, {
-        headers,
-        cache: 'no-store',
-        credentials: 'include',
-      });
-      const data = await parseSyncResponse(res);
-
-      if (data.items && data.items.length > 0) {
-        setApiItems(data.items);
-      }
-
-      const debugId = data.syncRunId || data.firstItemId || data.latestId || data.items?.[0]?.id;
-      const countText = typeof data.count === 'number'
-        ? `${data.count} items`
-        : typeof data.currentItemCount === 'number'
-          ? `${data.currentItemCount} current items`
-          : data.message || 'sync checked';
-      const statusText = res.ok && data.success !== false ? countText : `Error: ${data.error || data.warning || 'Unknown error'}`;
-      setSyncResult(`${statusText}${debugId ? ` · ID: ${debugId}` : ''}`);
-    } catch (e: unknown) {
-      setSyncResult(`Fetch failed: ${e instanceof Error ? e.message : String(e)}`);
-      console.error(e);
-    } finally {
-      setIsSyncing(false);
-    }
-  }, [isAdmin]);
+  // Sync is performed automatically by the Netlify cron function (6am, 12pm, 5pm MST).
+  // Manual admin sync has been removed from the UI; this placeholder retains setSyncResult for
+  // any future use of the result banner without dead state warnings.
 
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;

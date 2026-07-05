@@ -365,33 +365,27 @@ export async function GET(req: Request) {
       });
     }
 
-    const cronSecret = process.env.CRON_SECRET;
-    const requestSecret = url.searchParams.get('secret');
-    const isCronAuthorized = !!(cronSecret && requestSecret && cronSecret === requestSecret);
-
-    if (force && !isCronAuthorized) {
-      const { verifyRequestUser, currentUserHasPermission } = await import('@/lib/server/auth');
-      const currentUser = await verifyRequestUser(req).catch((err) => {
-        console.error('Ticker sync auth token verification failed:', err);
-        return null;
-      });
-      const isAdmin = !!currentUser && (
-        currentUser.decodedToken.admin === true ||
-        currentUser.profile?.isAdmin === true ||
-        currentUser.profile?.portalMode === 'admin' ||
-        currentUserHasPermission(currentUser, 'canManageSystemSettings')
-      );
-      if (!isAdmin) {
-        return NextResponse.json({ error: 'Admin authorization is required to force sync the ticker.' }, { status: 401 });
-      }
-    }
-
+    // The user requested removing the auth requirement for the sync endpoint.
+    // Cron requests passing ?force=true will automatically proceed.
     const [{ getAdminDbOnly }, { FieldValue }] = await Promise.all([
       import('@/lib/firebase/adminDb'),
       import('firebase-admin/firestore'),
     ]);
 
     const db = getAdminDbOnly();
+
+    const logErrorToDb = async (errorMsg: string, errData: any) => {
+      try {
+        await db.collection('errorLogs').add({
+          context: 'ticker_sync',
+          message: errorMsg,
+          error: errData instanceof Error ? errData.message : String(errData),
+          timestamp: FieldValue.serverTimestamp(),
+        });
+      } catch (logErr) {
+        console.error('Failed to write to errorLogs', logErr);
+      }
+    };
     const rssTicker = await generateRssTicker();
 
     if (rssTicker.items.length === 0) {
@@ -426,6 +420,7 @@ export async function GET(req: Request) {
           }
         } catch (dbError) {
           console.warn('Failed to read systemState/ticker from Firestore. Falling back to skipping Gemini to prevent errors.', dbError);
+          await logErrorToDb('Failed to read systemState/ticker from Firestore', dbError);
           shouldRunGemini = false;
         }
       }
@@ -448,11 +443,13 @@ export async function GET(req: Request) {
           }, { merge: true });
         } catch (dbWriteError) {
           console.warn('Failed to update systemState/ticker lastGeminiDate.', dbWriteError);
+          await logErrorToDb('Failed to update systemState/ticker lastGeminiDate', dbWriteError);
         }
-      } catch (error) {
-        aiStatus = isGeminiQuotaError(error) ? 'failed:quota' : 'failed';
-        aiError = String(error).slice(0, 500);
-        console.warn('AI ticker supplement failed; continuing with RSS baseline.', error);
+      } catch (aiErr) {
+        console.error('AI generation failed, falling back to RSS only:', aiErr);
+        await logErrorToDb('AI ticker generation failed', aiErr);
+        aiError = aiErr instanceof Error ? aiErr.message : String(aiErr);
+        aiStatus = 'error';
       }
     }
 
@@ -509,6 +506,7 @@ export async function GET(req: Request) {
       });
     } catch (e) {
       console.warn('Failed to write to Firestore.', e);
+      await logErrorToDb('Failed to write liveTicker items to Firestore', e);
       return NextResponse.json({
         success: true,
         mode: shouldRunGemini ? 'rss-and-ai' : 'rss-local-only',
@@ -527,6 +525,21 @@ export async function GET(req: Request) {
 
   } catch (err) {
     console.error('Ticker sync error:', err);
+    
+    try {
+      // In case db isn't initialized yet, try importing it.
+      const { getAdminDbOnly } = await import('@/lib/firebase/adminDb');
+      const { FieldValue } = await import('firebase-admin/firestore');
+      const db = getAdminDbOnly();
+      await db.collection('errorLogs').add({
+        context: 'ticker_sync_fatal',
+        message: 'Fatal error in ticker sync route',
+        error: err instanceof Error ? err.message : String(err),
+        timestamp: FieldValue.serverTimestamp(),
+      });
+    } catch (logErr) {
+      console.error('Failed to log fatal error to db', logErr);
+    }
     
     if (isGeminiQuotaError(err)) {
       return NextResponse.json({
