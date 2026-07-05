@@ -44,13 +44,28 @@ export default function TickerSyncButton() {
     setResult(null);
     try {
       const auth = getAuth();
-      const token = await auth.currentUser?.getIdToken();
-      const headers: HeadersInit = {};
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
+      const token = await auth.currentUser?.getIdToken(true);
+      if (!token) {
+        throw new Error('No Firebase auth token found for the signed-in admin.');
       }
 
-      const res = await fetch('/api/ticker/sync?force=true', { headers, cache: 'no-store' });
+      await fetch('/api/auth/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken: token }),
+        credentials: 'include',
+      }).catch(() => {});
+
+      const headers: HeadersInit = {
+        Authorization: `Bearer ${token}`,
+        'X-Firebase-ID-Token': token,
+      };
+
+      const res = await fetch('/api/ticker/sync?force=true', {
+        headers,
+        cache: 'no-store',
+        credentials: 'include',
+      });
       const data = await parseSyncResponse(res);
       const debugId = data.syncRunId || data.firstItemId || data.latestId;
       if (res.ok && data.success !== false) {
