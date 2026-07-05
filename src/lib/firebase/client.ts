@@ -1,5 +1,5 @@
-import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
+import { getAuth, type Auth } from "firebase/auth";
 import {
   getFirestore,
   initializeFirestore,
@@ -17,16 +17,17 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Initialize Firebase only if it hasn't been initialized already
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+const isConfigValid = typeof firebaseConfig.apiKey === 'string' && firebaseConfig.apiKey.trim().length > 0;
 
-const auth = getAuth(app);
+let app: FirebaseApp;
+let auth: Auth;
+let db: Firestore;
 
-function createFirestore(): Firestore {
-  if (typeof window === "undefined") return getFirestore(app);
+function createFirestore(firebaseApp: FirebaseApp): Firestore {
+  if (typeof window === "undefined") return getFirestore(firebaseApp);
 
   try {
-    return initializeFirestore(app, {
+    return initializeFirestore(firebaseApp, {
       localCache: persistentLocalCache({
         tabManager: persistentMultipleTabManager(),
       }),
@@ -35,10 +36,22 @@ function createFirestore(): Firestore {
     if (err instanceof Error && !err.message.includes("already been called")) {
       console.warn("Firestore persistent cache unavailable; falling back to default cache.", err);
     }
-    return getFirestore(app);
+    return getFirestore(firebaseApp);
   }
 }
 
-const db = createFirestore();
+if (isConfigValid) {
+  app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+  auth = getAuth(app);
+  db = createFirestore(app);
+} else {
+  // Mock fallback to allow Next.js static build to succeed without API keys in CI envs
+  app = { name: "[MockApp]" } as unknown as FirebaseApp;
+  auth = {
+    currentUser: null,
+    onAuthStateChanged: () => () => {},
+  } as unknown as Auth;
+  db = {} as unknown as Firestore;
+}
 
 export { app, auth, db };
