@@ -367,10 +367,14 @@ export async function GET(req: Request) {
 
     if (force) {
       const { verifyRequestUser, currentUserHasPermission } = await import('@/lib/server/auth');
-      const currentUser = await verifyRequestUser(req).catch(() => null);
+      const currentUser = await verifyRequestUser(req).catch((err) => {
+        console.error('Ticker sync auth token verification failed:', err);
+        return null;
+      });
       const isAdmin = !!currentUser && (
         currentUser.decodedToken.admin === true ||
         currentUser.profile?.isAdmin === true ||
+        currentUser.profile?.portalMode === 'admin' ||
         currentUserHasPermission(currentUser, 'canManageSystemSettings')
       );
       if (!isAdmin) {
