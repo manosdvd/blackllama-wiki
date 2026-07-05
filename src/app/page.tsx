@@ -85,7 +85,7 @@ export default function Home() {
               <div className={styles.actionGrid}>
                 {roleName === 'guest' && (
                   <>
-                    <Link href="/apply" className={styles.contextActionBtn}>
+                    <Link href="/apply" className={`${styles.contextActionBtn} ${styles.primary}`}>
                       <FileText size={18} />
                       <div className={styles.btnText}>
                         <strong>Submit Application</strong>
@@ -106,7 +106,7 @@ export default function Home() {
 
                 {roleName === 'candidate' && (
                   <>
-                    <Link href="/onboarding" className={styles.contextActionBtn}>
+                    <Link href="/onboarding" className={`${styles.contextActionBtn} ${styles.primary}`}>
                       <FileText size={18} />
                       <div className={styles.btnText}>
                         <strong>Onboarding Profile</strong>
@@ -127,7 +127,7 @@ export default function Home() {
 
                 {(roleName === 'onboarding' || roleName === 'staff') && (
                   <>
-                    <Link href="/onboarding" className={styles.contextActionBtn}>
+                    <Link href="/onboarding" className={`${styles.contextActionBtn} ${styles.primary}`}>
                       <FileText size={18} />
                       <div className={styles.btnText}>
                         <strong>Staff Onboarding</strong>
@@ -148,7 +148,7 @@ export default function Home() {
 
                 {roleName === 'admin' && (
                   <>
-                    <Link href="/admin/review" className={styles.contextActionBtn}>
+                    <Link href="/admin/review" className={`${styles.contextActionBtn} ${styles.primary}`}>
                       <ShieldCheck size={18} />
                       <div className={styles.btnText}>
                         <strong>Review Dashboard</strong>

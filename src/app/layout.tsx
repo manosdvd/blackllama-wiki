@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Atkinson_Hyperlegible, Inter, Lexend } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/layout/Header";
+import BottomNav from "@/components/layout/BottomNav";
 import EmbersBackground from "@/components/ui/EmbersBackground";
 import { AuthProvider } from "@/components/auth/AuthContext";
 
@@ -40,11 +41,13 @@ export default function RootLayout({
     <html lang="en" className={`${atkinson.variable} ${inter.variable} ${lexend.variable}`}>
       <body>
         <AuthProvider>
+          <a href="#main-content" className="skip-link">Skip to Main Content</a>
           <EmbersBackground />
           <Header />
-          <main style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1 }}>
+          <main id="main-content" tabIndex={-1} style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1, outline: 'none' }}>
             {children}
           </main>
+          <BottomNav />
         </AuthProvider>
       </body>
     </html>

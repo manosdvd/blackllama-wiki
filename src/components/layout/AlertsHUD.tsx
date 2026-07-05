@@ -5,7 +5,7 @@ import styles from './AlertsHUD.module.css';
 import {
   AlertTriangle, Flame, CloudLightning, Info,
   Wind, Droplets, ThermometerSun, MapPin, CheckCircle, Satellite,
-  Trees, Activity, ChevronLeft, ChevronRight,
+  Trees, Activity, ChevronLeft, ChevronRight, Clock,
 } from 'lucide-react';
 import type {
   FireAggregatorResponse,
@@ -32,6 +32,7 @@ export default function AlertsHUD() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
+  const [isDetailsExpanded, setIsDetailsExpanded] = useState(false);
 
   // 1. Live clock — client-only to avoid hydration mismatch
   useEffect(() => {
@@ -166,23 +167,18 @@ export default function AlertsHUD() {
   };
 
   const renderWeatherBlock = () => (
-    <a
-      href="https://forecast.weather.gov/MapClick.php?lat=32.39806&amp;lon=-110.725"
-      target="_blank"
-      rel="noopener noreferrer"
-      className={`${styles.weatherBlock} ${styles.weatherLink}`}
+    <button
+      type="button"
+      onClick={() => setIsDetailsExpanded(!isDetailsExpanded)}
+      className={`${styles.weatherBlock} ${styles.weatherButton} ${isDetailsExpanded ? styles.weatherActive : ''}`}
+      aria-expanded={isDetailsExpanded}
+      aria-controls="hud-details-panel"
+      title="Click for detailed weather and coordinates"
     >
-      <div className={styles.weatherPrimary}>
-        <ThermometerSun size={14} />
-        <span className={styles.weatherTemp}>{weather?.temp || '--'}</span>
-        <span className={styles.weatherCond}>{weather?.condition || 'Weather unavailable'}</span>
-      </div>
-      <div className={styles.weatherStats}>
-        <span><Wind size={11} /> {weather?.wind || '--'}</span>
-        <span><Droplets size={11} /> {weather?.humidity || '--'}</span>
-        <span>Rain: {weather?.precipChance || '--'}</span>
-      </div>
-    </a>
+      <ThermometerSun size={16} />
+      <span className={styles.weatherTemp}>{weather?.temp || '--'}</span>
+      <span className={styles.weatherCond}>({weather?.condition || 'Weather unavailable'}) • Click for Details</span>
+    </button>
   );
 
   const renderAlertCard = (alert: FireAlertItem, index: number) => {
@@ -280,23 +276,65 @@ export default function AlertsHUD() {
           </>
         )}
 
-        {/* Location + time */}
-        <div className={styles.locationBlock}>
-          <div className={styles.locStats}>
-            <span><MapPin size={11} /> 32.398° N, 110.725° W</span>
-            <span>7,950 ft</span>
-            {currentTime && (
-              <span>{currentTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Phoenix' })} MST</span>
-            )}
-          </div>
-        </div>
-
         {!isAllClear && alerts.length > 1 && (
           <div className={styles.mobileAlertCounter}>
             {activeAlertIndex + 1} / {alerts.length}
           </div>
         )}
       </div>
+
+      {/* Collapsible Station Details Drawer (Move coordinate/elevation clutter here) */}
+      {isDetailsExpanded && (
+        <div id="hud-details-panel" className={styles.detailsPanel} aria-label="Detailed Weather and Station Info">
+          <div className={styles.detailsGrid}>
+            <div className={styles.detailsColumn}>
+              <h4>Station & Coordinates</h4>
+              <div className={styles.detailsItem}>
+                <MapPin size={14} />
+                <span><strong>Location:</strong> Mount Lemmon (7,950 ft elevation)</span>
+              </div>
+              <div className={styles.detailsItem}>
+                <MapPin size={14} />
+                <span><strong>Coordinates:</strong> 32.398° N, 110.725° W</span>
+              </div>
+              {currentTime && (
+                <div className={styles.detailsItem}>
+                  <Clock size={14} />
+                  <span><strong>Station Time:</strong> {currentTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'America/Phoenix' })} MST</span>
+                </div>
+              )}
+            </div>
+
+            <div className={styles.detailsColumn}>
+              <h4>Detailed Weather Conditions</h4>
+              <div className={styles.detailsItem}>
+                <Wind size={14} />
+                <span><strong>Wind Speed:</strong> {weather?.wind || '--'}</span>
+              </div>
+              <div className={styles.detailsItem}>
+                <Droplets size={14} />
+                <span><strong>Humidity:</strong> {weather?.humidity || '--'}</span>
+              </div>
+              <div className={styles.detailsItem}>
+                <CloudLightning size={14} />
+                <span><strong>Precipitation:</strong> {weather?.precipChance || '--'}</span>
+              </div>
+              <div className={styles.detailsItem}>
+                <ThermometerSun size={14} />
+                <span><strong>Condition:</strong> {weather?.detailedForecast || 'Detailed forecast unavailable.'}</span>
+              </div>
+              <a
+                href="https://forecast.weather.gov/MapClick.php?lat=32.39806&amp;lon=-110.725"
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.nwsExternalLink}
+              >
+                Open Official NWS Forecast Page ↗
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Source health footer */}
       <div className={styles.sourceHealthBar}>

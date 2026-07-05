@@ -210,15 +210,38 @@
   background-color: rgba(255, 255, 255, 0.02);
   border: 1px solid var(--surface-border);
   border-radius: 6px;
-  color: var(--canvas-tan);
+  color: var(--foreground);
   text-decoration: none;
   transition: all 0.2s;
   position: relative;
+  min-height: 48px; /* Accessible touch target height */
 }
 
 .contextActionBtn:hover {
   background-color: rgba(234, 179, 8, 0.04);
   border-color: rgba(234, 179, 8, 0.3);
+}
+
+.contextActionBtn.primary {
+  background-color: var(--pine-green);
+  border-color: var(--pine-green-light);
+}
+
+.contextActionBtn.primary:hover {
+  background-color: var(--pine-green-light);
+  border-color: var(--lantern-gold);
+}
+
+.contextActionBtn.primary strong {
+  color: #ffffff !important;
+}
+
+.contextActionBtn.primary span {
+  color: #d1fae5 !important;
+}
+
+.contextActionBtn.primary svg {
+  color: #ffffff !important;
 }
 
 .contextActionBtn:hover .arrowIcon {

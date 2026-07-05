@@ -5,7 +5,7 @@ import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import { getAuth } from 'firebase/auth';
 import { useAuth } from '@/components/auth/AuthContext';
-import { ExternalLink, X } from 'lucide-react';
+import { ExternalLink, X, Play, Pause, Eye, EyeOff } from 'lucide-react';
 import styles from './Ticker.module.css';
 
 interface TickerItem {
@@ -91,6 +91,19 @@ export default function Ticker({ items }: TickerProps) {
   const [syncResult, setSyncResult] = useState<string | null>(null);
   const [mobileScrollAmount, setMobileScrollAmount] = useState(0);
   const [mobileShouldScroll, setMobileShouldScroll] = useState(false);
+
+  const [isPaused, setIsPaused] = useState(false);
+  const [isHidden, setIsHidden] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('ticker_hidden') === 'true';
+    }
+    return false;
+  });
+
+  const toggleHidden = (val: boolean) => {
+    setIsHidden(val);
+    localStorage.setItem('ticker_hidden', String(val));
+  };
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const feedButtonRef = useRef<HTMLButtonElement>(null);
@@ -204,7 +217,7 @@ export default function Ticker({ items }: TickerProps) {
 
     const startInterval = () => {
       intervalId = setInterval(() => {
-        if (isActive) {
+        if (isActive && !isPaused) {
           setMobileIndex((prev) => (prev + 1) % combinedItems.length);
         }
       }, 7000);
@@ -229,7 +242,7 @@ export default function Ticker({ items }: TickerProps) {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       clearInterval(intervalId);
     };
-  }, [combinedItems]);
+  }, [combinedItems, isPaused]);
 
   useEffect(() => {
     if (!scrollRef.current || displayItems.length === 0) return;
@@ -242,7 +255,7 @@ export default function Ticker({ items }: TickerProps) {
 
     const scroll = () => {
       if (!isActive) return;
-      if (scrollRef.current && !isHovered) {
+      if (scrollRef.current && !isHovered && !isPaused) {
         scrollRef.current.scrollLeft += 0.4;
         if (scrollRef.current.scrollLeft >= scrollRef.current.scrollWidth / 2) {
           scrollRef.current.scrollLeft = 0;
@@ -270,7 +283,7 @@ export default function Ticker({ items }: TickerProps) {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       cancelAnimationFrame(animationId);
     };
-  }, [displayItems, isHovered]);
+  }, [displayItems, isHovered, isPaused]);
 
   useEffect(() => {
     if (!mobileContainerRef.current || !mobileTextRef.current) return;
@@ -316,6 +329,22 @@ export default function Ticker({ items }: TickerProps) {
   const prevMobile = () => setMobileIndex((p) => (p - 1 + combinedItems.length) % combinedItems.length);
 
   if (combinedItems.length === 0) return null;
+
+  if (isHidden) {
+    return (
+      <div className={styles.restoreBar}>
+        <button
+          onClick={() => toggleHidden(false)}
+          className={styles.restoreBtn}
+          title="Restore news ticker"
+          aria-label="Restore news ticker"
+        >
+          <Eye size={14} />
+          <span>Show Camp Feed Ticker</span>
+        </button>
+      </div>
+    );
+  }
 
   const safeMobileIndex = Math.min(mobileIndex, combinedItems.length - 1);
   const mobileItem = combinedItems[safeMobileIndex];
@@ -375,6 +404,27 @@ export default function Ticker({ items }: TickerProps) {
           }}
           className={styles.desktopArrowBtn}
         >▶</button>
+      </div>
+
+      <div className={styles.tickerControls}>
+        <button
+          type="button"
+          onClick={() => setIsPaused(!isPaused)}
+          className={styles.controlBtn}
+          title={isPaused ? "Play news ticker" : "Pause news ticker"}
+          aria-label={isPaused ? "Play news ticker" : "Pause news ticker"}
+        >
+          {isPaused ? <Play size={14} /> : <Pause size={14} />}
+        </button>
+        <button
+          type="button"
+          onClick={() => toggleHidden(true)}
+          className={styles.controlBtn}
+          title="Hide news ticker"
+          aria-label="Hide news ticker"
+        >
+          <EyeOff size={14} />
+        </button>
       </div>
 
       <div className={styles.tickerMobileContent}>

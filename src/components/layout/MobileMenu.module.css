@@ -7,7 +7,8 @@
   display: none;
   align-items: center;
   justify-content: center;
-  padding: 0.5rem;
+  width: 44px; /* Explicit 44x44px touch target */
+  height: 44px;
   border-radius: 4px;
   transition: all 0.2s;
   z-index: 10001;
@@ -55,7 +56,7 @@
   font-size: 1.1rem;
   font-weight: 700;
   color: var(--canvas-tan);
-  padding: 0.5rem 0;
+  padding: 0.75rem 0; /* Ensures 44px touch target height */
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   transition: color 0.2s, padding-left 0.2s;
 }

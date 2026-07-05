@@ -200,8 +200,8 @@
 
 .weatherBlock {
   display: flex;
-  flex-direction: column;
-  gap: 3px;
+  align-items: center;
+  gap: 6px;
   min-width: 210px;
   padding: 0.2rem 0.75rem;
   border-right: 1px solid rgba(255,255,255,0.08);
@@ -214,34 +214,124 @@
   border-left: 1px solid rgba(255,255,255,0.08);
 }
 
-.weatherPrimary {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--canvas-tan);
+.weatherButton {
+  background: transparent;
+  border-top: none;
+  border-bottom: none;
+  border-left: none;
+  color: var(--foreground);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-align: left;
+  transition: all 0.2s;
+  min-height: 100%;
+}
+
+.weatherButton:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.weatherActive {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+  color: var(--lantern-gold) !important;
 }
 
 .weatherTemp {
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 700;
   color: var(--lantern-gold);
 }
 
 .weatherCond {
   font-size: 0.78rem;
-  color: #c9c5c0;
+  color: var(--stone-grey);
 }
 
-.weatherStats {
-  display: flex;
-  gap: 10px;
-  font-size: 0.68rem;
-  color: #7a7672;
+/* Collapsible Details Drawer */
+.detailsPanel {
+  background-color: var(--charcoal-darker, #0c0a09);
+  border-bottom: 1px solid var(--surface-border);
+  padding: 1.25rem 1.5rem;
+  animation: slideDownDetails 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
-.weatherStats span {
+
+@keyframes slideDownDetails {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    overflow: hidden;
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    max-height: 500px;
+  }
+}
+
+.detailsGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+
+@media (max-width: 700px) {
+  .detailsGrid {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+}
+
+.detailsColumn h4 {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--campfire-amber);
+  margin: 0 0 0.75rem 0;
+  letter-spacing: 1px;
+  border-bottom: 1px solid var(--surface-border);
+  padding-bottom: 0.25rem;
+}
+
+.detailsItem {
   display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: var(--foreground);
+  margin-bottom: 0.5rem;
+}
+
+.detailsItem strong {
+  color: var(--stone-grey);
+  font-weight: 600;
+}
+
+.detailsItem svg {
+  margin-top: 2px;
+  color: var(--pine-green-light);
+  flex-shrink: 0;
+}
+
+.nwsExternalLink {
+  display: inline-flex;
   align-items: center;
-  gap: 3px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--lantern-gold);
+  text-decoration: none;
+  margin-top: 0.5rem;
+  transition: color 0.2s;
+}
+
+.nwsExternalLink:hover {
+  color: var(--campfire-amber);
+  text-decoration: underline;
 }
 
 /* ── Location block ──────────────────────────────────────────── */
