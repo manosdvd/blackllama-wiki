@@ -45,15 +45,7 @@
   --word-spacing: normal;
 }
 
-/* Light mode override if needed, but primary is dark */
-@media (prefers-color-scheme: light) {
-  :root {
-    --background: var(--canvas-tan);
-    --foreground: var(--charcoal-base);
-    --surface: #e7e5e4;
-    --surface-border: #d6d3d1;
-  }
-}
+
 
 /* Accessibility Toggles (Classes added via JS) */
 html.high-legibility {

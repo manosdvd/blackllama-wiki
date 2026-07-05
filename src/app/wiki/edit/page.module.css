@@ -199,9 +199,9 @@
 }
 
 .editorArea {
-  padding: 2rem 4rem;
-  background-color: white; /* EditorJS needs a light background for its default themes to look best, or we override everything */
-  color: #333; /* Dark text for the light background */
+  padding: 1.5rem;
+  background-color: var(--charcoal-base);
+  color: var(--canvas-tan);
   min-height: 60vh;
 }
 
