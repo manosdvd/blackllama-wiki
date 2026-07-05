@@ -108,12 +108,30 @@ export default function Ticker({ items }: TickerProps) {
     try {
       const headers: HeadersInit = {};
       const auth = getAuth();
-      if (forceValue && auth.currentUser) {
-        const token = await auth.currentUser.getIdToken();
+
+      if (forceValue) {
+        if (!auth.currentUser) {
+          throw new Error('No Firebase auth user found for the signed-in admin.');
+        }
+
+        const token = await auth.currentUser.getIdToken(true);
+
+        await fetch('/api/auth/session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ idToken: token }),
+          credentials: 'include',
+        }).catch(() => {});
+
         headers['Authorization'] = `Bearer ${token}`;
+        headers['X-Firebase-ID-Token'] = token;
       }
 
-      const res = await fetch(url, { headers, cache: 'no-store' });
+      const res = await fetch(url, {
+        headers,
+        cache: 'no-store',
+        credentials: 'include',
+      });
       const data = await parseSyncResponse(res);
 
       if (data.items && data.items.length > 0) {
