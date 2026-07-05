@@ -30,5 +30,9 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules", "blackllamaDEPRICATED"]
+  "exclude": [
+    "node_modules",
+    "blackllamaDEPRICATED",
+    "netlify/functions"
+  ]
 }
