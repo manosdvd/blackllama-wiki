@@ -5,6 +5,8 @@ import { ADMIN_PERMISSIONS, type AdminPermission } from '@/types/permissions';
 import type { UserProfile } from '@/types/users';
 import { isHealthyAccountStatus } from '@/types/users';
 
+const SESSION_COOKIE_NAME = 'campLawtonSession';
+
 export interface CurrentUser {
   decodedToken: DecodedIdToken;
   profile: UserProfile | null;
@@ -16,12 +18,29 @@ export function bearerTokenFromRequest(request: Request) {
   return authHeader.slice('Bearer '.length).trim();
 }
 
-export async function verifyRequestUser(request: Request): Promise<CurrentUser | null> {
-  const token = bearerTokenFromRequest(request);
-  if (!token) return null;
+export function sessionCookieFromRequest(request: Request) {
+  const cookieHeader = request.headers.get('cookie');
+  if (!cookieHeader) return null;
 
+  const sessionPair = cookieHeader
+    .split(';')
+    .map((cookie) => cookie.trim())
+    .find((cookie) => cookie.startsWith(`${SESSION_COOKIE_NAME}=`));
+
+  if (!sessionPair) return null;
+  return decodeURIComponent(sessionPair.slice(SESSION_COOKIE_NAME.length + 1));
+}
+
+export async function verifyRequestUser(request: Request): Promise<CurrentUser | null> {
   const adminAuth = await getAdminAuth();
-  const decodedToken = await adminAuth.verifyIdToken(token);
+  const bearerToken = bearerTokenFromRequest(request);
+  const sessionCookie = !bearerToken ? sessionCookieFromRequest(request) : null;
+
+  if (!bearerToken && !sessionCookie) return null;
+
+  const decodedToken = bearerToken
+    ? await adminAuth.verifyIdToken(bearerToken)
+    : await adminAuth.verifySessionCookie(sessionCookie as string, true);
   const profile = await getUserProfile(decodedToken.uid);
 
   return { decodedToken, profile };
