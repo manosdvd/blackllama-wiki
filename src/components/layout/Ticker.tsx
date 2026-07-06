@@ -81,6 +81,7 @@ export default function Ticker({ items }: TickerProps) {
   // Sync is performed automatically by the Netlify cron function (6am, 12pm, 5pm MST).
   // Manual admin sync has been removed from the UI.
 
+  // Subscribe to Firestore liveTicker collection
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
 
@@ -99,6 +100,39 @@ export default function Ticker({ items }: TickerProps) {
     return () => {
       unsubscribe?.();
     };
+  }, []);
+
+  // On page load, trigger a background RSS sync if liveTicker is empty or stale
+  useEffect(() => {
+    const STALE_THRESHOLD_MS = 6 * 60 * 60 * 1000; // 6 hours
+
+    async function triggerSyncIfNeeded() {
+      try {
+        // Check if we already have fresh items in Firestore
+        const { collection: col, getDocs, query: fsQuery, orderBy: fsOrderBy, limit } = await import('firebase/firestore');
+        const snap = await getDocs(fsQuery(col(db, 'liveTicker'), fsOrderBy('position', 'asc'), limit(1)));
+
+        if (!snap.empty) {
+          const firstItem = snap.docs[0].data() as TickerItem;
+          const generatedAt = firstItem.generatedAt ? new Date(firstItem.generatedAt).getTime() : 0;
+          const age = Date.now() - generatedAt;
+          if (age < STALE_THRESHOLD_MS) {
+            // Data is fresh enough, no sync needed
+            return;
+          }
+        }
+
+        // Data is empty or stale — trigger a background sync (fire-and-forget)
+        console.info('[Ticker] Triggering background RSS sync...');
+        fetch('/api/ticker/sync').catch(() => {
+          // Silently ignore if sync fails — offline or slow network
+        });
+      } catch {
+        // Ignore errors — just skip the sync attempt silently
+      }
+    }
+
+    triggerSyncIfNeeded();
   }, []);
 
   useEffect(() => {
