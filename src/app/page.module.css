@@ -1,6 +1,6 @@
 .dashboardContainer {
   padding: 2rem;
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
   width: 100%;
 }
@@ -26,6 +26,148 @@
   font-size: 0.9rem;
 }
 
+/* Join the Staff Hero Card */
+.joinStaffCard {
+  background: linear-gradient(135deg, rgba(27, 77, 62, 0.2) 0%, rgba(229, 140, 53, 0.08) 100%);
+  border: 1px solid rgba(229, 140, 53, 0.2);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.4), inset 0 0 12px rgba(229, 140, 53, 0.05);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: 8px;
+  padding: 2rem;
+  margin-bottom: 2.5rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.joinStaffCard::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(to bottom, var(--pine-green-light), var(--campfire-amber));
+}
+
+.joinStaffContent {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 2.5rem;
+  align-items: center;
+}
+
+.joinStaffTextSide {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.joinStaffHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.25rem;
+}
+
+.joinStaffIcon {
+  color: var(--campfire-amber);
+  filter: drop-shadow(0 0 8px rgba(229, 140, 53, 0.5));
+  animation: flamePulse 2.5s infinite ease-in-out;
+}
+
+@keyframes flamePulse {
+  0%, 100% { transform: scale(1); opacity: 0.9; }
+  50% { transform: scale(1.1) rotate(2deg); opacity: 1; }
+}
+
+.joinStaffHeader h3 {
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  color: var(--canvas-tan);
+  margin: 0;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.joinStaffLead {
+  font-size: 1.05rem;
+  line-height: 1.6;
+  color: var(--canvas-tan);
+  font-weight: 500;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.joinStaffBody {
+  font-size: 0.92rem;
+  line-height: 1.6;
+  color: var(--stone-grey);
+  font-style: italic;
+}
+
+.joinStaffActionSide {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-items: stretch;
+  text-align: center;
+}
+
+.joinStaffActionSide h4 {
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.10em;
+  color: var(--lantern-gold);
+  margin: 0;
+}
+
+.joinStaffActionSide p {
+  font-size: 0.8rem;
+  color: var(--stone-grey);
+  line-height: 1.4;
+  margin: 0;
+}
+
+.joinStaffBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1.5rem;
+  background: var(--pine-green);
+  border: 1px solid var(--pine-green-light);
+  border-radius: 4px;
+  color: var(--canvas-tan);
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  transition: all 0.2s ease-in-out;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  text-decoration: none;
+}
+
+.joinStaffBtn:hover {
+  background: var(--pine-green-light);
+  color: #121212;
+  border-color: var(--lantern-gold);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(91, 226, 167, 0.3);
+}
+
+.joinStaffBtn svg {
+  transition: transform 0.2s ease;
+}
+
+.joinStaffBtn:hover svg:last-child {
+  transform: translateX(4px);
+}
+
 /* Two Column Grid */
 .grid {
   display: grid;
@@ -49,6 +191,13 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+  border-color: rgba(229, 140, 53, 0.15);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
 }
 
 .cardHeader {
@@ -71,130 +220,6 @@
   flex: 1;
 }
 
-/* Secure Session/Welcome Card */
-.welcomeCard {
-  background-color: rgba(12, 10, 9, 0.4);
-  border: 1px solid var(--surface-border);
-  border-radius: 6px;
-  padding: 1.5rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1.5rem;
-  flex-wrap: wrap;
-}
-
-.welcomeLeft {
-  display: flex;
-  align-items: center;
-  gap: 1.25rem;
-}
-
-.avatar {
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  background-color: rgba(16, 185, 129, 0.15);
-  border: 1px solid rgba(16, 185, 129, 0.3);
-  color: #34d399;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.guestAvatar {
-  background-color: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  color: var(--red-ember);
-}
-
-.welcomeInfo h3 {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: var(--canvas-tan);
-  margin: 0 0 0.25rem 0;
-  letter-spacing: 0.05em;
-}
-
-.welcomeInfo p {
-  color: var(--stone-grey);
-  font-size: 0.9rem;
-  margin: 0 0 0.5rem 0;
-}
-
-.boldText {
-  color: var(--canvas-tan);
-  font-weight: 600;
-}
-
-.badgeRow {
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-}
-
-.roleBadge {
-  background-color: var(--charcoal-lighter);
-  border: 1px solid var(--surface-border);
-  color: var(--lantern-gold);
-  padding: 0.15rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.guestBadge {
-  color: var(--stone-grey);
-}
-
-.activeBadge {
-  background-color: rgba(52, 211, 153, 0.1);
-  color: #34d399;
-  border: 1px solid rgba(52, 211, 153, 0.3);
-  padding: 0.15rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-}
-
-.welcomeRight {
-  display: flex;
-  align-items: center;
-}
-
-.authBtn {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.6rem 1.2rem;
-  border-radius: 4px;
-  font-weight: 600;
-  font-size: 0.85rem;
-  cursor: pointer;
-  background-color: var(--charcoal-lighter);
-  color: var(--canvas-tan);
-  border: 1px solid var(--surface-border);
-  transition: all 0.2s;
-}
-
-.authBtn:hover {
-  background-color: var(--stone-grey);
-}
-
-.loginBtn {
-  background-color: var(--pine-green);
-  color: var(--canvas-tan);
-  border: none;
-}
-
-.loginBtn:hover {
-  background-color: var(--pine-green-light);
-  transform: translateY(-1px);
-}
-
 /* Action Grid (Context actions) */
 .actionGrid {
   display: grid;
@@ -214,7 +239,7 @@
   text-decoration: none;
   transition: all 0.2s;
   position: relative;
-  min-height: 48px; /* Accessible touch target height */
+  min-height: 48px;
 }
 
 .contextActionBtn:hover {
@@ -362,65 +387,69 @@
   text-align: center;
 }
 
-/* Status Items inside Side Panel */
-.statusList {
+/* Semi-Random Featured Article Card */
+.featuredPreview {
   display: flex;
   flex-direction: column;
-  gap: 0.9rem;
+  gap: 0.85rem;
 }
 
-.statusRow {
+.featuredBadgeRow {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  justify-content: flex-start;
 }
 
-.statusRow:last-child {
-  border-bottom: none;
-  padding-bottom: 0;
+.featuredTitle {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--lantern-gold);
+  line-height: 1.4;
+  margin: 0;
 }
 
-.statusRowLabel {
-  display: flex;
+.featuredSummary {
+  font-size: 0.85rem;
+  color: var(--stone-grey);
+  line-height: 1.5;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.featuredReadBtn {
+  display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  color: var(--stone-grey);
-  font-size: 0.85rem;
-  font-weight: 600;
-}
-
-.statusPill {
-  padding: 0.15rem 0.55rem;
-  border-radius: 3px;
-  font-size: 0.75rem;
-  font-weight: 800;
-  letter-spacing: 0.05em;
-}
-
-.statusPill.online {
-  background-color: rgba(16, 185, 129, 0.15);
-  color: #34d399;
-  border: 1px solid rgba(16, 185, 129, 0.3);
-}
-
-.statusPill.offline {
-  background-color: rgba(245, 158, 11, 0.15);
-  color: var(--campfire-amber);
-  border: 1px solid rgba(245, 158, 11, 0.3);
-}
-
-.statusPill.warning {
-  background-color: rgba(245, 158, 11, 0.15);
-  color: var(--campfire-amber);
-  border: 1px solid rgba(245, 158, 11, 0.3);
-}
-
-.statusText {
-  font-size: 0.85rem;
+  align-self: flex-start;
+  font-size: 0.82rem;
   font-weight: 700;
-  color: var(--canvas-tan);
+  text-transform: uppercase;
+  color: var(--pine-green-light);
+  transition: all 0.2s ease;
+  padding: 0.25rem 0;
+  border-bottom: 1px solid transparent;
+  margin-top: 0.25rem;
+  text-decoration: none;
+}
+
+.featuredReadBtn:hover {
+  color: var(--lantern-gold);
+  border-bottom-color: var(--lantern-gold);
+}
+
+.featuredReadBtn svg {
+  transition: transform 0.2s ease;
+}
+
+.featuredReadBtn:hover svg {
+  transform: translateX(3px);
+}
+
+.highlightIcon {
+  color: var(--lantern-gold);
 }
 
 /* Emergency Directory inside Side Panel */
@@ -459,6 +488,18 @@
 }
 
 /* Responsive Rules */
+@media (max-width: 1024px) {
+  .joinStaffContent {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  .joinStaffActionSide {
+    align-self: center;
+    max-width: 400px;
+    width: 100%;
+  }
+}
+
 @media (max-width: 768px) {
   .dashboardContainer {
     padding: 1rem;
@@ -466,16 +507,7 @@
   .grid {
     grid-template-columns: 1fr;
   }
-  .welcomeCard {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  .welcomeRight {
-    align-self: stretch;
-    width: 100%;
-  }
-  .welcomeRight .authBtn {
-    width: 100%;
-    justify-content: center;
+  .joinStaffCard {
+    padding: 1.5rem;
   }
 }

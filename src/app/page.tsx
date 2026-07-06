@@ -3,8 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
-  BookOpen, FileText, MessageSquare, Radio, Phone, Wifi, Database,
-  ArrowRight, Clock, ShieldCheck
+  BookOpen, FileText, MessageSquare, Phone, ArrowRight, Clock, ShieldCheck, Flame, Music
 } from 'lucide-react';
 import { useAuth } from '@/components/auth/AuthContext';
 import type { ContentItem } from '@/types/content';
@@ -14,26 +13,8 @@ export default function Home() {
   const { user, profile } = useAuth();
   const [articles, setArticles] = useState<ContentItem[]>([]);
   const [loadingArticles, setLoadingArticles] = useState(true);
-  const [isOnline, setIsOnline] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
-      return navigator.onLine;
-    }
-    return true;
-  });
-
-  // Track online/offline status dynamically for PWA
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const goOnline = () => setIsOnline(true);
-      const goOffline = () => setIsOnline(false);
-      window.addEventListener('online', goOnline);
-      window.addEventListener('offline', goOffline);
-      return () => {
-        window.removeEventListener('online', goOnline);
-        window.removeEventListener('offline', goOffline);
-      };
-    }
-  }, []);
+  const [randomArticle, setRandomArticle] = useState<ContentItem | null>(null);
+  const [loadingRandom, setLoadingRandom] = useState(true);
 
   // Fetch recent wiki articles matching user visibility level
   useEffect(() => {
@@ -63,6 +44,39 @@ export default function Home() {
     };
   }, [user]);
 
+  // Fetch a semi-random article from "Camp culture and training" or "Songbook"
+  useEffect(() => {
+    let active = true;
+    async function fetchRandom() {
+      setLoadingRandom(true);
+      try {
+        const res = await fetch('/api/wiki/articles?limit=150');
+        if (res.ok) {
+          const data = (await res.json()) as { articles?: ContentItem[] };
+          if (active && data.articles) {
+            const pool = data.articles.filter(
+              (a) =>
+                a.status === 'published' &&
+                (a.categoryId === 'camp-staff-culture-training' || a.categoryId === 'songbook')
+            );
+            if (pool.length > 0) {
+              const randomIndex = Math.floor(Math.random() * pool.length);
+              setRandomArticle(pool[randomIndex]);
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch random article:', err);
+      } finally {
+        if (active) setLoadingRandom(false);
+      }
+    }
+    fetchRandom();
+    return () => {
+      active = false;
+    };
+  }, []);
+
   // Determine user role and corresponding description
   const roleName = profile?.portalMode ?? 'guest';
 
@@ -72,6 +86,56 @@ export default function Home() {
         <h2>OPERATIONS BOARD</h2>
         <p>Santa Catalina Ranger District • Mount Lemmon Ranger Station</p>
       </header>
+
+      {/* Join the Staff Section */}
+      <section className={styles.joinStaffCard}>
+        <div className={styles.joinStaffContent}>
+          <div className={styles.joinStaffTextSide}>
+            <div className={styles.joinStaffHeader}>
+              <Flame className={styles.joinStaffIcon} size={28} />
+              <h3>JOIN THE STAFF</h3>
+            </div>
+            <p className={styles.joinStaffLead}>
+              Since the first Scouts arrived in 1921, our purpose has remained consistent: to transform lives through the power of the outdoor experience. You are how we fulfill that promise to the youth of Catalina Council and beyond. As a staff member, your daily actions and personal conduct serve as the living embodiment of the Scouting brand. You are the role models who make a simple camping trip into a life-altering experience. Your role is so much more than teaching merit badges and singing silly songs - you are shaping the future.
+            </p>
+            <p className={styles.joinStaffBody}>
+              Just as important is the impact this experience will have on you. Few experiences in life provide the leadership experience and personal development that being on camp staff provides. If you embrace what is asked of you this summer, you will leave a different person. I can’t say for certain who that person will be, but it will be more than you are now. That may sound like hyperbole now, but read this again in August and tell me I’m wrong.
+            </p>
+          </div>
+          <div className={styles.joinStaffActionSide}>
+            <h4>READY TO MAKE A DIFFERENCE?</h4>
+            <p>Apply today or complete your onboarding files to secure your place in Camp Lawton&apos;s history.</p>
+            {roleName === 'guest' && (
+              <Link href="/apply" className={styles.joinStaffBtn}>
+                <FileText size={18} />
+                <span>Submit Application</span>
+                <ArrowRight size={16} />
+              </Link>
+            )}
+            {roleName === 'candidate' && (
+              <Link href="/onboarding" className={styles.joinStaffBtn}>
+                <FileText size={18} />
+                <span>Continue Onboarding</span>
+                <ArrowRight size={16} />
+              </Link>
+            )}
+            {(roleName === 'onboarding' || roleName === 'staff') && (
+              <Link href="/onboarding" className={styles.joinStaffBtn}>
+                <FileText size={18} />
+                <span>Access Onboarding Tasks</span>
+                <ArrowRight size={16} />
+              </Link>
+            )}
+            {roleName === 'admin' && (
+              <Link href="/admin/review" className={styles.joinStaffBtn}>
+                <ShieldCheck size={18} />
+                <span>Review Dashboard</span>
+                <ArrowRight size={16} />
+              </Link>
+            )}
+          </div>
+        </div>
+      </section>
 
       <div className={styles.grid}>
         {/* Main Column */}
@@ -218,47 +282,45 @@ export default function Home() {
 
         {/* Sidebar Column */}
         <div className={styles.sideColumn}>
-          {/* Operational Status */}
+          {/* Featured Culture & Songbook Preview */}
           <section className={styles.card}>
             <div className={styles.cardHeader}>
-              <h3>OPERATIONS STATUS</h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                {randomArticle?.categoryId === 'songbook' ? (
+                  <Music size={16} className={styles.highlightIcon} />
+                ) : (
+                  <BookOpen size={16} className={styles.highlightIcon} />
+                )}
+                <h3>FEATURED CULTURE & SONGS</h3>
+              </div>
             </div>
             <div className={styles.cardBody}>
-              <div className={styles.statusList}>
-                <div className={styles.statusRow}>
-                  <div className={styles.statusRowLabel}>
-                    <Wifi size={16} />
-                    <span>NETWORK MODE</span>
+              {loadingRandom ? (
+                <div className={styles.emptyState}>Loading featured content...</div>
+              ) : randomArticle ? (
+                <div className={styles.featuredPreview}>
+                  <div className={styles.featuredBadgeRow}>
+                    <span className={styles.articleCategory}>
+                      {randomArticle.categoryId === 'songbook' ? 'Songbook' : 'Culture & Training'}
+                    </span>
                   </div>
-                  <span className={`${styles.statusPill} ${isOnline ? styles.online : styles.offline}`}>
-                    {isOnline ? 'ONLINE' : 'LOCAL CACHED'}
-                  </span>
+                  <h4 className={styles.featuredTitle}>{randomArticle.title}</h4>
+                  <p className={styles.featuredSummary}>
+                    {randomArticle.summary || 'Explore camp culture, traditions, and essential training information.'}
+                  </p>
+                  <Link
+                    href={`/wiki/article/${randomArticle.slug || randomArticle.id}`}
+                    className={styles.featuredReadBtn}
+                  >
+                    <span>{randomArticle.categoryId === 'songbook' ? 'Sing Song / View Lyrics' : 'Read Article'}</span>
+                    <ArrowRight size={14} />
+                  </Link>
                 </div>
-
-                <div className={styles.statusRow}>
-                  <div className={styles.statusRowLabel}>
-                    <Radio size={16} />
-                    <span>RADIO STANDBY</span>
-                  </div>
-                  <span className={`${styles.statusPill} ${styles.warning}`}>CH 1 MAIN</span>
+              ) : (
+                <div className={styles.emptyState}>
+                  <p>No featured materials available.</p>
                 </div>
-
-                <div className={styles.statusRow}>
-                  <div className={styles.statusRowLabel}>
-                    <Database size={16} />
-                    <span>LOCAL OFFLINE STORAGE</span>
-                  </div>
-                  <span className={`${styles.statusPill} ${styles.online}`}>ENABLED</span>
-                </div>
-
-                <div className={styles.statusRow}>
-                  <div className={styles.statusRowLabel}>
-                    <Clock size={16} />
-                    <span>CAMP SEASON</span>
-                  </div>
-                  <span className={styles.statusText}>PRE-SEASON PREP</span>
-                </div>
-              </div>
+              )}
             </div>
           </section>
 
