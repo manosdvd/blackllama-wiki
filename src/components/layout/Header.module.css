@@ -2,6 +2,8 @@
   display: flex;
   flex-direction: column;
   width: 100%;
+  max-width: 1920px;
+  margin: 0 auto;
   background-color: var(--charcoal-base);
   border-bottom: 1px solid var(--surface-border);
   position: sticky;

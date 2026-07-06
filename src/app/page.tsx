@@ -9,6 +9,20 @@ import { useAuth } from '@/components/auth/AuthContext';
 import type { ContentItem } from '@/types/content';
 import styles from './page.module.css';
 
+const categoryMap: Record<string, string> = {
+  'camp-staff-culture-training': 'Culture & Training',
+  'policies-procedures': 'Policies & Procedures',
+  'songbook': 'Campfire Songbook',
+  'forms-paperwork': 'Onboarding & Forms',
+  'camp-culture-history': 'Camp Culture & History',
+  'resources': 'Staff Resources',
+  'emergency-procedures': 'Emergency Procedures',
+};
+
+function getFriendlyCategory(catId: string) {
+  return categoryMap[catId] || catId;
+}
+
 export default function Home() {
   const { user, profile } = useAuth();
   const [articles, setArticles] = useState<ContentItem[]>([]);
@@ -83,7 +97,7 @@ export default function Home() {
   return (
     <div className={styles.dashboardContainer}>
       <header className={styles.pageHeader}>
-        <h2>OPERATIONS BOARD</h2>
+        <h2>STAFF HILL BULLETIN</h2>
         <p>Santa Catalina Ranger District • Mount Lemmon Ranger Station</p>
       </header>
 
@@ -140,104 +154,10 @@ export default function Home() {
       <div className={styles.grid}>
         {/* Main Column */}
         <div className={styles.mainColumn}>
-          {/* Quick Tasks & Contextual Actions */}
-          <section className={styles.card}>
-            <div className={styles.cardHeader}>
-              <h3>CONTEXT ACTIONS</h3>
-            </div>
-            <div className={styles.cardBody}>
-              <div className={styles.actionGrid}>
-                {roleName === 'guest' && (
-                  <>
-                    <Link href="/apply" className={`${styles.contextActionBtn} ${styles.primary}`}>
-                      <FileText size={18} />
-                      <div className={styles.btnText}>
-                        <strong>Submit Application</strong>
-                        <span>Join our summer staff program</span>
-                      </div>
-                      <ArrowRight size={16} className={styles.arrowIcon} />
-                    </Link>
-                    <Link href="/wiki" className={styles.contextActionBtn}>
-                      <BookOpen size={18} />
-                      <div className={styles.btnText}>
-                        <strong>Browse Public Wiki</strong>
-                        <span>Search rules and information</span>
-                      </div>
-                      <ArrowRight size={16} className={styles.arrowIcon} />
-                    </Link>
-                  </>
-                )}
-
-                {roleName === 'candidate' && (
-                  <>
-                    <Link href="/onboarding" className={`${styles.contextActionBtn} ${styles.primary}`}>
-                      <FileText size={18} />
-                      <div className={styles.btnText}>
-                        <strong>Onboarding Profile</strong>
-                        <span>Track application status</span>
-                      </div>
-                      <ArrowRight size={16} className={styles.arrowIcon} />
-                    </Link>
-                    <Link href="/wiki" className={styles.contextActionBtn}>
-                      <BookOpen size={18} />
-                      <div className={styles.btnText}>
-                        <strong>Candidate Handbooks</strong>
-                        <span>Read preparatory manuals</span>
-                      </div>
-                      <ArrowRight size={16} className={styles.arrowIcon} />
-                    </Link>
-                  </>
-                )}
-
-                {(roleName === 'onboarding' || roleName === 'staff') && (
-                  <>
-                    <Link href="/onboarding" className={`${styles.contextActionBtn} ${styles.primary}`}>
-                      <FileText size={18} />
-                      <div className={styles.btnText}>
-                        <strong>Staff Onboarding</strong>
-                        <span>Complete required onboarding tasks</span>
-                      </div>
-                      <ArrowRight size={16} className={styles.arrowIcon} />
-                    </Link>
-                    <Link href="/wiki" className={styles.contextActionBtn}>
-                      <BookOpen size={18} />
-                      <div className={styles.btnText}>
-                        <strong>Operations Wiki</strong>
-                        <span>Search SOPs and safety guides</span>
-                      </div>
-                      <ArrowRight size={16} className={styles.arrowIcon} />
-                    </Link>
-                  </>
-                )}
-
-                {roleName === 'admin' && (
-                  <>
-                    <Link href="/admin/review" className={`${styles.contextActionBtn} ${styles.primary}`}>
-                      <ShieldCheck size={18} />
-                      <div className={styles.btnText}>
-                        <strong>Review Dashboard</strong>
-                        <span>Approve staff registrations</span>
-                      </div>
-                      <ArrowRight size={16} className={styles.arrowIcon} />
-                    </Link>
-                    <Link href="/wiki" className={styles.contextActionBtn}>
-                      <BookOpen size={18} />
-                      <div className={styles.btnText}>
-                        <strong>Manage Wiki Contents</strong>
-                        <span>Create and edit articles</span>
-                      </div>
-                      <ArrowRight size={16} className={styles.arrowIcon} />
-                    </Link>
-                  </>
-                )}
-              </div>
-            </div>
-          </section>
-
           {/* Dynamic Recent Updates Feed */}
           <section className={styles.card}>
             <div className={styles.cardHeader}>
-              <h3>RECENT OPERATIONS UPDATES</h3>
+              <h3>SHOUTS FROM THE LOGS</h3>
             </div>
             <div className={styles.cardBody}>
               {loadingArticles ? (
@@ -261,7 +181,7 @@ export default function Home() {
                           <p>{article.summary}</p>
                         </div>
                         <div className={styles.articleRight}>
-                          <span className={styles.articleCategory}>{article.categoryId}</span>
+                          <span className={styles.articleCategory}>{getFriendlyCategory(article.categoryId)}</span>
                           <span className={styles.articleDate}>
                             <Clock size={12} /> {date}
                           </span>
@@ -301,7 +221,7 @@ export default function Home() {
                 <div className={styles.featuredPreview}>
                   <div className={styles.featuredBadgeRow}>
                     <span className={styles.articleCategory}>
-                      {randomArticle.categoryId === 'songbook' ? 'Songbook' : 'Culture & Training'}
+                      {getFriendlyCategory(randomArticle.categoryId)}
                     </span>
                   </div>
                   <h4 className={styles.featuredTitle}>{randomArticle.title}</h4>

@@ -28,7 +28,7 @@ export default async function Header() {
             />
             <div className={styles.logoText}>
               <h1>CAMP LAWTON</h1>
-              <span>STAFF COMMAND</span>
+              <span>Staff Hill Online</span>
             </div>
           </Link>
         </div>
