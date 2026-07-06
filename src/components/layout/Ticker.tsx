@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
-import { useAuth } from '@/components/auth/AuthContext';
+
 import { ExternalLink, X, Play, Pause, Eye, EyeOff } from 'lucide-react';
 import styles from './Ticker.module.css';
 
@@ -49,9 +49,9 @@ function getCategoryColor(category?: string) {
 }
 
 export default function Ticker({ items }: TickerProps) {
-  const { isAdmin } = useAuth();
+
   const [dbItems, setDbItems] = useState<TickerItem[]>([]);
-  const [apiItems, setApiItems] = useState<TickerItem[]>([]);
+  const [apiItems] = useState<TickerItem[]>([]);
   const [shuffledLocalItems, setShuffledLocalItems] = useState<TickerItem[]>(items);
   const [mobileIndex, setMobileIndex] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
