@@ -4,7 +4,7 @@ import { ADMIN_PERMISSIONS, permissionsForPreset } from '@/types/permissions';
 import type { PortalMode, UserProfile } from '@/types/users';
 import { isHealthyAccountStatus } from '@/types/users';
 
-export function effectivePermissions(profile?: UserProfile | null): AdminPermission[] {
+function effectivePermissions(profile?: UserProfile | null): AdminPermission[] {
   if (!profile) return [];
   if (profile.adminPreset === 'owner') return [...ADMIN_PERMISSIONS];
 

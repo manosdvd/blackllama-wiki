@@ -41,11 +41,7 @@ export function extractEditorPlainText(data?: EditorData | null) {
   return data.blocks.map(blockToText).filter(Boolean).join('\n').trim();
 }
 
-export function makeSummaryFromEditor(data?: EditorData | null, maxLength = 180) {
-  const text = extractEditorPlainText(data).replace(/\s+/g, ' ');
-  if (text.length <= maxLength) return text;
-  return `${text.slice(0, maxLength - 1).trim()}...`;
-}
+
 
 export function slugify(value: string) {
   return value

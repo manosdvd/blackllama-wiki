@@ -12,21 +12,21 @@ export interface CurrentUser {
   profile: UserProfile | null;
 }
 
-export function bearerTokenFromRequest(request: Request) {
+function bearerTokenFromRequest(request: Request) {
   const authHeader = request.headers.get('authorization') ?? request.headers.get('Authorization');
   if (!authHeader?.startsWith('Bearer ')) return null;
   return authHeader.slice('Bearer '.length).trim();
 }
 
-export function firebaseIdTokenFromRequest(request: Request) {
+function firebaseIdTokenFromRequest(request: Request) {
   return request.headers.get('x-firebase-id-token') ?? request.headers.get('X-Firebase-ID-Token');
 }
 
-export function requestIdTokenFromRequest(request: Request) {
+function requestIdTokenFromRequest(request: Request) {
   return bearerTokenFromRequest(request) || firebaseIdTokenFromRequest(request);
 }
 
-export function sessionCookieFromRequest(request: Request) {
+function sessionCookieFromRequest(request: Request) {
   const cookieHeader = request.headers.get('cookie');
   if (!cookieHeader) return null;
 
@@ -39,13 +39,7 @@ export function sessionCookieFromRequest(request: Request) {
   return decodeURIComponent(sessionPair.slice(SESSION_COOKIE_NAME.length + 1));
 }
 
-export function authDebugFromRequest(request: Request) {
-  return {
-    hasAuthorizationHeader: !!(request.headers.get('authorization') ?? request.headers.get('Authorization')),
-    hasFirebaseIdTokenHeader: !!firebaseIdTokenFromRequest(request),
-    hasSessionCookie: !!sessionCookieFromRequest(request),
-  };
-}
+
 
 export async function verifyRequestUser(request: Request): Promise<CurrentUser | null> {
   const adminAuth = await getAdminAuth();
@@ -62,7 +56,7 @@ export async function verifyRequestUser(request: Request): Promise<CurrentUser |
   return { decodedToken, profile };
 }
 
-export async function getUserProfile(uid: string): Promise<UserProfile | null> {
+async function getUserProfile(uid: string): Promise<UserProfile | null> {
   const snapshot = await getAdminDb().collection('users').doc(uid).get();
   if (!snapshot.exists) return null;
   return snapshot.data() as UserProfile;

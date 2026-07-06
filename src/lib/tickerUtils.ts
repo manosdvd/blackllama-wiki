@@ -48,8 +48,7 @@ function selectOneOfflineItemPerCategory(items: OfflineTickerItem[]) {
 }
 
 export async function getOfflineTickerItems() {
-  const [tickerConfig, quoteItems, curatedItems, meritBadgeItems, mythBustingItems, knotItems] = await Promise.all([
-    readJsonFile<{ offlineTicker?: OfflineTickerItem[] }>('tickerFeeds.json', { offlineTicker: [] }),
+  const [quoteItems, curatedItems, meritBadgeItems, mythBustingItems, knotItems] = await Promise.all([
     readJsonFile<OfflineTickerItem[]>('src/data/offlineQuoteTicker.json', []),
     readJsonFile<OfflineTickerItem[]>('src/data/offlineCuratedTicker.json', []),
     readJsonFile<OfflineTickerItem[]>('src/data/offlineMeritBadgeTicker.json', []),
@@ -58,7 +57,6 @@ export async function getOfflineTickerItems() {
   ]);
 
   const enabledItems = [
-    ...(tickerConfig.offlineTicker || []),
     ...quoteItems,
     ...curatedItems,
     ...meritBadgeItems,

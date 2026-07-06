@@ -13,6 +13,7 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
     "blackllamaDEPRICATED/**",
+    ".deprecated/**",
     "public/sw.js",
     "public/workbox-*.js",
   ]),

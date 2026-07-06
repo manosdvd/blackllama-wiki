@@ -24,7 +24,7 @@ function localServiceAccount(): ServiceAccount | null {
   return serviceAccountFromJson(readFileSync(localPath, 'utf8'));
 }
 
-export function getAdminDbApp(): App {
+function getAdminDbApp(): App {
   const existing = getApps()[0];
   if (existing) return existing;
 

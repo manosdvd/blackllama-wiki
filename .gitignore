@@ -46,3 +46,4 @@ dev_server.log
 sync_output.json
 public/sw.js
 public/workbox-*.js
+.deprecated/

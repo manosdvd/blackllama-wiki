@@ -22,7 +22,7 @@ function blockKey(block: EditorBlock, index: number) {
   return block.id ?? `${block.type}-${index}`;
 }
 
-export function parseMarkdownWikiLinks(markdown: string): string {
+function parseMarkdownWikiLinks(markdown: string): string {
   return markdown.replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (match, target, display) => {
     const t = target.trim();
     const d = display ? display.trim() : t;
@@ -31,7 +31,7 @@ export function parseMarkdownWikiLinks(markdown: string): string {
   });
 }
 
-export function parseHtmlWikiLinks(html: string): string {
+function parseHtmlWikiLinks(html: string): string {
   return html.replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (match, target, display) => {
     const t = target.trim();
     const d = display ? display.trim() : t;
@@ -82,7 +82,7 @@ export function convertMarkdownToHtml(markdown: string): string {
   return html;
 }
 
-export function WikiText({ value, preserveBreaks = false }: { value: string; preserveBreaks?: boolean }) {
+function WikiText({ value, preserveBreaks = false }: { value: string; preserveBreaks?: boolean }) {
   if (!value) return null;
 
   const normalized = preserveBreaks ? value.replace(/<br\s*\/?>/gi, '\n') : value;

@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
-import { getAuth, type Auth } from "firebase/auth";
+
 import {
   getFirestore,
   initializeFirestore,
@@ -20,7 +20,7 @@ const firebaseConfig = {
 const isConfigValid = typeof firebaseConfig.apiKey === 'string' && firebaseConfig.apiKey.trim().length > 0;
 
 let app: FirebaseApp;
-let auth: Auth;
+
 let db: Firestore;
 
 function createFirestore(firebaseApp: FirebaseApp): Firestore {
@@ -42,16 +42,13 @@ function createFirestore(firebaseApp: FirebaseApp): Firestore {
 
 if (isConfigValid) {
   app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-  auth = getAuth(app);
+
   db = createFirestore(app);
 } else {
   // Mock fallback to allow Next.js static build to succeed without API keys in CI envs
   app = { name: "[MockApp]" } as unknown as FirebaseApp;
-  auth = {
-    currentUser: null,
-    onAuthStateChanged: () => () => {},
-  } as unknown as Auth;
+
   db = {} as unknown as Firestore;
 }
 
-export { app, auth, db };
+export { app, db };

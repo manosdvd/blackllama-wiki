@@ -49,7 +49,7 @@ export interface SeasonMembership {
   endedAt?: unknown;
 }
 
-export const HEALTHY_ACCOUNT_STATUSES: AccountStatus[] = ['pending', 'active'];
+const HEALTHY_ACCOUNT_STATUSES: AccountStatus[] = ['pending', 'active'];
 
 export function isHealthyAccountStatus(status?: AccountStatus | null) {
   return !!status && HEALTHY_ACCOUNT_STATUSES.includes(status);
