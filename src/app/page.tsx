@@ -23,6 +23,16 @@ function getFriendlyCategory(catId: string) {
   return categoryMap[catId] || catId;
 }
 
+function dateLabel(value: unknown) {
+  if (!value) return 'Recently';
+  if (typeof value === 'string' || typeof value === 'number') return new Date(value).toLocaleDateString();
+  if (typeof value === 'object' && value !== null) {
+    const seconds = 'seconds' in value ? Number(value.seconds) : '_seconds' in value ? Number(value._seconds) : null;
+    if (seconds) return new Date(seconds * 1000).toLocaleDateString();
+  }
+  return 'Recently';
+}
+
 export default function Home() {
   const { user, profile } = useAuth();
   const [articles, setArticles] = useState<ContentItem[]>([]);
@@ -165,11 +175,7 @@ export default function Home() {
               ) : articles.length > 0 ? (
                 <div className={styles.articleList}>
                   {articles.map((article) => {
-                    const date = article.updatedAt
-                      ? typeof article.updatedAt === 'object' && 'seconds' in article.updatedAt
-                        ? new Date(Number(article.updatedAt.seconds) * 1000).toLocaleDateString()
-                        : new Date(String(article.updatedAt)).toLocaleDateString()
-                      : 'Recently';
+                    const date = dateLabel(article.updatedAt);
                     return (
                       <Link
                         key={article.id}

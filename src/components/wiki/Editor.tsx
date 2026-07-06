@@ -125,9 +125,12 @@ export default function Editor({ initialData, onChange }: EditorProps) {
   // Load content into WYSIWYG editor area when entering wysiwyg mode
   useEffect(() => {
     if (activeMode === 'wysiwyg' && wysiwygRef.current) {
-      wysiwygRef.current.innerHTML = htmlContent;
+      if (wysiwygRef.current.innerHTML !== htmlContent) {
+        wysiwygRef.current.innerHTML = htmlContent;
+      }
     }
-  }, [activeMode, htmlContent]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeMode]);
 
   // Handler for text input inside contentEditable
   const handleWysiwygInput = () => {

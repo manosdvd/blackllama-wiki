@@ -11,7 +11,7 @@ const withPWA = withPWAInit({
 });
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  serverExternalPackages: ['firebase-admin', 'jwks-rsa', 'jose'],
 };
 
 export default withPWA(nextConfig);

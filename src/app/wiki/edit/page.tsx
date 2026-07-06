@@ -1,12 +1,13 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/components/auth/AuthContext';
 import { slugify } from '@/lib/content/editorText';
 import { DEFAULT_WIKI_CATEGORIES, type ContentItem, type ContentStatus, type ContentVisibility, type EditorData } from '@/types/content';
+import EditorOutput from '@/components/wiki/EditorOutput';
 import styles from './page.module.css';
 
 // Editor.js must be imported dynamically with ssr: false
@@ -17,6 +18,16 @@ const Editor = dynamic(() => import('@/components/wiki/Editor'), {
 
 const SELECTABLE_WIKI_CATEGORIES = DEFAULT_WIKI_CATEGORIES.filter((category) => !category.isSuperCategory);
 const DEFAULT_CATEGORY_ID = SELECTABLE_WIKI_CATEGORIES[0]?.id ?? DEFAULT_WIKI_CATEGORIES[0].id;
+
+interface WikiRevision {
+  id: string;
+  versionNumber: number;
+  status: ContentStatus;
+  bodyEditorJs: EditorData;
+  changeSummary?: string;
+  createdByUid?: string;
+  createdAt?: { seconds: number; nanoseconds: number } | string | null;
+}
 
 function WikiEditPageContent() {
   const searchParams = useSearchParams();
@@ -32,16 +43,27 @@ function WikiEditPageContent() {
   const [reviewDueAt, setReviewDueAt] = useState('');
   const [isPinned, setIsPinned] = useState(false);
   const [slugTouched, setSlugTouched] = useState(false);
+  const [changeSummary, setChangeSummary] = useState('');
+  
+  // State for editor block data and revisions
   const [editorData, setEditorData] = useState<EditorData>(() => ({ time: Date.now(), blocks: [], version: '2.31.6' }));
+  const editorDataRef = useRef<EditorData>({ time: 0, blocks: [], version: '2.31.6' });
   const [existingArticle, setExistingArticle] = useState<ContentItem | null>(null);
   const [loadingArticle, setLoadingArticle] = useState(!!articleId);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Revisions and Preview states
+  const [revisions, setRevisions] = useState<WikiRevision[]>([]);
+  const [loadingRevisions, setLoadingRevisions] = useState(false);
+  const [revisionKey, setRevisionKey] = useState(0);
+  const [isPreviewMode, setIsPreviewMode] = useState(false);
+
   const canDraft = hasPermission('canDraftWiki') || hasPermission('canEditWiki') || hasPermission('canPublishWiki');
   const canPublish = hasPermission('canPublishWiki');
 
+  // Load article
   useEffect(() => {
     if (!articleId || loading) return;
 
@@ -69,6 +91,7 @@ function WikiEditPageContent() {
         setTags(data.article.tagIds.join(', '));
         setIsPinned(data.article.isPinned);
         setEditorData(data.article.bodyEditorJs);
+        editorDataRef.current = data.article.bodyEditorJs;
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : String(err));
       } finally {
@@ -82,6 +105,35 @@ function WikiEditPageContent() {
     };
   }, [articleId, loading, user]);
 
+  useEffect(() => {
+    if (!existingArticle) return;
+    const articleId = existingArticle.id;
+    let active = true;
+    async function getRevisions() {
+      setLoadingRevisions(true);
+      try {
+        const { db } = await import('@/lib/firebase/client');
+        const { collection, getDocs, query: fsQuery, orderBy } = await import('firebase/firestore');
+        const colRef = collection(db, 'contentItems', articleId, 'revisions');
+        const q = fsQuery(colRef, orderBy('versionNumber', 'desc'));
+        const snap = await getDocs(q);
+        const list: WikiRevision[] = [];
+        snap.forEach((doc) => {
+          list.push({ id: doc.id, ...doc.data() } as WikiRevision);
+        });
+        if (active) setRevisions(list);
+      } catch (err) {
+        console.error('Error fetching revisions:', err);
+      } finally {
+        if (active) setLoadingRevisions(false);
+      }
+    }
+    getRevisions();
+    return () => {
+      active = false;
+    };
+  }, [existingArticle]);
+
   const tagIds = useMemo(
     () =>
       tags
@@ -92,7 +144,7 @@ function WikiEditPageContent() {
   );
 
   const handleEditorChange = useCallback((data: EditorData) => {
-    setEditorData(data);
+    editorDataRef.current = data;
   }, []);
 
   const saveArticle = async (nextStatus: ContentStatus) => {
@@ -115,13 +167,14 @@ function WikiEditPageContent() {
         title,
         slug,
         summary,
-        bodyEditorJs: editorData,
+        bodyEditorJs: editorDataRef.current,
         categoryId,
         tagIds,
         visibility,
         status: nextStatus,
         reviewDueAt: reviewDueAt || null,
         isPinned,
+        changeSummary: changeSummary.trim() || undefined,
       };
       const response = await fetch(articleId ? `/api/wiki/articles/${encodeURIComponent(articleId)}` : '/api/wiki/articles', {
         method: articleId ? 'PATCH' : 'POST',
@@ -136,7 +189,23 @@ function WikiEditPageContent() {
 
       setExistingArticle(data.article);
       setStatus(data.article.status);
+      setChangeSummary('');
       setMessage(nextStatus === 'published' ? 'Article published.' : nextStatus === 'in_review' ? 'Draft submitted for review.' : 'Draft saved.');
+      
+      // Update local revision list to include the newly saved version
+      if (articleId) {
+        const { db } = await import('@/lib/firebase/client');
+        const { collection, getDocs, query: fsQuery, orderBy } = await import('firebase/firestore');
+        const colRef = collection(db, 'contentItems', articleId, 'revisions');
+        const q = fsQuery(colRef, orderBy('versionNumber', 'desc'));
+        const snap = await getDocs(q);
+        const list: WikiRevision[] = [];
+        snap.forEach((doc) => {
+          list.push({ id: doc.id, ...doc.data() } as WikiRevision);
+        });
+        setRevisions(list);
+      }
+
       if (!articleId) {
         window.history.replaceState(null, '', `/wiki/edit?id=${data.article.id}`);
       }
@@ -175,6 +244,13 @@ function WikiEditPageContent() {
       setError(err instanceof Error ? err.message : String(err));
       setSaving(false);
     }
+  };
+
+  const togglePreviewMode = () => {
+    if (!isPreviewMode) {
+      setEditorData(editorDataRef.current);
+    }
+    setIsPreviewMode(!isPreviewMode);
   };
 
   if (loading || loadingArticle) {
@@ -281,10 +357,76 @@ function WikiEditPageContent() {
             <input type="checkbox" checked={isPinned} onChange={(event) => setIsPinned(event.target.checked)} />
             Pin article
           </label>
+          
+          <label>
+            Change Summary
+            <input
+              type="text"
+              value={changeSummary}
+              onChange={(event) => setChangeSummary(event.target.value)}
+              placeholder="e.g. Fixed typo, updated contact details"
+            />
+          </label>
+
+          {loadingRevisions ? (
+            <div className={styles.revisionLoading}>Loading revision list...</div>
+          ) : revisions.length > 0 ? (
+            <div className={styles.revisionControl}>
+              <label>
+                Load Previous Revision
+                <select
+                  onChange={(e) => {
+                    const revId = e.target.value;
+                    if (!revId) return;
+                    const rev = revisions.find((r) => r.id === revId);
+                    if (rev && window.confirm(`Load revision v${rev.versionNumber}? This will overwrite your current unsaved editor content.`)) {
+                      setEditorData(rev.bodyEditorJs);
+                      editorDataRef.current = rev.bodyEditorJs;
+                      setRevisionKey((k) => k + 1);
+                    }
+                  }}
+                  defaultValue=""
+                  className={styles.revisionSelect}
+                >
+                  <option value="">-- Choose version --</option>
+                  {revisions.map((rev) => {
+                    const date = rev.createdAt
+                      ? typeof rev.createdAt === 'object' && 'seconds' in rev.createdAt
+                        ? new Date(Number(rev.createdAt.seconds) * 1000).toLocaleDateString()
+                        : new Date(String(rev.createdAt)).toLocaleDateString()
+                      : 'Recently';
+                    return (
+                      <option key={rev.id} value={rev.id}>
+                        v{rev.versionNumber} ({rev.changeSummary || 'No summary'}) - {date}
+                      </option>
+                    );
+                  })}
+                </select>
+              </label>
+            </div>
+          ) : null}
         </div>
         
-        <div className={styles.editorArea}>
-          <Editor key={existingArticle?.id ?? 'new'} initialData={editorData} onChange={handleEditorChange} />
+        <div className={styles.editorAreaWrapper}>
+          <div className={styles.editorAreaHeader}>
+            <h3>Body Content</h3>
+            <button
+              type="button"
+              className={styles.previewToggleBtn}
+              onClick={togglePreviewMode}
+            >
+              {isPreviewMode ? 'Return to Editor' : 'Show Live Preview'}
+            </button>
+          </div>
+          <div className={styles.editorArea}>
+            {isPreviewMode ? (
+              <div className={styles.livePreviewContainer}>
+                <EditorOutput data={editorData} />
+              </div>
+            ) : (
+              <Editor key={`${existingArticle?.id ?? 'new'}-${revisionKey}`} initialData={editorData} onChange={handleEditorChange} />
+            )}
+          </div>
         </div>
       </div>
     </div>

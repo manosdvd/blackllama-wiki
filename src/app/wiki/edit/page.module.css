@@ -120,7 +120,7 @@
 
 .secondaryMetadata {
   display: grid;
-  grid-template-columns: 1.4fr 1fr 0.8fr 0.7fr;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 1rem;
   padding: 1.5rem;
   background: rgba(12, 10, 9, 0.36);
@@ -135,6 +135,10 @@
   font-weight: 700;
   gap: 0.45rem;
   text-transform: uppercase;
+}
+
+.secondaryMetadata label:first-child {
+  grid-column: span 2;
 }
 
 .secondaryMetadata input,
@@ -213,28 +217,6 @@
   opacity: 0.7;
 }
 
-/* Make sure EditorJS tools are styled correctly inside our area */
-.editorArea :global(.codex-editor) {
-  /* This targets the internal editor js container */
-}
-
-@media (max-width: 860px) {
-  .header,
-  .actions {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .metadataForm,
-  .secondaryMetadata {
-    grid-template-columns: 1fr;
-  }
-
-  .editorArea {
-    padding: 1rem;
-  }
-}
-
 .deleteBtn {
   padding: 0.75rem 1.5rem;
   border-radius: 4px;
@@ -256,4 +238,90 @@
   cursor: not-allowed;
   opacity: 0.55;
   transform: none;
+}
+
+/* Editor live preview & revision history controls */
+.editorAreaWrapper {
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.editorAreaHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1.5rem;
+  background-color: rgba(0, 0, 0, 0.15);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.editorAreaHeader h3 {
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--stone-grey);
+  margin: 0;
+  letter-spacing: 0.05em;
+}
+
+.previewToggleBtn {
+  background-color: var(--pine-green);
+  border: 1px solid var(--pine-green-light);
+  border-radius: 4px;
+  color: var(--canvas-tan);
+  padding: 0.4rem 0.85rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.previewToggleBtn:hover {
+  background-color: var(--pine-green-light);
+  color: #121212;
+}
+
+.livePreviewContainer {
+  padding: 1.5rem;
+  background-color: var(--charcoal-base);
+  color: var(--canvas-tan);
+  min-height: 60vh;
+}
+
+.revisionControl {
+  display: flex;
+  flex-direction: column;
+}
+
+.revisionSelect {
+  width: 100%;
+}
+
+.revisionLoading {
+  font-size: 0.8rem;
+  color: var(--stone-grey);
+  font-style: italic;
+  padding-top: 1rem;
+}
+
+@media (max-width: 860px) {
+  .header,
+  .actions {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .metadataForm,
+  .secondaryMetadata {
+    grid-template-columns: 1fr;
+  }
+  
+  .secondaryMetadata label:first-child {
+    grid-column: span 1;
+  }
+
+  .editorArea {
+    padding: 1rem;
+  }
 }

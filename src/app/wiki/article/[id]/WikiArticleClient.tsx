@@ -25,7 +25,7 @@ function categoryLabel(id: string) {
 }
 
 export default function WikiArticleClient({ id }: { id: string }) {
-  const { user, loading, hasPermission } = useAuth();
+  const { user, profile, loading, hasPermission } = useAuth();
   const [article, setArticle] = useState<ContentItem | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loadingArticle, setLoadingArticle] = useState(true);
@@ -46,7 +46,50 @@ export default function WikiArticleClient({ id }: { id: string }) {
         if (!response.ok) throw new Error(data.error || 'Unable to load article.');
         if (!cancelled) setArticle(data.article ?? null);
       } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : String(err));
+        console.warn('API fetch failed, falling back to client-side Firestore cache:', err);
+        try {
+          const { db } = await import('@/lib/firebase/client');
+          const { doc, getDoc, collection, query: fsQuery, where, getDocs, limit: fsLimit } = await import('firebase/firestore');
+          const { canAccessVisibility } = await import('@/lib/auth/permissions');
+
+          if (cancelled) return;
+          // Try fetching directly by doc ID first
+          const docRef = doc(db, 'contentItems', id);
+          let docSnap = await getDoc(docRef);
+
+          // If not found by ID, try searching by slug
+          if (!docSnap.exists()) {
+            const colRef = collection(db, 'contentItems');
+            const q = fsQuery(colRef, where('slug', '==', id), fsLimit(1));
+            const querySnapshot = await getDocs(q);
+            if (!querySnapshot.empty) {
+              docSnap = querySnapshot.docs[0];
+            }
+          }
+
+          if (docSnap.exists()) {
+            const articleData = { id: docSnap.id, ...docSnap.data() } as ContentItem;
+            const hasAccess = articleData.status === 'published'
+              ? canAccessVisibility(profile, articleData.visibility)
+              : user && (articleData.createdByUid === user.uid || hasPermission('canEditWiki'));
+
+            if (!hasAccess) {
+              throw new Error('You do not have access to this article.');
+            }
+
+            if (!cancelled) {
+              setArticle(articleData);
+              setError(null);
+            }
+          } else {
+            throw new Error('Article not found.');
+          }
+        } catch (fallbackErr) {
+          console.error('Fallback query failed:', fallbackErr);
+          if (!cancelled) {
+            setError(err instanceof Error ? err.message : String(err));
+          }
+        }
       } finally {
         if (!cancelled) setLoadingArticle(false);
       }
@@ -56,7 +99,7 @@ export default function WikiArticleClient({ id }: { id: string }) {
     return () => {
       cancelled = true;
     };
-  }, [id, loading, user]);
+  }, [id, loading, user, profile, hasPermission]);
 
   const canEdit = hasPermission('canEditWiki') || hasPermission('canPublishWiki');
 

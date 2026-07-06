@@ -8,7 +8,7 @@ import { useAuth } from '@/components/auth/AuthContext';
 import { DEFAULT_WIKI_CATEGORIES, type ContentItem } from '@/types/content';
 
 export default function WikiIndexPage() {
-  const { user, loading, hasPermission } = useAuth();
+  const { user, profile, loading, hasPermission } = useAuth();
   const [articles, setArticles] = useState<ContentItem[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
@@ -34,7 +34,38 @@ export default function WikiIndexPage() {
         if (!response.ok) throw new Error(data.error || 'Unable to load wiki articles.');
         if (!cancelled) setArticles(data.articles ?? []);
       } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : String(err));
+        console.warn('API fetch failed, falling back to client-side Firestore cache:', err);
+        try {
+          const { db } = await import('@/lib/firebase/client');
+          const { collection, getDocs, query: fsQuery, where, limit: fsLimit } = await import('firebase/firestore');
+          const { canAccessVisibility } = await import('@/lib/auth/permissions');
+
+          if (cancelled) return;
+          const colRef = collection(db, 'contentItems');
+          const q = fsQuery(colRef, where('type', '==', 'wiki'), where('status', '==', 'published'), fsLimit(120));
+          const querySnapshot = await getDocs(q);
+          const articlesList: ContentItem[] = [];
+          querySnapshot.forEach((docSnap) => {
+            articlesList.push({ id: docSnap.id, ...docSnap.data() } as ContentItem);
+          });
+
+          // Filter by visibility locally
+          const filtered = articlesList
+            .filter((art) => canAccessVisibility(profile, art.visibility))
+            .sort((a, b) => {
+              const aVal = a.updatedAt && typeof a.updatedAt === 'object' && 'seconds' in a.updatedAt ? Number(a.updatedAt.seconds) : 0;
+              const bVal = b.updatedAt && typeof b.updatedAt === 'object' && 'seconds' in b.updatedAt ? Number(b.updatedAt.seconds) : 0;
+              return bVal - aVal;
+            });
+
+          if (!cancelled) {
+            setArticles(filtered);
+            setError(null);
+          }
+        } catch (fallbackErr) {
+          console.error('Fallback query failed:', fallbackErr);
+          if (!cancelled) setError(err instanceof Error ? err.message : String(err));
+        }
       } finally {
         if (!cancelled) setLoadingArticles(false);
       }
@@ -44,7 +75,7 @@ export default function WikiIndexPage() {
     return () => {
       cancelled = true;
     };
-  }, [loading, user]);
+  }, [loading, user, profile]);
 
   const categoryCounts = useMemo(() => {
     const counts = new Map<string, number>();
