@@ -113,7 +113,7 @@
 .wysiwygArea h2,
 .wysiwygArea h3,
 .wysiwygArea h4 {
-  font-family: var(--font-atkinson), sans-serif;
+  font-family: 'Lexie Readable', sans-serif;
   color: var(--pine-green-light);
   margin-top: 1.5rem;
   margin-bottom: 0.75rem;

@@ -1,7 +1,7 @@
 .tickerContainer {
   background-color: var(--charcoal-darker, #080707);
   color: var(--canvas-tan, #e8e3d3);
-  font-family: var(--font-inter), sans-serif;
+  font-family: 'Lexie Readable', sans-serif;
   font-size: 0.85rem;
   border-top: 1px solid var(--charcoal-lighter, #2c2826);
   border-bottom: 1px solid var(--charcoal-lighter, #2c2826);

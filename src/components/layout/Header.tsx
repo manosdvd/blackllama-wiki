@@ -3,7 +3,6 @@ import Link from 'next/link';
 import Image from 'next/image';
 import AlertsHUD from './AlertsHUD';
 import Ticker from './Ticker';
-import DyslexiaToggle from './DyslexiaToggle';
 import ThemeToggle from './ThemeToggle';
 import AuthButton from './AuthButton';
 import MobileMenu from './MobileMenu';
@@ -44,7 +43,6 @@ export default async function Header() {
 
         <div className={styles.actions}>
           <ThemeToggle />
-          <DyslexiaToggle />
           <AuthButton />
           <MobileMenu />
         </div>

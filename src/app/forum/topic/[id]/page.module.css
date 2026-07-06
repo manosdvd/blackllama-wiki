@@ -2,7 +2,7 @@
   max-width: 900px;
   margin: 0 auto;
   padding: 2rem;
-  font-family: var(--font-inter), sans-serif;
+  font-family: 'Lexie Readable', sans-serif;
 }
 
 .backLink {
@@ -27,7 +27,7 @@
 }
 
 .header h1 {
-  font-family: var(--font-atkinson), sans-serif;
+  font-family: 'Lexie Readable', sans-serif;
   color: var(--canvas-tan);
   margin: 0 0 0.5rem 0;
   font-size: 2rem;
@@ -162,7 +162,7 @@
   margin-top: 0;
   margin-bottom: 1rem;
   color: var(--canvas-tan);
-  font-family: var(--font-atkinson), sans-serif;
+  font-family: 'Lexie Readable', sans-serif;
 }
 
 .textarea {
@@ -173,7 +173,7 @@
   border-radius: 4px;
   padding: 1rem;
   color: var(--canvas-tan);
-  font-family: var(--font-inter), sans-serif;
+  font-family: 'Lexie Readable', sans-serif;
   resize: vertical;
   margin-bottom: 1rem;
 }

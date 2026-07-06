@@ -1,26 +1,9 @@
 import type { Metadata, Viewport } from "next";
-import { Atkinson_Hyperlegible, Inter, Lexend } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/layout/Header";
 import BottomNav from "@/components/layout/BottomNav";
 import EmbersBackground from "@/components/ui/EmbersBackground";
 import { AuthProvider } from "@/components/auth/AuthContext";
-
-const atkinson = Atkinson_Hyperlegible({ 
-  weight: ['400', '700'],
-  subsets: ["latin"],
-  variable: '--font-atkinson',
-});
-
-const inter = Inter({ 
-  subsets: ["latin"],
-  variable: '--font-inter',
-});
-
-const lexend = Lexend({
-  subsets: ["latin"],
-  variable: '--font-lexend',
-});
 
 export const metadata: Metadata = {
   title: "Camp Lawton Staff Hub",
@@ -38,7 +21,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${atkinson.variable} ${inter.variable} ${lexend.variable}`}>
+    <html lang="en">
       <body>
         <AuthProvider>
           <a href="#main-content" className="skip-link">Skip to Main Content</a>
