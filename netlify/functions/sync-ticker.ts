@@ -17,7 +17,7 @@ export default async function syncTicker() {
 
   console.log(`[Sync Ticker Cron] Triggered. Site URL: ${siteUrl}`);
   if (!cronSecret) {
-    console.warn('[Sync Ticker Cron] CRON_SECRET is not configured. Running non-force sync to avoid admin auth failure. Gemini may be skipped if it already ran today.');
+    console.warn('[Sync Ticker Cron] CRON_SECRET is not configured. Running non-force sync to avoid admin auth failure.');
   }
 
   try {

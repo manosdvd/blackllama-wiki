@@ -85,7 +85,7 @@ export default function TickerSyncButton() {
     <div style={{ padding: '1rem', background: 'rgba(0,0,0,0.2)', border: '1px solid #333', borderRadius: '4px', marginBottom: '1rem' }}>
       <h3 style={{ marginBottom: '0.5rem' }}>System Controls</h3>
       <p style={{ fontSize: '0.85rem', color: '#ccc', marginBottom: '1rem' }}>
-        Manually force Gemini to fetch current sources, rebuild the live ticker, and push the result to Firestore.
+        Manually force the system to fetch current RSS feeds, rebuild the live ticker, and push the result to Firestore.
       </p>
       <button 
         onClick={handleSync} 

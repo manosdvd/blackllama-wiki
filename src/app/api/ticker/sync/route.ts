@@ -54,7 +54,22 @@ const FEED_URLS = [
   'smithsonianmag.com/rss/science-nature',
   'archives.gov/global-pages/rss/news.xml', 'tucsonbirdalliance.blogspot.com/feeds/posts/default',
   'freshoffthegrid.com/feed/', 'www.rei.com/blog/feed', 'wildlandtrekking.com/feed/',
-  'thehikinglife.com/feed/', 'https://nationaldaycalendar.com/rss'
+  'thehikinglife.com/feed/', 'https://nationaldaycalendar.com/rss', 
+  'https://rss.app/feeds/nDqCGtfjaZ6wn10I.xml', 'https://paulkirtley.co.uk/feed/', 
+  'https://blog.nols.edu/rss.xml](https://blog.nols.edu/rss.xml', 
+  'https://theazhikeaholics.com/feed/', 'https://www.archaeologysouthwest.org/feed/', 
+  'https://tucsonastronomy.org/feed/', 'https://rss.app/feeds/AztZJf5NpmcSMJg4.xml', 
+  'https://woodbeecarver.com/feed/', 'https://woodbeecarver.com/feed/', 
+  'https://www.redcross.ca/blog/rss', 'https://survivalsherpa.wordpress.com/feed/', 
+  'https://skyislandalliance.org/feed/', 'https://www.southwestdiscoveries.com/feed/',
+  'https://rss.app/feeds/7OILicWFV8pBtyvV.xml', 'https://mountlemmonlodge.com/feed/',
+  'https://rss.app/feeds/nnhnHtHV5szfQ3my.xml', 
+  'https://rss.app/feeds/iD5DWYJEvW2o6Ojz.xml','https://rss.app/feeds/5DoloBF2LLaDqyjO.xml', 
+  'https://rss.app/feeds/89yasnMYbdnFJLbM.xml', 'https://rss.app/feeds/BkR3o4Rmc1cfBkvp.xml',
+  'https://rss.app/feeds/MtXqTr6RztcQ5yJM.xml', 'https://rss.app/feeds/SmsCTDwybGojxVzH.xml',
+  'https://www.youtube.com/feeds/videos.xml?channel_id=UCgut0aj_YW9tJNKJ8Rd7EoA',
+  ''https://www.youtube.com/feeds/videos.xml?channel_id=UC7r-LubEzJEec5b9qYJVcpA'
+  
 ];
 
 function getPhoenixDateStamp() {
@@ -172,171 +187,6 @@ async function generateRssTicker() {
   };
 }
 
-interface NewsTicker {
-  ticker_metadata?: {
-    generated_at?: string;
-    target_location?: string;
-  };
-  items?: NewsTickerItem[];
-}
-
-const COMPRESSED_FEEDS = FEED_URLS.join(',');
-
-const COMPRESSED_QUERIES = [
-  'Arizona Trail Association latest closures restrictions events',
-  'Arizona Trail Association Santa Catalina Summerhaven Marshall Gulch',
-  '"Scouting America" latest', '"Catalina Council" Southern Arizona Scouting current news',
-  '"Mt. Lemmon" OR Summerhaven current trail road nature',
-  'Santa Catalina Mountains flora fauna sky island fact',
-  'Tucson Bird Alliance field trips rare bird alert',
-  'Arizona-Sonora Desert Museum events Sonoran Desert nature',
-  'Cooper Center Tucson wildlife camera outdoor education',
-  'Southern Arizona Rescue Association training safety',
-  'University of Arizona SkyCenter astronomy Mt Lemmon',
-  'family friendly outdoor bushcraft YouTube camping tips latest',
-  'Dictionary.com Word of the Day', 'Riddles.com Riddle of the Day (1 Question, click link for answer)',
-  'This day in Scouting History', 'NationalDayCalendar', 'Arizona State Parks', '"World Scouting" latest',
-  'Southern Arizona camping hiking backpacking',
-  'tips and tricks hiking backpacking "wilderness first aid" climbing bushcraft pioneering', 
-  'YouTube channels LIKE NASA "NASA Jet Propulsion Laboratory" "Learn With NASA" SmarterEveryDay "Practical Engineering" "PBS Terra" "Deep Look" MinuteEarth "Nature on PBS" "National Park Service" "Arizona Game and Fish" "Arizona-Sonora Desert Museum" "The Desert Speaks" "Miranda Goes Outside!!" "Homemade Wanderlust" "Adventure Archives" MyLifeOutdoors JupiterHikes "SciShow Kids" "Crash Course Kids" "PBS Eons" "Journey to the Microcosmos" "Bizarre Beasts" "SciShow Space" SciShow "Crash Course"', 
-  'Include keywords: camping, hiking, trail, backpacking, outdoors, wildlife, desert, forest, mountain, nature, science, NASA, space, stars, engineering, park, conservation, ranger, gear, map, navigation, water, weather, ecology, animals; Exclude keywords: politics, war, murder, true crime, scandal, drama, sex, alcohol, drugs, weapon, gun, influencer, reaction, exposed, controversy, apocalypse'
-].join(',');
-
-const MINIFIED_JOKES = '["What do you call a funny mountain? Hill-arious.","Why don\'t eggs tell jokes? They might crack up!","Did you hear about the circus fire? It was in tents!"]';
-
-function buildTickerPrompt(rssItems: NewsTickerItem[]) {
-  const today = getPhoenixDateStamp();
-  const rssBaseline = rssItems
-    .slice(0, 18)
-    .map((item) => `- ${item.headline} | ${item.source} | ${item.link}`)
-    .join('\n');
-
-  return `
-Loc: ${TARGET_LOCATION}
-Today: ${today} America/Phoenix
-
-Mission: Generate a small AI supplement for a camp news ticker. RSS already provides the baseline. Add only items that improve variety, local relevance, or usefulness.
-
-Rules:
-1. Return ONLY a raw JSON object. Do not wrap it in markdown. Do not add explanation.
-2. JSON shape must be: {"ticker_metadata":{"generated_at":"ISO string","target_location":"string"},"items":[{"headline":"string","source":"string","link":"https://..."}]}
-3. Return 4-8 items total. Each item must ONLY provide headline, source, and direct link URL.
-4. Freshness & Relevance: Prefer current or recently verified content. Omit resolved issues or past events.
-5. Zero Filler: NO generic placeholders. Every headline must contain a specific, verified fact, tip, or update.
-6. Strict Accuracy: Do not make up links, events, or statuses. If unsure, skip it.
-7. Content Mix: Add useful local mountain updates, Scouting America/world Scouting items, outdoor skills, and local nature facts.
-8. Avoid duplicating RSS baseline items.
-
-RSS Baseline Already Available:
-${rssBaseline || '(RSS baseline unavailable)'}
-
-Feeds Baseline: ${COMPRESSED_FEEDS}
-Query Baseline: ${COMPRESSED_QUERIES}
-JokePool: ${MINIFIED_JOKES}
-`.trim();
-}
-
-const wait = (ms: number) => new Promise((res) => setTimeout(res, ms));
-
-function timeoutAfter(ms: number) {
-  return new Promise<never>((_, reject) => {
-    setTimeout(() => reject(new Error(`Gemini ticker generation timed out after ${ms}ms`)), ms);
-  });
-}
-
-function isGeminiQuotaError(error: unknown) {
-  return /quota|RESOURCE_EXHAUSTED|429|rate-limit|rate limit/i.test(String(error));
-}
-
-function extractRetryAfterSeconds(error: unknown) {
-  const message = String(error);
-  const retryDelayMatch = message.match(/retryDelay"\s*:\s*"(\d+)s"/i);
-  if (retryDelayMatch?.[1]) return Number(retryDelayMatch[1]);
-
-  const retryInMatch = message.match(/retry in\s+([\d.]+)s/i);
-  if (retryInMatch?.[1]) return Math.ceil(Number(retryInMatch[1]));
-
-  return null;
-}
-
-function extractTickerJson(rawText: string) {
-  const cleaned = rawText
-    .trim()
-    .replace(/^```json\s*/i, '')
-    .replace(/^```\s*/i, '')
-    .replace(/```$/i, '')
-    .trim();
-
-  try {
-    return JSON.parse(cleaned) as NewsTicker;
-  } catch {
-    const start = cleaned.indexOf('{');
-    const end = cleaned.lastIndexOf('}');
-    if (start >= 0 && end > start) {
-      return JSON.parse(cleaned.slice(start, end + 1)) as NewsTicker;
-    }
-    throw new Error(`Gemini did not return parseable JSON. Raw response starts: ${cleaned.slice(0, 240)}`);
-  }
-}
-
-async function generateAiTicker(apiKey: string, rssItems: NewsTickerItem[]) {
-  const { GoogleGenAI } = await import('@google/genai');
-  const ai = new GoogleGenAI({ apiKey });
-  const prompt = buildTickerPrompt(rssItems);
-  let lastError: unknown;
-
-  const modelsToTry = ['gemini-2.5-flash-lite', 'gemini-2.5-flash'];
-
-  for (const model of modelsToTry) {
-    for (let attempt = 1; attempt <= 2; attempt++) {
-      try {
-        const response = await Promise.race([
-          ai.models.generateContent({
-            model,
-            contents: prompt,
-            config: {
-              systemInstruction: 'You are an optional AI supplement for an RSS-first ticker. Return only raw JSON text. No markdown and no conversational text.',
-              tools: [{ googleSearch: {} }],
-              temperature: 0.3,
-            }
-          }),
-          timeoutAfter(8000), // GEMINI_TIMEOUT_MS = 8000
-        ]);
-
-        const parsed = extractTickerJson(response.text || '{}');
-        if (!Array.isArray(parsed.items) || parsed.items.length === 0) {
-          throw new Error('Empty items array returned');
-        }
-
-        parsed.items = parsed.items
-          .filter((item) => item.headline && item.link)
-          .slice(0, 8)
-          .map((item) => ({
-            headline: trimHeadline(item.headline),
-            source: cleanText(item.source || 'AI Supplement'),
-            link: normalizeTickerLink(item.link),
-          }));
-
-        return parsed;
-      } catch (error) {
-        lastError = error;
-        const msg = String(error);
-        if (isGeminiQuotaError(error)) break; // Move to next model
-        if (attempt === 2 || !/(500|502|503|504|timeout|timed out)/i.test(msg)) break; // Move to next model
-        await wait(1000 * attempt);
-      }
-    }
-  }
-  throw lastError;
-}
-
-function mergeTickerItems(rssItems: NewsTickerItem[], aiItems: NewsTickerItem[]) {
-  return dedupeTickerItems([
-    ...aiItems,
-    ...rssItems,
-  ]).slice(0, 36);
-}
-
 type TickerResponseItem = Omit<LiveTickerItem, 'timestamp'>;
 
 function tickerResponseItem(item: LiveTickerItem): TickerResponseItem {
@@ -355,15 +205,11 @@ function tickerResponseItem(item: LiveTickerItem): TickerResponseItem {
 export async function GET(req: Request) {
   try {
     const url = new URL(req.url);
-    const force = url.searchParams.get('force') === 'true';
-    const apiKey = process.env.GEMINI_API_KEY;
 
     if (url.searchParams.get('health') === 'true') {
       return NextResponse.json({
         success: true,
         route: 'ticker-sync',
-        hasGeminiKey: Boolean(apiKey),
-        model: 'gemini-2.5-flash-lite (with fallback)',
         rssFeeds: FEED_URLS.length,
         maxAgeHours: 24,
       });
@@ -403,62 +249,7 @@ export async function GET(req: Request) {
       }, { status: 503 });
     }
 
-    let shouldRunGemini = false;
-    let aiStatus = apiKey ? 'skipped' : 'skipped:no-gemini-key';
-    const todayDate = getPhoenixDateStamp();
-
-    if (apiKey) {
-      if (force) {
-        shouldRunGemini = true;
-      } else {
-        try {
-          const docRef = db.collection('systemState').doc('ticker');
-          const docSnap = await docRef.get();
-          if (!docSnap.exists) {
-            shouldRunGemini = true;
-          } else {
-            const data = docSnap.data();
-            if (data?.lastGeminiDate !== todayDate) {
-              shouldRunGemini = true;
-            }
-          }
-        } catch (dbError) {
-          console.warn('Failed to read systemState/ticker from Firestore. Falling back to skipping Gemini to prevent errors.', dbError);
-          await logErrorToDb('Failed to read systemState/ticker from Firestore', dbError);
-          shouldRunGemini = false;
-        }
-      }
-    }
-
-    let aiError: string | null = null;
-    let aiItems: NewsTickerItem[] = [];
-
-    if (shouldRunGemini && apiKey) {
-      try {
-        const aiTicker = await generateAiTicker(apiKey, rssTicker.items);
-        aiItems = Array.isArray(aiTicker.items) ? aiTicker.items : [];
-        aiStatus = `ok:${aiItems.length}`;
-        
-        // Update Firestore lastGeminiDate on success
-        try {
-          await db.collection('systemState').doc('ticker').set({
-            lastGeminiDate: todayDate,
-            updatedAt: FieldValue.serverTimestamp()
-          }, { merge: true });
-        } catch (dbWriteError) {
-          console.warn('Failed to update systemState/ticker lastGeminiDate.', dbWriteError);
-          await logErrorToDb('Failed to update systemState/ticker lastGeminiDate', dbWriteError);
-        }
-      } catch (aiErr) {
-        console.error('AI generation failed, falling back to RSS only:', aiErr);
-        await logErrorToDb('AI ticker generation failed', aiErr);
-        aiError = aiErr instanceof Error ? aiErr.message : String(aiErr);
-        aiStatus = 'error';
-      }
-    }
-
-    const combinedItems = mergeTickerItems(rssTicker.items, aiItems);
-
+    const combinedItems = rssTicker.items;
     const generatedAt = new Date().toISOString();
     const syncRunId = `sync_${getPhoenixDateStamp()}_${Date.now()}`;
 
@@ -467,7 +258,7 @@ export async function GET(req: Request) {
       title: item.headline,
       url: normalizeTickerLink(item.link),
       source: item.source || 'RSS Feed',
-      sourceType: aiItems.some((aiItem) => aiItem.link === item.link || aiItem.headline === item.headline) ? 'ai' : 'rss',
+      sourceType: 'rss',
       position: index,
       generatedAt,
       syncRunId,
@@ -489,21 +280,21 @@ export async function GET(req: Request) {
       
       return NextResponse.json({
         success: true,
-        mode: shouldRunGemini ? 'rss-and-ai' : 'rss-local-only',
+        mode: 'rss-local-only',
         count: liveItems.length,
         syncRunId,
         firstItemId: liveItems[0]?.id || null,
         rssCount: rssTicker.items.length,
         rssFailedFeedCount: rssTicker.failedFeedCount,
-        aiStatus,
-        aiError,
+        aiStatus: 'disabled',
+        aiError: null,
         maxAgeHours: 24,
         metadata: {
           generated_at: generatedAt,
           target_location: TARGET_LOCATION,
           rss_feed_count: rssTicker.feedCount,
           rss_failed_feed_count: rssTicker.failedFeedCount,
-          ai_status: aiStatus,
+          ai_status: 'disabled',
           max_age_hours: 24,
         },
         items: liveItems.map(tickerResponseItem)
@@ -513,14 +304,14 @@ export async function GET(req: Request) {
       await logErrorToDb('Failed to write liveTicker items to Firestore', e);
       return NextResponse.json({
         success: true,
-        mode: shouldRunGemini ? 'rss-and-ai' : 'rss-local-only',
+        mode: 'rss-local-only',
         count: liveItems.length,
         syncRunId,
         firstItemId: liveItems[0]?.id || null,
         rssCount: rssTicker.items.length,
         rssFailedFeedCount: rssTicker.failedFeedCount,
-        aiStatus,
-        aiError,
+        aiStatus: 'disabled',
+        aiError: null,
         maxAgeHours: 24,
         warning: 'Failed to write to DB',
         items: liveItems.map(tickerResponseItem)
@@ -543,15 +334,6 @@ export async function GET(req: Request) {
       });
     } catch (logErr) {
       console.error('Failed to log fatal error to db', logErr);
-    }
-    
-    if (isGeminiQuotaError(err)) {
-      return NextResponse.json({
-        success: false,
-        error: 'Gemini quota exceeded before RSS fallback could complete. The ticker will keep showing the most recent cached feed until quota resets.',
-        retryAfterSeconds: extractRetryAfterSeconds(err),
-        model: 'gemini-2.5-flash-lite (with fallback)',
-      }, { status: 429 });
     }
 
     return NextResponse.json({ error: String(err) }, { status: 500 });
