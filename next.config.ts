@@ -11,7 +11,7 @@ const withPWA = withPWAInit({
 });
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ['firebase-admin', 'jwks-rsa', 'jose'],
+  transpilePackages: ['firebase-admin', 'jwks-rsa', 'jose'],
 };
 
 export default withPWA(nextConfig);

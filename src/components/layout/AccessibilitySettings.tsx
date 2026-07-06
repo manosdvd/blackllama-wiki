@@ -4,44 +4,40 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Accessibility } from 'lucide-react';
 import styles from './AccessibilitySettings.module.css';
 
-type FontChoice = 'default' | 'atkinson' | 'dyslexia';
+type FontChoice = 'default' | 'opendyslexic';
+
+function storedFontChoice(): FontChoice {
+  if (typeof window === 'undefined') return 'default';
+  const storedFont = localStorage.getItem('access-font');
+  return storedFont === 'opendyslexic' ? 'opendyslexic' : 'default';
+}
+
+function storedHighLegibility() {
+  return typeof window !== 'undefined' && localStorage.getItem('access-high-legibility') === 'true';
+}
 
 export default function AccessibilitySettings() {
   const [isOpen, setIsOpen] = useState(false);
-  const [font, setFont] = useState<FontChoice>('default');
-  const [highLegibility, setHighLegibility] = useState(false);
-  const isInitialized = useRef(false);
+  const [font, setFont] = useState<FontChoice>(storedFontChoice);
+  const [highLegibility, setHighLegibility] = useState(storedHighLegibility);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Load from localStorage on mount
+  // Migrate removed font options to the Lexie Readable default.
   useEffect(() => {
-    if (isInitialized.current) return;
-    isInitialized.current = true;
-
-    const storedFont = localStorage.getItem('access-font') as FontChoice;
-    const storedLegibility = localStorage.getItem('access-high-legibility') === 'true';
-
-    if (storedFont === 'atkinson' || storedFont === 'dyslexia' || storedFont === 'default') {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setFont(storedFont);
+    const storedFont = localStorage.getItem('access-font');
+    if (storedFont === 'atkinson' || storedFont === 'dyslexia') {
+      localStorage.setItem('access-font', 'default');
     }
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setHighLegibility(storedLegibility);
   }, []);
 
   // Sync document element classes when preferences change
   useEffect(() => {
     const root = document.documentElement;
 
-    // Font family styling classes
-    if (font === 'atkinson') {
-      root.classList.add('font-atkinson');
-      root.classList.remove('font-dyslexia');
-    } else if (font === 'dyslexia') {
-      root.classList.add('font-dyslexia');
-      root.classList.remove('font-atkinson');
+    if (font === 'opendyslexic') {
+      root.classList.add('font-opendyslexic');
     } else {
-      root.classList.remove('font-atkinson', 'font-dyslexia');
+      root.classList.remove('font-opendyslexic');
     }
 
     // High legibility class
@@ -103,24 +99,17 @@ export default function AccessibilitySettings() {
                 type="button"
                 className={`${styles.optionBtn} ${font === 'default' ? styles.optionBtnActive : ''}`}
                 onClick={() => selectFont('default')}
-              >
-                Default (Inter)
-              </button>
-              <button
-                type="button"
-                className={`${styles.optionBtn} ${font === 'atkinson' ? styles.optionBtnActive : ''}`}
-                onClick={() => selectFont('atkinson')}
-                style={{ fontFamily: 'Atkinson Hyperlegible, sans-serif' }}
-              >
-                Atkinson Hyperlegible
-              </button>
-              <button
-                type="button"
-                className={`${styles.optionBtn} ${font === 'dyslexia' ? styles.optionBtnActive : ''}`}
-                onClick={() => selectFont('dyslexia')}
                 style={{ fontFamily: 'Lexie Readable, sans-serif' }}
               >
-                Dyslexia Friendly
+                Lexie Readable
+              </button>
+              <button
+                type="button"
+                className={`${styles.optionBtn} ${font === 'opendyslexic' ? styles.optionBtnActive : ''}`}
+                onClick={() => selectFont('opendyslexic')}
+                style={{ fontFamily: 'OpenDyslexic, Lexie Readable, sans-serif' }}
+              >
+                OpenDyslexic
               </button>
             </div>
           </div>

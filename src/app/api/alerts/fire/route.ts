@@ -65,6 +65,13 @@ export interface FireAggregatorResponse {
 
 const CAMP_LAT = 32.39806;
 const CAMP_LON = -110.725;
+const PRIMARY_ALERT_RADIUS_MILES = 15;
+const SANTA_CATALINA_BOUNDS = {
+  west: -111.02,
+  south: 32.22,
+  east: -110.50,
+  north: 32.62,
+};
 // Santa Catalina Mountains FIRMS bounding box: west,south,east,north
 const FIRMS_BBOX = '-111.05,32.20,-110.45,32.65';
 // WFIGS ArcGIS bounding box for spatial query (xmin,ymin,xmax,ymax)
@@ -102,6 +109,18 @@ function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): nu
 
 function kmToMiles(km: number): number {
   return km * 0.621371;
+}
+
+function isInsideSantaCatalinaBounds(lat: number, lon: number) {
+  return lat >= SANTA_CATALINA_BOUNDS.south
+    && lat <= SANTA_CATALINA_BOUNDS.north
+    && lon >= SANTA_CATALINA_BOUNDS.west
+    && lon <= SANTA_CATALINA_BOUNDS.east;
+}
+
+function isInPrimaryAlertArea(lat: number, lon: number, distanceMiles?: number) {
+  const distMiles = distanceMiles ?? kmToMiles(haversineKm(lat, lon, CAMP_LAT, CAMP_LON));
+  return distMiles <= PRIMARY_ALERT_RADIUS_MILES || isInsideSantaCatalinaBounds(lat, lon);
 }
 
 function envValue(...names: string[]) {
@@ -531,7 +550,7 @@ async function fetchWildCAD(): Promise<{ items: FireAlertItem[]; health: SourceH
       if (lon > 0) lon = -lon;
 
       const distMiles = kmToMiles(haversineKm(lat, lon, CAMP_LAT, CAMP_LON));
-      if (distMiles > 40) continue; // Coronado NF / Santa Catalina RD region radius
+      if (!isInPrimaryAlertArea(lat, lon, distMiles)) continue;
 
       const dateMs = new Date(item.date).getTime();
       const ageMs = now - dateMs;
@@ -693,11 +712,11 @@ async function fetchInciWeb(): Promise<{ items: FireAlertItem[]; health: SourceH
 
 // ─── NIFC Current Fire Locations (public IRWIN mirror) ────────────────────────
 
-// Radius (miles) beyond which we ignore a NIFC fire point as out-of-area
-const NIFC_RADIUS_MILES = 75;
+// Radius (miles) beyond which we ignore a NIFC fire point as out-of-area.
+const NIFC_RADIUS_MILES = PRIMARY_ALERT_RADIUS_MILES;
 
-// Bounding box for query: wider AZ region around Santa Catalinas
-const NIFC_BBOX = '-111.5,31.8,-109.5,33.0';
+// Bounding box for query: Santa Catalina Mountains and immediate Camp Lawton area.
+const NIFC_BBOX = '-111.05,32.20,-110.45,32.65';
 
 // Candidate NIFC/IRWIN FeatureServer URLs (try in order; NIFC may change service names)
 const NIFC_SERVICE_URLS = [
@@ -762,7 +781,7 @@ async function fetchNIFCLocations(): Promise<{ items: FireAlertItem[]; health: S
 
       const distKm = haversineKm(lat, lon, CAMP_LAT, CAMP_LON);
       const distMiles = kmToMiles(distKm);
-      if (distMiles > NIFC_RADIUS_MILES) return null;
+      if (distMiles > NIFC_RADIUS_MILES && !isInsideSantaCatalinaBounds(lat, lon)) return null;
 
       const name = a.IncidentName || 'Unknown Incident';
       const acres = a.CurrentAcres !== undefined && a.CurrentAcres !== null ? Math.round(a.CurrentAcres) : undefined;
