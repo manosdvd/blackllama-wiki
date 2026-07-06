@@ -66,6 +66,7 @@ export interface FireAggregatorResponse {
 const CAMP_LAT = 32.39806;
 const CAMP_LON = -110.725;
 const PRIMARY_ALERT_RADIUS_MILES = 15;
+const WILDCAD_ALERT_RADIUS_MILES = 10;
 const SANTA_CATALINA_BOUNDS = {
   west: -111.02,
   south: 32.22,
@@ -116,11 +117,6 @@ function isInsideSantaCatalinaBounds(lat: number, lon: number) {
     && lat <= SANTA_CATALINA_BOUNDS.north
     && lon >= SANTA_CATALINA_BOUNDS.west
     && lon <= SANTA_CATALINA_BOUNDS.east;
-}
-
-function isInPrimaryAlertArea(lat: number, lon: number, distanceMiles?: number) {
-  const distMiles = distanceMiles ?? kmToMiles(haversineKm(lat, lon, CAMP_LAT, CAMP_LON));
-  return distMiles <= PRIMARY_ALERT_RADIUS_MILES || isInsideSantaCatalinaBounds(lat, lon);
 }
 
 function envValue(...names: string[]) {
@@ -550,7 +546,7 @@ async function fetchWildCAD(): Promise<{ items: FireAlertItem[]; health: SourceH
       if (lon > 0) lon = -lon;
 
       const distMiles = kmToMiles(haversineKm(lat, lon, CAMP_LAT, CAMP_LON));
-      if (!isInPrimaryAlertArea(lat, lon, distMiles)) continue;
+      if (distMiles > WILDCAD_ALERT_RADIUS_MILES) continue;
 
       const dateMs = new Date(item.date).getTime();
       const ageMs = now - dateMs;
