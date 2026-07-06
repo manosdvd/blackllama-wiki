@@ -252,3 +252,50 @@
   background-color: var(--pine-green-light);
   transform: translateY(-1px);
 }
+
+/* Distinct Menu Bar styling below Ticker */
+.menuBar {
+  width: 100%;
+  background-color: var(--charcoal-lighter);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 2px solid var(--pine-green);
+}
+
+.menuContainer {
+  max-width: 1920px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+.menuLinks {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  overflow-x: auto;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+  padding: 0.5rem 0;
+}
+
+.menuLinks::-webkit-scrollbar {
+  display: none; /* Chrome/Safari/Opera */
+}
+
+.menuItem {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--canvas-tan);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  transition: all 0.2s ease-in-out;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+
+.menuItem:hover {
+  background-color: rgba(234, 179, 8, 0.08); /* light gold/amber tint */
+  color: var(--lantern-gold);
+  border-color: rgba(234, 179, 8, 0.3);
+}

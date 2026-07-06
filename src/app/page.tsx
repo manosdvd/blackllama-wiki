@@ -167,7 +167,7 @@ export default function Home() {
           {/* Dynamic Recent Updates Feed */}
           <section className={styles.card}>
             <div className={styles.cardHeader}>
-              <h3>SHOUTS FROM THE LOGS</h3>
+              <h3>LATEST UPDATES</h3>
             </div>
             <div className={styles.cardBody}>
               {loadingArticles ? (

@@ -7,3 +7,6 @@
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
+
+[functions]
+  external_node_modules = ["firebase-admin", "jwks-rsa", "jose"]

@@ -56,10 +56,10 @@ const FEED_URLS = [
   'freshoffthegrid.com/feed/', 'www.rei.com/blog/feed', 'wildlandtrekking.com/feed/',
   'thehikinglife.com/feed/', 'https://nationaldaycalendar.com/rss', 
   'https://rss.app/feeds/nDqCGtfjaZ6wn10I.xml', 'https://paulkirtley.co.uk/feed/', 
-  'https://blog.nols.edu/rss.xml', 
+  'https://blog.nols.edu/rss.xml](https://blog.nols.edu/rss.xml', 
   'https://theazhikeaholics.com/feed/', 'https://www.archaeologysouthwest.org/feed/', 
   'https://tucsonastronomy.org/feed/', 'https://rss.app/feeds/AztZJf5NpmcSMJg4.xml', 
-  'https://woodbeecarver.com/feed/', 
+  'https://woodbeecarver.com/feed/', 'https://woodbeecarver.com/feed/', 
   'https://www.redcross.ca/blog/rss', 'https://survivalsherpa.wordpress.com/feed/', 
   'https://skyislandalliance.org/feed/', 'https://www.southwestdiscoveries.com/feed/',
   'https://rss.app/feeds/7OILicWFV8pBtyvV.xml', 'https://mountlemmonlodge.com/feed/',
@@ -68,7 +68,9 @@ const FEED_URLS = [
   'https://rss.app/feeds/89yasnMYbdnFJLbM.xml', 'https://rss.app/feeds/BkR3o4Rmc1cfBkvp.xml',
   'https://rss.app/feeds/MtXqTr6RztcQ5yJM.xml', 'https://rss.app/feeds/SmsCTDwybGojxVzH.xml',
   'https://www.youtube.com/feeds/videos.xml?channel_id=UCgut0aj_YW9tJNKJ8Rd7EoA',
-  'https://www.youtube.com/feeds/videos.xml?channel_id=UC7r-LubEzJEec5b9qYJVcpA'
+  'https://www.youtube.com/feeds/videos.xml?channel_id=UC7r-LubEzJEec5b9qYJVcpA',
+  'https://www.blm.gov/press-release/arizona/rss'
+  
 ];
 
 function getPhoenixDateStamp() {

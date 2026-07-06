@@ -33,14 +33,6 @@ export default async function Header() {
           </Link>
         </div>
 
-        <nav className={styles.navLinks}>
-          <Link href="/" className={styles.navItem}>Dashboard</Link>
-          <Link href="/wiki" className={styles.navItem}>Wiki & Procedures</Link>
-          <Link href="/apply" className={styles.navItem}>Apply</Link>
-          <Link href="/onboarding" className={styles.navItem}>Onboarding</Link>
-          <Link href="/admin/review" className={styles.navItem}>Admin</Link>
-        </nav>
-
         <div className={styles.actions}>
           <ThemeToggle />
           <AuthButton />
@@ -53,6 +45,19 @@ export default async function Header() {
       
       {/* Ticker at the bottom of the header */}
       <Ticker items={tickerItems} />
+
+      {/* Distinct Main Menu Bar below the ticker */}
+      <div className={styles.menuBar}>
+        <div className={styles.menuContainer}>
+          <nav className={styles.menuLinks}>
+            <Link href="/" className={styles.menuItem}>Dashboard</Link>
+            <Link href="/wiki" className={styles.menuItem}>Wiki & Procedures</Link>
+            <Link href="/apply" className={styles.menuItem}>Apply</Link>
+            <Link href="/onboarding" className={styles.menuItem}>Onboarding</Link>
+            <Link href="/admin/review" className={styles.menuItem}>Admin</Link>
+          </nav>
+        </div>
+      </div>
     </header>
   );
 }
