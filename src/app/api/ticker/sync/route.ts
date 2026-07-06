@@ -67,10 +67,11 @@ const FEED_URLS = [
   'https://rss.app/feeds/iD5DWYJEvW2o6Ojz.xml','https://rss.app/feeds/5DoloBF2LLaDqyjO.xml', 
   'https://rss.app/feeds/89yasnMYbdnFJLbM.xml', 'https://rss.app/feeds/BkR3o4Rmc1cfBkvp.xml',
   'https://rss.app/feeds/MtXqTr6RztcQ5yJM.xml', 'https://rss.app/feeds/SmsCTDwybGojxVzH.xml',
-  'https://www.youtube.com/feeds/videos.xml?channel_id=UCgut0aj_YW9tJNKJ8Rd7EoA',
   'https://www.youtube.com/feeds/videos.xml?channel_id=UC7r-LubEzJEec5b9qYJVcpA',
-  'https://www.blm.gov/press-release/arizona/rss'
-  
+  'https://www.blm.gov/press-release/arizona/rss', 'https://www.azgfd.com/azgfd-news/feed/',
+  'https://www.youtube.com/feeds/videos.xml?channel_id=UC415bOPUcGSamy543abLmRA',
+  'https://www.youtube.com/feeds/videos.xml?channel_id=UCWXWkY9L14tgx9JFTzn_uaA',
+  'https://www.youtube.com/feeds/videos.xml?channel_id=UClFrYG5h7Vbz-Y2CEIEU6EQ',
 ];
 
 function getPhoenixDateStamp() {

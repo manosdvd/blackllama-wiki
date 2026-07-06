@@ -5,7 +5,7 @@ import styles from './AlertsHUD.module.css';
 import {
   AlertTriangle, Flame, CloudLightning, Info,
   Wind, Droplets, ThermometerSun, MapPin, CheckCircle, Satellite,
-  Trees, Activity, ChevronLeft, ChevronRight, Clock,
+  Trees, Activity, ChevronLeft, ChevronRight, Clock, Radio, FileText, Navigation,
 } from 'lucide-react';
 import type {
   FireAggregatorResponse,
@@ -16,7 +16,7 @@ import type {
   WeatherSnapshot,
 } from '@/app/api/alerts/fire/route';
 
-const SOURCE_HEALTH_ORDER: FireAlertSource[] = ['NWS', 'USFS', 'FIRMS', 'WFIGS', 'AIRNOW'];
+const SOURCE_HEALTH_ORDER: FireAlertSource[] = ['NWS', 'USFS', 'FIRMS', 'WFIGS', 'AIRNOW', 'WILDCAD', 'INCIWEB', 'NIFC'];
 
 const SOURCE_LABELS: Record<FireAlertSource, string> = {
   NWS: 'NWS',
@@ -25,6 +25,9 @@ const SOURCE_LABELS: Record<FireAlertSource, string> = {
   WFIGS: 'WFIGS',
   NOAA_HMS: 'HMS',
   AIRNOW: 'AirNow',
+  WILDCAD: 'WildCAD',
+  INCIWEB: 'InciWeb',
+  NIFC: 'NIFC',
 };
 
 export default function AlertsHUD() {
@@ -109,6 +112,9 @@ export default function AlertsHUD() {
     if (source === 'WFIGS') return <Flame className={`${styles.icon} ${styles.warnIcon}`} />;
     if (source === 'AIRNOW') return <Wind className={styles.icon} />;
     if (source === 'USFS') return <Trees className={styles.icon} />;
+    if (source === 'WILDCAD') return <Radio className={styles.icon} />;
+    if (source === 'INCIWEB') return <FileText className={styles.icon} />;
+    if (source === 'NIFC') return <Navigation className={styles.icon} />;
     switch (level) {
       case 'evacuation':
       case 'critical': return <AlertTriangle className={styles.icon} />;

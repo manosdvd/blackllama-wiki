@@ -32,7 +32,7 @@ interface WikiRevision {
 function WikiEditPageContent() {
   const searchParams = useSearchParams();
   const articleId = searchParams.get('id') ?? undefined;
-  const { user, loading, hasPermission } = useAuth();
+  const { user, loading, hasPermission, openAuthModal } = useAuth();
   const [title, setTitle] = useState('');
   const [slug, setSlug] = useState('');
   const [summary, setSummary] = useState('');
@@ -62,6 +62,13 @@ function WikiEditPageContent() {
 
   const canDraft = hasPermission('canDraftWiki') || hasPermission('canEditWiki') || hasPermission('canPublishWiki');
   const canPublish = hasPermission('canPublishWiki');
+
+  // Trigger login popup automatically on visit if guest
+  useEffect(() => {
+    if (!loading && !user) {
+      openAuthModal();
+    }
+  }, [loading, user, openAuthModal]);
 
   // Load article
   useEffect(() => {
@@ -265,7 +272,11 @@ function WikiEditPageContent() {
         </header>
         <div className={styles.noticePanel}>
           <p>Wiki editing is available to staff with draft, editor, or publisher access.</p>
-          {!user && <button className={styles.publishBtn}>Sign in from the header</button>}
+          {!user && (
+            <button className={styles.publishBtn} onClick={openAuthModal}>
+              Sign In / Register
+            </button>
+          )}
           <Link href="/wiki" className={styles.secondaryLink}>Back to Wiki</Link>
         </div>
       </div>

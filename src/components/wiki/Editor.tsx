@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   Bold, Italic, Underline, Heading2, Heading3,
   List, ListOrdered, Link as LinkIcon, Link2, RemoveFormatting,
-  Quote
+  Quote, Image as ImageIcon, Video
 } from 'lucide-react';
 import { convertMarkdownToHtml } from './EditorOutput';
 import type { EditorData } from '@/types/content';
@@ -121,6 +121,9 @@ export default function Editor({ initialData, onChange }: EditorProps) {
   });
 
   const wysiwygRef = useRef<HTMLDivElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const markdownTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const htmlTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Load content into WYSIWYG editor area when entering wysiwyg mode
   useEffect(() => {
@@ -233,6 +236,113 @@ export default function Editor({ initialData, onChange }: EditorProps) {
     setActiveMode(mode);
   };
 
+  // Helper to insert HTML/Markdown content at the cursor for the active editor tab
+  const insertMediaAtCursor = (wysiwygHtml: string, markdownText: string) => {
+    if (activeMode === 'wysiwyg') {
+      wysiwygRef.current?.focus();
+      const selection = window.getSelection();
+      if (selection && selection.rangeCount) {
+        const range = selection.getRangeAt(0);
+        range.deleteContents();
+        
+        // Convert HTML string to DOM nodes
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = wysiwygHtml;
+        const fragment = document.createDocumentFragment();
+        while (tempDiv.firstChild) {
+          fragment.appendChild(tempDiv.firstChild);
+        }
+        
+        range.insertNode(fragment);
+        range.collapse(false);
+        selection.removeAllRanges();
+        selection.addRange(range);
+      }
+      handleWysiwygInput();
+    } else if (activeMode === 'markdown') {
+      const textarea = markdownTextareaRef.current;
+      if (textarea) {
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const val = textarea.value;
+        const newVal = val.substring(0, start) + markdownText + val.substring(end);
+        setMdContent(newVal);
+        setHtmlContent(convertMarkdownToHtml(newVal));
+        onChange({
+          time: Date.now(),
+          blocks: [{ type: 'markdown', data: { markdown: newVal } }],
+          version: 'custom-wysiwyg'
+        });
+        
+        setTimeout(() => {
+          textarea.focus();
+          textarea.selectionStart = textarea.selectionEnd = start + markdownText.length;
+        }, 0);
+      }
+    } else if (activeMode === 'html') {
+      const textarea = htmlTextareaRef.current;
+      if (textarea) {
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const val = textarea.value;
+        const newVal = val.substring(0, start) + wysiwygHtml + val.substring(end);
+        setHtmlContent(newVal);
+        setMdContent(convertHtmlToMarkdown(newVal));
+        onChange({
+          time: Date.now(),
+          blocks: [{ type: 'html', data: { html: newVal } }],
+          version: 'custom-wysiwyg'
+        });
+        
+        setTimeout(() => {
+          textarea.focus();
+          textarea.selectionStart = textarea.selectionEnd = start + wysiwygHtml.length;
+        }, 0);
+      }
+    }
+  };
+
+  const handleImageClick = () => {
+    imageInputRef.current?.click();
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = reader.result as string;
+      const imgHtml = `<img src="${base64}" alt="${file.name}" style="max-width: 100%; border-radius: 6px; margin: 12px 0; display: block;" />`;
+      const imgMd = `![${file.name}](${base64})`;
+      insertMediaAtCursor(imgHtml, imgMd);
+    };
+    reader.readAsDataURL(file);
+
+    e.target.value = ''; // Reset file input
+  };
+
+  const handleYoutubeEmbed = () => {
+    const url = prompt('Enter YouTube Video Link:\n(e.g., https://www.youtube.com/watch?v=dQw4w9WgXcQ)');
+    if (!url) return;
+
+    // Regex to extract Video ID
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+    const match = url.match(regExp);
+    const videoId = (match && match[2].length === 11) ? match[2] : null;
+
+    if (!videoId) {
+      alert('Invalid YouTube Link. Please copy and paste a direct video URL.');
+      return;
+    }
+
+    const embedHtml = `<div class="video-container" style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%; border-radius: 8px; margin: 16px 0;">
+  <iframe src="https://www.youtube.com/embed/${videoId}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+</div>`;
+
+    insertMediaAtCursor(embedHtml, embedHtml);
+  };
+
   return (
     <div className={styles.editorContainer}>
       {/* Tabs list */}
@@ -302,11 +412,26 @@ export default function Editor({ initialData, onChange }: EditorProps) {
           <button type="button" className={styles.toolbarBtn} onClick={insertWikiLink} title="Insert Wiki Link [Tagging]">
             <Link2 size={16} />
           </button>
+          <button type="button" className={styles.toolbarBtn} onClick={handleImageClick} title="Insert Image Upload">
+            <ImageIcon size={16} />
+          </button>
+          <button type="button" className={styles.toolbarBtn} onClick={handleYoutubeEmbed} title="Embed YouTube Video">
+            <Video size={16} />
+          </button>
           <button type="button" className={styles.toolbarBtn} onClick={() => execCmd('removeFormat')} title="Clear Formatting">
             <RemoveFormatting size={16} />
           </button>
         </div>
       )}
+
+      {/* Hidden file input for image uploads */}
+      <input
+        type="file"
+        ref={imageInputRef}
+        onChange={handleImageUpload}
+        accept="image/*"
+        style={{ display: 'none' }}
+      />
 
       {/* Editor viewports */}
       <div className={styles.editorBody}>
@@ -322,6 +447,7 @@ export default function Editor({ initialData, onChange }: EditorProps) {
         
         {activeMode === 'markdown' && (
           <textarea
+            ref={markdownTextareaRef}
             className={styles.textareaInput}
             value={mdContent}
             onChange={handleMdChange}
@@ -331,6 +457,7 @@ export default function Editor({ initialData, onChange }: EditorProps) {
 
         {activeMode === 'html' && (
           <textarea
+            ref={htmlTextareaRef}
             className={styles.textareaInput}
             value={htmlContent}
             onChange={handleHtmlChange}

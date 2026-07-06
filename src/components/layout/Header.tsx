@@ -4,6 +4,7 @@ import Image from 'next/image';
 import AlertsHUD from './AlertsHUD';
 import Ticker from './Ticker';
 import ThemeToggle from './ThemeToggle';
+import AccessibilitySettings from './AccessibilitySettings';
 import AuthButton from './AuthButton';
 import MobileMenu from './MobileMenu';
 import { getOfflineTickerItems } from '@/lib/tickerUtils';
@@ -34,6 +35,7 @@ export default async function Header() {
         </div>
 
         <div className={styles.actions}>
+          <AccessibilitySettings />
           <ThemeToggle />
           <AuthButton />
           <MobileMenu />

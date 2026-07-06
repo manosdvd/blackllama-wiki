@@ -1,0 +1,160 @@
+.container {
+  position: relative;
+  display: inline-block;
+}
+
+.iconBtn {
+  composes: iconBtn from './Header.module.css';
+}
+
+.active {
+  composes: active from './Header.module.css';
+}
+
+.toggleLabel {
+  composes: toggleLabel from './Header.module.css';
+}
+
+.popover {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 280px;
+  background-color: var(--charcoal-lighter, #2a2a2a);
+  border: 1px solid var(--lantern-gold, #f5c453);
+  border-radius: 6px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+  padding: 1.25rem;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.title {
+  font-size: 0.9rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: var(--lantern-gold);
+  border-bottom: 1px solid var(--surface-border);
+  padding-bottom: 0.5rem;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.settingGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.settingGroup label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--stone-grey);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.optionsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.optionBtn {
+  background: var(--charcoal-darker, #0a0a0a);
+  border: 1px solid var(--surface-border, #2e2e2e);
+  color: var(--canvas-tan);
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+  text-align: left;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.optionBtn:hover {
+  border-color: var(--campfire-amber);
+  color: var(--lantern-gold);
+  background-color: rgba(229, 140, 53, 0.05);
+}
+
+.optionBtnActive {
+  background: rgba(234, 179, 8, 0.08);
+  border-color: var(--lantern-gold);
+  color: var(--lantern-gold);
+}
+
+.toggleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.toggleLabelText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.toggleLabelText strong {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--canvas-tan);
+}
+
+.toggleLabelText span {
+  font-size: 0.65rem;
+  color: var(--stone-grey);
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 22px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--charcoal-base, #121212);
+  border: 1px solid var(--surface-border, #2e2e2e);
+  transition: .2s;
+  border-radius: 22px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 14px;
+  width: 14px;
+  left: 3px;
+  bottom: 3px;
+  background-color: var(--stone-grey);
+  transition: .2s;
+  border-radius: 50%;
+}
+
+.switch input:checked + .slider {
+  background-color: rgba(229, 140, 53, 0.15);
+  border-color: var(--campfire-amber);
+}
+
+.switch input:checked + .slider:before {
+  transform: translateX(22px);
+  background-color: var(--campfire-amber);
+}
