@@ -1,6 +1,10 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useSyncExternalStore } from 'react';
+import {
+  shouldReduceMotion,
+  subscribeMotionPreference,
+} from '@/lib/accessibilityPreferences';
 import styles from './EmbersBackground.module.css';
 
 interface Particle {
@@ -14,11 +18,14 @@ interface Particle {
 
 export default function EmbersBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const reduceMotion = useSyncExternalStore(
+    subscribeMotionPreference,
+    shouldReduceMotion,
+    () => false,
+  );
 
   useEffect(() => {
-    // 1. Accessibility: check if user prefers reduced motion
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (prefersReducedMotion) return;
+    if (reduceMotion) return;
 
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -114,7 +121,9 @@ export default function EmbersBackground() {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       cancelAnimationFrame(animationFrameId);
     };
-  }, []);
+  }, [reduceMotion]);
+
+  if (reduceMotion) return null;
 
   return (
     <canvas 

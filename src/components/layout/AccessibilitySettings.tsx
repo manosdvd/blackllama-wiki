@@ -2,6 +2,10 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { Accessibility } from 'lucide-react';
+import {
+  readLowMotionPreference,
+  writeLowMotionPreference,
+} from '@/lib/accessibilityPreferences';
 import styles from './AccessibilitySettings.module.css';
 
 type FontChoice = 'default' | 'opendyslexic';
@@ -20,6 +24,7 @@ export default function AccessibilitySettings() {
   const [isOpen, setIsOpen] = useState(false);
   const [font, setFont] = useState<FontChoice>(storedFontChoice);
   const [highLegibility, setHighLegibility] = useState(storedHighLegibility);
+  const [lowMotion, setLowMotion] = useState(readLowMotionPreference);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Migrate removed font options to the Lexie Readable default.
@@ -40,13 +45,18 @@ export default function AccessibilitySettings() {
       root.classList.remove('font-opendyslexic');
     }
 
-    // High legibility class
     if (highLegibility) {
       root.classList.add('high-legibility');
     } else {
       root.classList.remove('high-legibility');
     }
-  }, [font, highLegibility]);
+
+    if (lowMotion) {
+      root.classList.add('low-motion');
+    } else {
+      root.classList.remove('low-motion');
+    }
+  }, [font, highLegibility, lowMotion]);
 
   // Click outside to close dropdown handler
   useEffect(() => {
@@ -72,6 +82,12 @@ export default function AccessibilitySettings() {
     const nextVal = !highLegibility;
     setHighLegibility(nextVal);
     localStorage.setItem('access-high-legibility', String(nextVal));
+  };
+
+  const toggleLowMotion = () => {
+    const nextVal = !lowMotion;
+    setLowMotion(nextVal);
+    writeLowMotionPreference(nextVal);
   };
 
   return (
@@ -125,6 +141,23 @@ export default function AccessibilitySettings() {
                   type="checkbox"
                   checked={highLegibility}
                   onChange={toggleHighLegibility}
+                />
+                <span className={styles.slider} />
+              </label>
+            </div>
+          </div>
+
+          <div className={styles.settingGroup}>
+            <div className={styles.toggleRow}>
+              <div className={styles.toggleLabelText}>
+                <strong>Low Motion</strong>
+                <span>Freeze ticker and hide ember background</span>
+              </div>
+              <label className={styles.switch} aria-label="Toggle Low Motion">
+                <input
+                  type="checkbox"
+                  checked={lowMotion}
+                  onChange={toggleLowMotion}
                 />
                 <span className={styles.slider} />
               </label>

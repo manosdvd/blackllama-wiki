@@ -22,8 +22,8 @@ if (!getApps().length) {
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 export type FireAlertLevel = 'normal' | 'info' | 'watch' | 'warning' | 'critical' | 'evacuation';
-export type FireAlertSource = 'NWS' | 'USFS' | 'FIRMS' | 'WFIGS' | 'NOAA_HMS' | 'AIRNOW' | 'WILDCAD' | 'INCIWEB' | 'NIFC';
-export type SourceHealthStatus = 'ok' | 'degraded' | 'error' | 'missing-key';
+export type FireAlertSource = 'NWS' | 'USFS' | 'FIRMS' | 'WFIGS' | 'NOAA_HMS' | 'AIRNOW' | 'WILDCAD';
+export type SourceHealthStatus = 'ok' | 'degraded' | 'error' | 'missing-key' | 'auth-error';
 export type Confidence = 'official' | 'high' | 'medium' | 'low';
 export type Actionability = 'monitor' | 'review-plan' | 'contact-leadership' | 'follow-official-orders';
 
@@ -65,14 +65,7 @@ export interface FireAggregatorResponse {
 
 const CAMP_LAT = 32.39806;
 const CAMP_LON = -110.725;
-const PRIMARY_ALERT_RADIUS_MILES = 15;
 const WILDCAD_ALERT_RADIUS_MILES = 10;
-const SANTA_CATALINA_BOUNDS = {
-  west: -111.02,
-  south: 32.22,
-  east: -110.50,
-  north: 32.62,
-};
 // Santa Catalina Mountains FIRMS bounding box: west,south,east,north
 const FIRMS_BBOX = '-111.05,32.20,-110.45,32.65';
 // WFIGS ArcGIS bounding box for spatial query (xmin,ymin,xmax,ymax)
@@ -110,13 +103,6 @@ function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): nu
 
 function kmToMiles(km: number): number {
   return km * 0.621371;
-}
-
-function isInsideSantaCatalinaBounds(lat: number, lon: number) {
-  return lat >= SANTA_CATALINA_BOUNDS.south
-    && lat <= SANTA_CATALINA_BOUNDS.north
-    && lon >= SANTA_CATALINA_BOUNDS.west
-    && lon <= SANTA_CATALINA_BOUNDS.east;
 }
 
 function envValue(...names: string[]) {
@@ -482,7 +468,11 @@ async function fetchAirNow(airNowKey: string): Promise<{ items: FireAlertItem[];
   try {
     const url = `https://www.airnowapi.org/aq/observation/zipCode/current/?format=application/json&zipCode=85619&distance=50&API_KEY=${airNowKey}`;
     const res = await fetch(url, { next: { revalidate: 300 } });
-    if (!res.ok) return { items: [], health: 'degraded' };
+    if (!res.ok) {
+      console.warn(`AirNow fetch returned ${res.status} ${res.statusText}`);
+      if (res.status === 401 || res.status === 403) return { items: [], health: 'auth-error' };
+      return { items: [], health: 'degraded' };
+    }
     const data = await res.json();
 
     if (!Array.isArray(data) || data.length === 0) return { items: [], health: 'ok' };
@@ -642,184 +632,6 @@ async function fetchWildCAD(): Promise<{ items: FireAlertItem[]; health: SourceH
   }
 }
 
-// ─── InciWeb Official Incident Feed ──────────────────────────────────────────
-
-const INCIWEB_FEED_URLS = [
-  'https://inciweb.wildfire.gov/feeds/rss/incidents/',
-  'https://inciweb.nwcg.gov/feeds/rss/incidents/',
-];
-
-// Keywords indicating an Arizona-specific incident
-const AZ_KEYWORDS = [
-  'arizona', ' az,', ' az ', '(az)', 'pima county', 'cochise', 'santa cruz', 'graham',
-  'greenlee', 'catalina', 'coronado', 'tucson', 'oracle', 'nogales', 'sierra vista',
-];
-
-async function fetchInciWeb(): Promise<{ items: FireAlertItem[]; health: SourceHealthStatus }> {
-  try {
-    const Parser = (await import('rss-parser')).default;
-    const parser = new Parser<Record<string, unknown>, { title?: string; link?: string; guid?: string; pubDate?: string; content?: string; contentSnippet?: string }>();
-
-    let feed = null;
-    for (const feedUrl of INCIWEB_FEED_URLS) {
-      try {
-        const racePromise = new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('InciWeb RSS timed out')), 8000)
-        );
-        feed = await Promise.race([parser.parseURL(feedUrl), racePromise]);
-        if (feed) break;
-      } catch { continue; }
-    }
-
-    if (!feed) return { items: [], health: 'degraded' };
-
-    const items: FireAlertItem[] = [];
-
-    for (const item of (feed.items || []).slice(0, 60)) {
-      const rawText = `${item.title ?? ''} ${item.contentSnippet ?? item.content ?? ''}`.toLowerCase();
-
-      // Only AZ incidents
-      if (!AZ_KEYWORDS.some(kw => rawText.includes(kw))) continue;
-
-      const isEvac = rawText.includes('evacuati');
-      const level: FireAlertLevel = isEvac ? 'evacuation' : 'warning';
-
-      const body = (item.contentSnippet || item.content || 'Official wildfire incident reported in Arizona.').replace(/<[^>]*>/g, ' ').trim();
-
-      items.push({
-        id: `inciweb-${item.guid ?? item.link ?? String(Date.now())}`,
-        level,
-        source: 'INCIWEB' as FireAlertSource,
-        title: (item.title || 'InciWeb: Arizona Wildfire Incident').slice(0, 120),
-        message: body.slice(0, 350),
-        observedAt: item.pubDate ? new Date(item.pubDate).toISOString() : undefined,
-        updatedAt: new Date().toISOString(),
-        confidence: 'official' as Confidence,
-        actionability: isEvac ? 'follow-official-orders' : 'review-plan',
-        url: item.link || undefined,
-      });
-    }
-
-    return { items: items.slice(0, 5), health: 'ok' };
-  } catch {
-    return { items: [], health: 'error' };
-  }
-}
-
-// ─── NIFC Current Fire Locations (public IRWIN mirror) ────────────────────────
-
-// Radius (miles) beyond which we ignore a NIFC fire point as out-of-area.
-const NIFC_RADIUS_MILES = PRIMARY_ALERT_RADIUS_MILES;
-
-// Bounding box for query: Santa Catalina Mountains and immediate Camp Lawton area.
-const NIFC_BBOX = '-111.05,32.20,-110.45,32.65';
-
-// Candidate NIFC/IRWIN FeatureServer URLs (try in order; NIFC may change service names)
-const NIFC_SERVICE_URLS = [
-  'https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/Current_WildlandFire_Locations/FeatureServer/0/query',
-  'https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/WFIGS_Current_Interagency_Fire_Perimeters_and_Incident_Locations_ToDate/FeatureServer/1/query',
-];
-
-interface NIFCFeature {
-  attributes: {
-    IncidentName?: string;
-    CurrentAcres?: number;
-    PercentContained?: number;
-    Latitude?: number;
-    Longitude?: number;
-    FireDiscoveryDateTime?: number;
-    ModifiedOnDateTime_dt?: string;
-    UniqueFireIdentifier?: string;
-    IrwinID?: string;
-    POOCounty?: string;
-    IncidentTypeCategory?: string;
-    FireCause?: string;
-  };
-}
-
-async function fetchNIFCLocations(): Promise<{ items: FireAlertItem[]; health: SourceHealthStatus }> {
-  const params = new URLSearchParams({
-    where: "POOState='US-AZ' AND IncidentTypeCategory='WF'",
-    geometry: NIFC_BBOX,
-    geometryType: 'esriGeometryEnvelope',
-    inSR: '4326',
-    spatialRel: 'esriSpatialRelIntersects',
-    outFields: 'IncidentName,CurrentAcres,PercentContained,Latitude,Longitude,FireDiscoveryDateTime,ModifiedOnDateTime_dt,UniqueFireIdentifier,IrwinID,POOCounty,IncidentTypeCategory,FireCause',
-    returnGeometry: 'false',
-    f: 'json',
-  });
-
-  let data: { features?: NIFCFeature[]; error?: unknown } | null = null;
-
-  for (const baseUrl of NIFC_SERVICE_URLS) {
-    try {
-      const res = await fetch(`${baseUrl}?${params}`, { next: { revalidate: 300 } });
-      if (!res.ok) continue;
-      const json = await res.json() as { features?: NIFCFeature[]; error?: unknown };
-      if (!json.error && Array.isArray(json.features)) {
-        data = json;
-        break;
-      }
-    } catch { continue; }
-  }
-
-  if (!data) return { items: [], health: 'degraded' };
-
-  const features: NIFCFeature[] = data.features ?? [];
-  if (features.length === 0) return { items: [], health: 'ok' };
-
-  const items: FireAlertItem[] = features
-    .map((f): FireAlertItem | null => {
-      const a = f.attributes;
-      const lat = a.Latitude;
-      const lon = a.Longitude;
-      if (!lat || !lon) return null;
-
-      const distKm = haversineKm(lat, lon, CAMP_LAT, CAMP_LON);
-      const distMiles = kmToMiles(distKm);
-      if (distMiles > NIFC_RADIUS_MILES && !isInsideSantaCatalinaBounds(lat, lon)) return null;
-
-      const name = a.IncidentName || 'Unknown Incident';
-      const acres = a.CurrentAcres !== undefined && a.CurrentAcres !== null ? Math.round(a.CurrentAcres) : undefined;
-      const contained = a.PercentContained !== undefined && a.PercentContained !== null ? a.PercentContained : null;
-      const county = a.POOCounty || '';
-      const cause = a.FireCause || 'under investigation';
-
-      const level: FireAlertLevel = distMiles < 15 ? 'critical'
-        : distMiles < 40 ? 'warning'
-        : 'watch';
-
-      const acresStr = acres !== undefined ? `${acres.toLocaleString()} acres` : 'size unknown';
-      const containedStr = contained !== null ? `${contained}% contained` : 'containment unknown';
-      const countyStr = county ? ` in ${county} County` : ' in Arizona';
-
-      // Build an InciWeb link using UniqueFireIdentifier when available
-      const inciwebUrl = a.UniqueFireIdentifier
-        ? `https://inciweb.wildfire.gov/incident-information/${a.UniqueFireIdentifier}`
-        : undefined;
-
-      return {
-        id: `nifc-${a.IrwinID ?? a.UniqueFireIdentifier ?? name.replace(/\s+/g, '-').toLowerCase()}`,
-        level,
-        source: 'NIFC' as FireAlertSource,
-        title: `Active Fire: ${name}${county ? ` (${county} Co.)` : ''}`,
-        message: `NIFC/IRWIN active wildfire incident: ${acresStr}, ${containedStr}${countyStr}. ~${Math.round(distMiles)} mi from camp. Cause: ${cause}.`,
-        observedAt: a.FireDiscoveryDateTime ? new Date(a.FireDiscoveryDateTime).toISOString() : undefined,
-        updatedAt: a.ModifiedOnDateTime_dt || new Date().toISOString(),
-        distanceMilesFromCamp: Math.round(distMiles),
-        confidence: 'official' as Confidence,
-        actionability: (level === 'critical' ? 'contact-leadership' : 'review-plan') as Actionability,
-        url: inciwebUrl,
-      };
-    })
-    .filter(Boolean) as FireAlertItem[];
-
-  // Sort closest-first
-  items.sort((a, b) => (a.distanceMilesFromCamp ?? 999) - (b.distanceMilesFromCamp ?? 999));
-
-  return { items: items.slice(0, 5), health: 'ok' };
-}
-
 // ─── Main Route ──────────────────────────────────────────────────────────────
 
 export async function GET() {
@@ -849,8 +661,6 @@ export async function GET() {
       NOAA_HMS: 'ok',
       AIRNOW: airNowKey ? 'ok' : 'missing-key',
       WILDCAD: 'ok',
-      INCIWEB: 'ok',
-      NIFC: 'ok',
     };
 
     // Run all fetches in parallel — none block each other
@@ -862,8 +672,6 @@ export async function GET() {
       wfigsResult,
       airNowResult,
       wildCadResult,
-      inciWebResult,
-      nifcResult,
     ] = await Promise.allSettled([
       fetchNWSAlerts(),
       fetchNWSWeather(),
@@ -872,8 +680,6 @@ export async function GET() {
       fetchWFIGS(),
       airNowKey ? fetchAirNow(airNowKey) : Promise.resolve({ items: [], health: 'missing-key' as SourceHealthStatus }),
       fetchWildCAD(),
-      fetchInciWeb(),
-      fetchNIFCLocations(),
     ]);
 
     const resolve = <T>(result: PromiseSettledResult<T>, fallback: T): T =>
@@ -886,8 +692,6 @@ export async function GET() {
     const wfigsData = resolve(wfigsResult, { items: [], health: 'error' as SourceHealthStatus });
     const airNowData = resolve(airNowResult, { items: [], health: airNowKey ? 'error' : 'missing-key' } as { items: FireAlertItem[]; health: SourceHealthStatus });
     const wildCadData = resolve(wildCadResult, { items: [], health: 'error' as SourceHealthStatus });
-    const inciWebData = resolve(inciWebResult, { items: [], health: 'error' as SourceHealthStatus });
-    const nifcData = resolve(nifcResult, { items: [], health: 'error' as SourceHealthStatus });
 
     sourceHealth.NWS = nwsAlertsData.health;
     sourceHealth.USFS = usfsData.health;
@@ -895,8 +699,6 @@ export async function GET() {
     sourceHealth.WFIGS = wfigsData.health;
     sourceHealth.AIRNOW = airNowData.health;
     sourceHealth.WILDCAD = wildCadData.health;
-    sourceHealth.INCIWEB = inciWebData.health;
-    sourceHealth.NIFC = nifcData.health;
 
     // 2. Fallback merging for failed sources
     const finalAlerts: FireAlertItem[] = [];
@@ -935,18 +737,6 @@ export async function GET() {
       finalAlerts.push(...wildCadData.items);
     } else if (cachedData && Array.isArray(cachedData.alerts)) {
       finalAlerts.push(...cachedData.alerts.filter(a => a.source === 'WILDCAD'));
-    }
-
-    if (inciWebData.health !== 'error') {
-      finalAlerts.push(...inciWebData.items);
-    } else if (cachedData && Array.isArray(cachedData.alerts)) {
-      finalAlerts.push(...cachedData.alerts.filter(a => a.source === 'INCIWEB'));
-    }
-
-    if (nifcData.health !== 'error') {
-      finalAlerts.push(...nifcData.items);
-    } else if (cachedData && Array.isArray(cachedData.alerts)) {
-      finalAlerts.push(...cachedData.alerts.filter(a => a.source === 'NIFC'));
     }
 
     // Sort aggregated final alerts by severity

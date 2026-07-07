@@ -1,8 +1,12 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
+import {
+  shouldReduceMotion,
+  subscribeMotionPreference,
+} from '@/lib/accessibilityPreferences';
 
 import { ExternalLink, X, Play, Pause, Eye, EyeOff } from 'lucide-react';
 import styles from './Ticker.module.css';
@@ -60,6 +64,11 @@ export default function Ticker({ items }: TickerProps) {
   const [mobileShouldScroll, setMobileShouldScroll] = useState(false);
 
   const [isPaused, setIsPaused] = useState(false);
+  const lowMotion = useSyncExternalStore(
+    subscribeMotionPreference,
+    shouldReduceMotion,
+    () => false,
+  );
   const [isHidden, setIsHidden] = useState(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('ticker_hidden') === 'true';
@@ -159,6 +168,7 @@ export default function Ticker({ items }: TickerProps) {
 
   useEffect(() => {
     if (combinedItems.length <= 1) return;
+    if (lowMotion) return;
     
     let intervalId: NodeJS.Timeout;
     let isActive = true;
@@ -190,13 +200,11 @@ export default function Ticker({ items }: TickerProps) {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       clearInterval(intervalId);
     };
-  }, [combinedItems, isPaused]);
+  }, [combinedItems, isPaused, lowMotion]);
 
   useEffect(() => {
     if (!scrollRef.current || displayItems.length === 0) return;
-
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (prefersReducedMotion) return;
+    if (lowMotion) return;
 
     let animationId: number;
     let isActive = true;
@@ -231,7 +239,7 @@ export default function Ticker({ items }: TickerProps) {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       cancelAnimationFrame(animationId);
     };
-  }, [displayItems, isHovered, isPaused]);
+  }, [displayItems, isHovered, isPaused, lowMotion]);
 
   useEffect(() => {
     if (!mobileContainerRef.current || !mobileTextRef.current) return;
@@ -381,7 +389,7 @@ export default function Ticker({ items }: TickerProps) {
           <div
             key={safeMobileIndex}
             ref={mobileTextRef}
-            className={`${styles.mobileItemInner} ${mobileShouldScroll ? styles.mobileMarquee : ''}`}
+            className={`${styles.mobileItemInner} ${mobileShouldScroll && !lowMotion ? styles.mobileMarquee : ''}`}
             style={{ '--scroll-amount': `-${mobileScrollAmount}px` } as React.CSSProperties}
           >
             <span className={styles.tickerCategory} style={{ color: getCategoryColor(mobileItem.category) }}>

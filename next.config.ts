@@ -11,7 +11,10 @@ const withPWA = withPWAInit({
 });
 
 const nextConfig: NextConfig = {
-  transpilePackages: ['firebase-admin', 'jwks-rsa', 'jose'],
+  turbopack: {},
+  ...(process.env.NODE_ENV === 'production'
+    ? { transpilePackages: ['firebase-admin', 'jwks-rsa', 'jose'] }
+    : {}),
 };
 
-export default withPWA(nextConfig);
+export default process.env.NODE_ENV === 'development' ? nextConfig : withPWA(nextConfig);
