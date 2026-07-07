@@ -6,6 +6,7 @@ import {
   upsertUserProfileFromToken,
   verifyRequestUser,
 } from '@/lib/server/auth';
+import { writeServerErrorLog } from '@/lib/server/errorLog';
 import { writeAuditLog } from '@/lib/server/audit';
 import { CURRENT_SEASON_ID, type StaffApplication, type StaffRoleType } from '@/types/applications';
 
@@ -43,7 +44,12 @@ export async function GET(request: Request) {
       });
     return NextResponse.json({ applications });
   } catch (error) {
-    console.error('Failed to read applications:', error);
+    await writeServerErrorLog({
+      context: 'applications.list',
+      message: 'Failed to read applications.',
+      error,
+      request,
+    });
     return NextResponse.json({ error: 'Failed to read applications.' }, { status: 500 });
   }
 }
@@ -121,7 +127,12 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ application: { id: appRef.id, ...application } }, { status: 201 });
   } catch (error) {
-    console.error('Failed to submit application:', error);
+    await writeServerErrorLog({
+      context: 'applications.create',
+      message: 'Failed to submit application.',
+      error,
+      request,
+    });
     return NextResponse.json({ error: 'Failed to submit application.' }, { status: 500 });
   }
 }

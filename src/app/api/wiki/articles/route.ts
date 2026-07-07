@@ -2,9 +2,16 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { NextResponse } from 'next/server';
 import { getAdminDb } from '@/lib/firebase/admin';
 import { canAccessVisibility } from '@/lib/auth/permissions';
-import { extractEditorPlainText, findWikiLinks, slugify } from '@/lib/content/editorText';
+import {
+  extractEditorPlainText,
+  findWikiLinks,
+  getEditorDataFirestoreError,
+  sanitizeEditorData,
+  slugify,
+} from '@/lib/content/editorText';
 import { currentUserHasPermission, currentUserIsHealthy, verifyRequestUser } from '@/lib/server/auth';
 import { writeAuditLog } from '@/lib/server/audit';
+import { writeServerErrorLog } from '@/lib/server/errorLog';
 import type { ContentItem, ContentStatus, ContentVisibility, ContentWritePayload } from '@/types/content';
 
 function validStatus(status: unknown): status is ContentStatus {
@@ -71,7 +78,12 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ articles });
   } catch (error) {
-    console.error('Failed to read wiki articles:', error);
+    await writeServerErrorLog({
+      context: 'wiki.articles.list',
+      message: 'Failed to read wiki articles.',
+      error,
+      request,
+    });
     return NextResponse.json({ error: 'Failed to read wiki articles.' }, { status: 500 });
   }
 }
@@ -102,7 +114,9 @@ export async function POST(request: Request) {
 
     const db = getAdminDb();
     const docRef = db.collection('contentItems').doc();
-    const bodyEditorJs = payload.bodyEditorJs!;
+    const bodyEditorJs = sanitizeEditorData(payload.bodyEditorJs!);
+    const editorDataError = getEditorDataFirestoreError(bodyEditorJs);
+    if (editorDataError) return NextResponse.json({ error: editorDataError }, { status: 400 });
     const bodyText = extractEditorPlainText(bodyEditorJs);
     const plainTextSearch = [payload.title, payload.summary, bodyText].filter(Boolean).join('\n');
     const slug = await uniqueSlug(slugify(payload.slug || payload.title!));
@@ -166,9 +180,17 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ article: { id: docRef.id, ...article } }, { status: 201 });
   } catch (error) {
-    console.error('Failed to create wiki article:', error);
+    await writeServerErrorLog({
+      context: 'wiki.articles.create',
+      message: 'Failed to create wiki article.',
+      error,
+      request,
+    });
     return NextResponse.json(
-      { error: `Failed to create wiki article: ${error instanceof Error ? error.message : String(error)}` },
+      {
+        error: 'Failed to create wiki article.',
+        detail: process.env.NODE_ENV === 'production' ? undefined : String(error),
+      },
       { status: 500 }
     );
   }

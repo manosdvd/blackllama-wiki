@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import type { DecodedIdToken } from 'firebase-admin/auth';
 import { getAdminAuth } from '@/lib/firebase/admin';
 import { upsertUserProfileFromToken } from '@/lib/server/auth';
+import { writeServerErrorLog } from '@/lib/server/errorLog';
 import { ADMIN_PERMISSIONS, type AdminPermission } from '@/types/permissions';
 import type { UserProfile } from '@/types/users';
 
@@ -51,7 +52,17 @@ export async function POST(request: Request) {
     try {
       profile = await upsertUserProfileFromToken(decodedToken, body.displayName);
     } catch (profileError) {
-      console.error('Session profile upsert failed; using token-derived profile:', profileError);
+      await writeServerErrorLog({
+        context: 'auth.session.profile_upsert',
+        message: 'Session profile upsert failed; using token-derived profile.',
+        error: profileError,
+        severity: 'warning',
+        request,
+        metadata: {
+          uid: decodedToken.uid,
+          email: typeof decodedToken.email === 'string' ? decodedToken.email : null,
+        },
+      });
       profile = fallbackProfileFromToken(decodedToken);
       warning = 'profile-upsert-failed';
     }
@@ -70,7 +81,12 @@ export async function POST(request: Request) {
     });
     return response;
   } catch (error) {
-    console.error('Session creation failed:', error);
+    await writeServerErrorLog({
+      context: 'auth.session.create',
+      message: 'Session creation failed.',
+      error,
+      request,
+    });
     return NextResponse.json(
       {
         error: 'Unable to create session.',

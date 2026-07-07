@@ -22,6 +22,16 @@ function blockKey(block: EditorBlock, index: number) {
   return block.id ?? `${block.type}-${index}`;
 }
 
+function tableCells(row: unknown): unknown[] {
+  if (Array.isArray(row)) return row;
+  if (row && typeof row === 'object') {
+    const maybeRow = row as { cells?: unknown; values?: unknown };
+    if (Array.isArray(maybeRow.cells)) return maybeRow.cells;
+    if (Array.isArray(maybeRow.values)) return maybeRow.values;
+  }
+  return [];
+}
+
 function parseMarkdownWikiLinks(markdown: string): string {
   return markdown.replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (match, target, display) => {
     const t = target.trim();
@@ -228,8 +238,8 @@ export default function EditorOutput({ data }: { data: EditorData }) {
                 <tbody>
                   {blockData.content.map((row, rowIndex) => (
                     <tr key={rowIndex}>
-                      {Array.isArray(row) &&
-                        row.map((cell, cellIndex) => (
+                      {tableCells(row)
+                        .map((cell, cellIndex) => (
                           <td key={cellIndex}>
                             <WikiText value={text(cell)} />
                           </td>

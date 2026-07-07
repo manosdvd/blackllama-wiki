@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { getAdminAuth, getAdminDb } from '@/lib/firebase/admin';
 import { currentUserHasPermission, verifyRequestUser } from '@/lib/server/auth';
 import { writeAuditLog } from '@/lib/server/audit';
+import { writeServerErrorLog } from '@/lib/server/errorLog';
 import { ADMIN_PRESETS, type AdminPresetKey } from '@/types/permissions';
 import type { AccountStatus, PortalMode, UserProfile } from '@/types/users';
 
@@ -112,7 +113,14 @@ export async function PATCH(request: Request, context: Context) {
 
     return NextResponse.json({ user: { ...updated, uid } });
   } catch (error) {
-    console.error('Failed to update user:', error);
+    const params = await context.params.catch(() => ({ uid: 'unknown' }));
+    await writeServerErrorLog({
+      context: 'users.update',
+      message: 'Failed to update user.',
+      error,
+      request,
+      metadata: { uid: params.uid },
+    });
     return NextResponse.json({ error: 'Failed to update user.' }, { status: 500 });
   }
 }

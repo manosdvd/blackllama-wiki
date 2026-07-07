@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { writeServerErrorLog } from '@/lib/server/errorLog';
 
 export const runtime = 'nodejs';
 
@@ -55,11 +56,11 @@ const FEED_URLS = [
   'archives.gov/global-pages/rss/news.xml', 'tucsonbirdalliance.blogspot.com/feeds/posts/default',
   'freshoffthegrid.com/feed/', 'www.rei.com/blog/feed', 'wildlandtrekking.com/feed/',
   'thehikinglife.com/feed/', 'https://nationaldaycalendar.com/rss', 
-  'https://rss.app/feeds/nDqCGtfjaZ6wn10I.xml', 'https://paulkirtley.co.uk/feed/', 
-  'https://blog.nols.edu/rss.xml](https://blog.nols.edu/rss.xml', 
+  'https://rss.app/feeds/nDqCGtfjaZ6wn10I.xml', 'https://paulkirtley.co.uk/feed/',
+  'https://blog.nols.edu/rss.xml',
   'https://theazhikeaholics.com/feed/', 'https://www.archaeologysouthwest.org/feed/', 
   'https://tucsonastronomy.org/feed/', 'https://rss.app/feeds/AztZJf5NpmcSMJg4.xml', 
-  'https://woodbeecarver.com/feed/', 'https://woodbeecarver.com/feed/', 
+  'https://woodbeecarver.com/feed/',
   'https://www.redcross.ca/blog/rss', 'https://survivalsherpa.wordpress.com/feed/', 
   'https://skyislandalliance.org/feed/', 'https://www.southwestdiscoveries.com/feed/',
   'https://rss.app/feeds/7OILicWFV8pBtyvV.xml', 'https://mountlemmonlodge.com/feed/',
@@ -176,6 +177,12 @@ async function generateRssTicker() {
   const candidates = feedResults
     .flatMap((result) => result.status === 'fulfilled' ? result.value : [])
     .sort((a, b) => b.publishedTime - a.publishedTime);
+  const failedFeeds = feedResults.flatMap((result, index) => {
+    if (result.status === 'fulfilled') return [];
+    const feedUrl = normalizeFeedUrl(FEED_URLS[index]);
+    const reason = result.reason instanceof Error ? result.reason.message : String(result.reason);
+    return [{ feedUrl, reason: trimHeadline(reason) }];
+  });
 
   return {
     ticker_metadata: {
@@ -185,7 +192,8 @@ async function generateRssTicker() {
     },
     items: dedupeTickerItems(candidates).slice(0, RSS_MAX_ITEMS),
     feedCount: FEED_URLS.length,
-    failedFeedCount: feedResults.filter((result) => result.status === 'rejected').length,
+    failedFeedCount: failedFeeds.length,
+    failedFeeds,
   };
 }
 
@@ -226,27 +234,29 @@ export async function GET(req: Request) {
 
     const db = getAdminDbOnly();
 
-    const logErrorToDb = async (errorMsg: string, errData: Error | string | unknown) => {
-      try {
-        await db.collection('errorLogs').add({
-          context: 'ticker_sync',
-          message: errorMsg,
-          error: errData instanceof Error ? errData.message : String(errData),
-          timestamp: FieldValue.serverTimestamp(),
-        });
-      } catch (logErr) {
-        console.error('Failed to write to errorLogs', logErr);
-      }
-    };
     const rssTicker = await generateRssTicker();
 
     if (rssTicker.items.length === 0) {
+      await writeServerErrorLog({
+        context: 'ticker.sync.rss_empty',
+        message: 'No recent RSS ticker items could be generated.',
+        severity: 'warning',
+        request: req,
+        metadata: {
+          feedCount: rssTicker.feedCount,
+          failedFeedCount: rssTicker.failedFeedCount,
+          failedFeeds: rssTicker.failedFeeds,
+          maxAgeHours: 24,
+        },
+      });
+
       return NextResponse.json({
         success: false,
         error: 'No RSS ticker items from the last 24 hours could be generated. Keeping existing cached ticker items in Firestore.',
         mode: 'rss-local-only',
         rssFeedCount: rssTicker.feedCount,
         rssFailedFeedCount: rssTicker.failedFeedCount,
+        rssFailedFeeds: rssTicker.failedFeeds,
         maxAgeHours: 24,
       }, { status: 503 });
     }
@@ -296,14 +306,20 @@ export async function GET(req: Request) {
           target_location: TARGET_LOCATION,
           rss_feed_count: rssTicker.feedCount,
           rss_failed_feed_count: rssTicker.failedFeedCount,
+          rss_failed_feeds: rssTicker.failedFeeds.slice(0, 12),
           ai_status: 'disabled',
           max_age_hours: 24,
         },
         items: liveItems.map(tickerResponseItem)
       });
     } catch (e) {
-      console.warn('Failed to write to Firestore.', e);
-      await logErrorToDb('Failed to write liveTicker items to Firestore', e);
+      await writeServerErrorLog({
+        context: 'ticker.sync.firestore_write',
+        message: 'Failed to write liveTicker items to Firestore.',
+        error: e,
+        request: req,
+        metadata: { syncRunId, itemCount: liveItems.length },
+      });
       return NextResponse.json({
         success: true,
         mode: 'rss-local-only',
@@ -321,22 +337,13 @@ export async function GET(req: Request) {
     }
 
   } catch (err) {
-    console.error('Ticker sync error:', err);
-    
-    try {
-      // In case db isn't initialized yet, try importing it.
-      const { getAdminDbOnly } = await import('@/lib/firebase/adminDb');
-      const { FieldValue } = await import('firebase-admin/firestore');
-      const db = getAdminDbOnly();
-      await db.collection('errorLogs').add({
-        context: 'ticker_sync_fatal',
-        message: 'Fatal error in ticker sync route',
-        error: err instanceof Error ? err.message : String(err),
-        timestamp: FieldValue.serverTimestamp(),
-      });
-    } catch (logErr) {
-      console.error('Failed to log fatal error to db', logErr);
-    }
+    await writeServerErrorLog({
+      context: 'ticker.sync.fatal',
+      message: 'Fatal error in ticker sync route.',
+      error: err,
+      severity: 'critical',
+      request: req,
+    });
 
     return NextResponse.json({ error: String(err) }, { status: 500 });
   }

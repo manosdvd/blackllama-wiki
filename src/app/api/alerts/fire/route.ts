@@ -1,23 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getApps, initializeApp, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
-
-// Initialize Firebase Admin (only once)
-if (!getApps().length) {
-  try {
-    const serviceAccountStr = process.env.FIREBASE_SERVICE_ACCOUNT;
-    if (serviceAccountStr) {
-      const serviceAccount = JSON.parse(serviceAccountStr);
-      initializeApp({
-        credential: cert(serviceAccount)
-      });
-    } else {
-       initializeApp();
-    }
-  } catch (e) {
-    console.warn("Firebase Admin Initialization Warning:", e);
-  }
-}
+import { getAdminDb } from '@/lib/firebase/admin';
+import { writeServerErrorLog } from '@/lib/server/errorLog';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -627,18 +610,23 @@ async function fetchWildCAD(): Promise<{ items: FireAlertItem[]; health: SourceH
 
     return { items: items.slice(0, 8), health: 'ok' };
   } catch (err) {
-    console.error('WildCAD fetch error:', err);
+    await writeServerErrorLog({
+      context: 'alerts.fire.wildcad',
+      message: 'WildCAD fetch failed.',
+      error: err,
+      severity: 'warning',
+    });
     return { items: [], health: 'error' };
   }
 }
 
 // ─── Main Route ──────────────────────────────────────────────────────────────
 
-export async function GET() {
+export async function GET(request: Request) {
   const firmsKey = envValue('FIRMS_MAP_KEY', 'NASA_FIRMS_MAP_KEY', 'FIRMS_API_KEY');
   const airNowKey = envValue('AIRNOW_API_KEY', 'AIR_NOW_API_KEY');
 
-  const db = getFirestore();
+  const db = getAdminDb();
   let cachedData: FireAggregatorResponse | null = null;
 
   // 1. Pre-load cache from Firestore
@@ -649,7 +637,13 @@ export async function GET() {
       cachedData = docSnap.data() as FireAggregatorResponse;
     }
   } catch (cacheErr) {
-    console.warn("Could not read alertsCache from Firestore:", cacheErr);
+    await writeServerErrorLog({
+      context: 'alerts.fire.cache_read',
+      message: 'Could not read alertsCache from Firestore.',
+      error: cacheErr,
+      severity: 'warning',
+      request,
+    });
   }
 
   try {
@@ -765,7 +759,17 @@ export async function GET() {
     try {
       await db.collection('alertsCache').doc('latest').set(response);
     } catch (saveErr) {
-      console.warn("Could not save alertsCache to Firestore:", saveErr);
+      await writeServerErrorLog({
+        context: 'alerts.fire.cache_write',
+        message: 'Could not save alertsCache to Firestore.',
+        error: saveErr,
+        severity: 'warning',
+        request,
+        metadata: {
+          alertCount: finalAlerts.length,
+          sourceHealth,
+        },
+      });
     }
 
     return NextResponse.json(response, {
@@ -775,7 +779,14 @@ export async function GET() {
     });
 
   } catch (err) {
-    console.error("Critical error in fire aggregator, falling back to cache:", err);
+    await writeServerErrorLog({
+      context: 'alerts.fire.fatal',
+      message: 'Critical error in fire aggregator.',
+      error: err,
+      severity: 'critical',
+      request,
+      metadata: { hasCachedData: !!cachedData },
+    });
     if (cachedData) {
       return NextResponse.json({
         ...cachedData,

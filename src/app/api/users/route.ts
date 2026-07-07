@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getAdminDb } from '@/lib/firebase/admin';
 import { currentUserHasPermission, verifyRequestUser } from '@/lib/server/auth';
+import { writeServerErrorLog } from '@/lib/server/errorLog';
 import type { UserProfile } from '@/types/users';
 
 export async function GET(request: Request) {
@@ -18,7 +19,12 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ users });
   } catch (error) {
-    console.error('Failed to read users:', error);
+    await writeServerErrorLog({
+      context: 'users.list',
+      message: 'Failed to read users.',
+      error,
+      request,
+    });
     return NextResponse.json({ error: 'Failed to read users.' }, { status: 500 });
   }
 }
