@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { getAdminDb } from '@/lib/firebase/admin';
 import { currentUserHasPermission, verifyRequestUser } from '@/lib/server/auth';
 import { writeAuditLog } from '@/lib/server/audit';
+import { writeServerErrorLog } from '@/lib/server/errorLog';
 import { createOnboardingForApplication } from '@/lib/server/onboarding';
 import type { ApplicationDecisionPayload, StaffApplication } from '@/types/applications';
 
@@ -87,7 +88,14 @@ export async function PATCH(request: Request, context: Context) {
     const updated = await appRef.get();
     return NextResponse.json({ application: { id: updated.id, ...updated.data() } });
   } catch (error) {
-    console.error('Failed to update application decision:', error);
+    const params = await context.params.catch(() => ({ id: 'unknown' }));
+    await writeServerErrorLog({
+      context: 'applications.decision',
+      message: 'Failed to update application decision.',
+      error,
+      request,
+      metadata: { applicationId: params.id },
+    });
     return NextResponse.json({ error: 'Failed to update application decision.' }, { status: 500 });
   }
 }

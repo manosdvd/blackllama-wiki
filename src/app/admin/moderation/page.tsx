@@ -1,100 +1,122 @@
-import React from 'react';
-import styles from './page.module.css';
+'use client';
+
+import React, { useEffect, useState } from 'react';
 import TickerSyncButton from '@/components/admin/TickerSyncButton';
+import { useAuth } from '@/components/auth/AuthContext';
+import styles from './page.module.css';
 
-// Mock data until Firestore is connected
-const mockFlaggedPosts = [
-  {
-    id: 'post-3',
-    topicId: 'topic-1',
-    topicTitle: 'Who is driving up on Sunday?',
-    authorName: 'Rule Breaker',
-    content: 'This is an inappropriate post that goes against Scouting guidelines.',
-    date: '30 mins ago',
-    flagCount: 3,
-  }
-];
+interface ErrorLogEntry {
+  id: string;
+  context?: string;
+  message?: string;
+  severity?: 'warning' | 'error' | 'critical';
+  occurredAt?: string;
+  timestamp?: string;
+  error?: {
+    name?: string;
+    message?: string;
+  };
+  request?: {
+    method?: string;
+    path?: string;
+  } | null;
+}
 
-const mockAuditLog = [
-  {
-    id: 'log-1',
-    moderatorName: 'Admin Sarah',
-    action: 'REMOVED_POST',
-    targetId: 'post-99',
-    reason: 'Violated YPT guidelines regarding appropriate language.',
-    date: '1 day ago'
-  },
-  {
-    id: 'log-2',
-    moderatorName: 'Admin Mike',
-    action: 'LOCKED_TOPIC',
-    targetId: 'topic-42',
-    reason: 'Discussion devolved into off-topic arguments.',
-    date: '3 days ago'
-  }
-];
+function formatDate(value?: string) {
+  if (!value) return 'Unknown time';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString('en-US', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+    timeZone: 'America/Phoenix',
+  });
+}
 
 export default function ModerationPage() {
+  const { user, loading, hasPermission } = useAuth();
+  const [logs, setLogs] = useState<ErrorLogEntry[]>([]);
+  const [logsError, setLogsError] = useState<string | null>(null);
+  const [logsLoading, setLogsLoading] = useState(false);
+  const canViewLogs = hasPermission('canViewAuditLog') || hasPermission('canManageSystemSettings');
+
+  useEffect(() => {
+    if (loading || !user || !canViewLogs) return;
+
+    async function loadLogs() {
+      setLogsLoading(true);
+      setLogsError(null);
+      try {
+        const token = await user!.getIdToken();
+        const response = await fetch('/api/admin/error-logs?limit=25', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = (await response.json()) as { logs?: ErrorLogEntry[]; error?: string };
+        if (!response.ok) throw new Error(data.error || 'Unable to load server error logs.');
+        setLogs(data.logs ?? []);
+      } catch (error) {
+        setLogsError(error instanceof Error ? error.message : String(error));
+      } finally {
+        setLogsLoading(false);
+      }
+    }
+
+    loadLogs();
+  }, [loading, user, canViewLogs]);
+
+  if (loading) return <div className={styles.container}>Loading moderation dashboard...</div>;
+
+  if (!user || !canViewLogs) {
+    return (
+      <div className={styles.container}>
+        <header className={styles.header}>
+          <h1>System & Moderation</h1>
+          <p className={styles.subtitle}>Audit log access is required.</p>
+        </header>
+      </div>
+    );
+  }
+
   return (
     <div className={styles.container}>
       <header className={styles.header}>
-        <h1>Moderation Dashboard</h1>
-        <p className={styles.subtitle}>Review flagged content and enforce Zero-DM / YPT compliance.</p>
+        <h1>System & Moderation</h1>
+        <p className={styles.subtitle}>Ticker controls and recent server-side diagnostics.</p>
       </header>
 
       <div className={styles.layout}>
-        <section>
+        <section className={styles.toolPanel}>
           <TickerSyncButton />
-          
-          <h2 className={styles.sectionTitle}>Flagged Queue</h2>
-          <div className={styles.flaggedList}>
-            {mockFlaggedPosts.length === 0 ? (
-              <p>No posts currently flagged for review.</p>
-            ) : (
-              mockFlaggedPosts.map(post => (
-                <div key={post.id} className={styles.flaggedCard}>
-                  <div className={styles.cardHeader}>
-                    <div className={styles.postMeta}>
-                      Posted by <strong>{post.authorName}</strong> in <strong>{post.topicTitle}</strong><br/>
-                      {post.date}
-                    </div>
-                    <div className={styles.flagCount}>
-                      🚩 {post.flagCount} Flags
-                    </div>
-                  </div>
-                  
-                  <div className={styles.postContent}>
-                    {post.content}
-                  </div>
-
-                  <div className={styles.actions}>
-                    <button className={styles.btnRemove}>Remove Post</button>
-                    <button className={styles.btnApprove}>Ignore (Approve)</button>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
         </section>
 
         <section>
-          <h2 className={styles.sectionTitle}>Audit Log</h2>
-          <div className={styles.logList}>
-            {mockAuditLog.map(log => (
-              <div key={log.id} className={styles.logEntry}>
-                <div className={styles.logHeader}>
-                  <span className={styles.logModerator}>{log.moderatorName}</span>
-                  <span className={styles.logDate}>{log.date}</span>
-                </div>
-                <div className={styles.logAction}>
-                  <strong>Action:</strong> {log.action}
-                </div>
-                <div className={styles.logReason}>
-                  &quot;{log.reason}&quot;
-                </div>
-              </div>
-            ))}
-          </div>
+          <h2 className={styles.sectionTitle}>Recent Error Logs</h2>
+          {logsError && <div className={styles.errorMessage}>{logsError}</div>}
+          {logsLoading ? (
+            <p className={styles.emptyState}>Loading logs...</p>
+          ) : logs.length === 0 ? (
+            <p className={styles.emptyState}>No server errors have been logged yet.</p>
+          ) : (
+            <div className={styles.logList}>
+              {logs.map((log) => (
+                <article key={log.id} className={`${styles.logEntry} ${styles[log.severity ?? 'error']}`}>
+                  <div className={styles.logHeader}>
+                    <span className={styles.logContext}>{log.context ?? 'unknown.context'}</span>
+                    <span className={styles.logDate}>{formatDate(log.occurredAt ?? log.timestamp)}</span>
+                  </div>
+                  <div className={styles.logAction}>{log.message ?? log.error?.message ?? 'No message recorded.'}</div>
+                  {log.error?.message && log.error.message !== log.message && (
+                    <div className={styles.logReason}>{log.error.name ?? 'Error'}: {log.error.message}</div>
+                  )}
+                  {log.request?.path && (
+                    <div className={styles.logRequest}>
+                      {log.request.method ?? 'GET'} {log.request.path}
+                    </div>
+                  )}
+                </article>
+              ))}
+            </div>
+          )}
         </section>
       </div>
     </div>

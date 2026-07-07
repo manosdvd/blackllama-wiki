@@ -2,9 +2,16 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { NextResponse } from 'next/server';
 import { getAdminDb } from '@/lib/firebase/admin';
 import { canAccessVisibility } from '@/lib/auth/permissions';
-import { extractEditorPlainText, findWikiLinks, slugify } from '@/lib/content/editorText';
+import {
+  extractEditorPlainText,
+  findWikiLinks,
+  getEditorDataFirestoreError,
+  sanitizeEditorData,
+  slugify,
+} from '@/lib/content/editorText';
 import { currentUserHasPermission, currentUserIsHealthy, verifyRequestUser } from '@/lib/server/auth';
 import { writeAuditLog } from '@/lib/server/audit';
+import { writeServerErrorLog } from '@/lib/server/errorLog';
 import type { ContentItem, ContentStatus, ContentVisibility, ContentWritePayload } from '@/types/content';
 
 type Context = { params: Promise<{ id: string }> };
@@ -60,7 +67,14 @@ export async function GET(request: Request, context: Context) {
 
     return NextResponse.json({ article });
   } catch (error) {
-    console.error('Failed to read wiki article:', error);
+    const params = await context.params.catch(() => ({ id: 'unknown' }));
+    await writeServerErrorLog({
+      context: 'wiki.articles.read',
+      message: 'Failed to read wiki article.',
+      error,
+      request,
+      metadata: { idOrSlug: params.id },
+    });
     return NextResponse.json({ error: 'Failed to read wiki article.' }, { status: 500 });
   }
 }
@@ -102,7 +116,9 @@ export async function PATCH(request: Request, context: Context) {
       return NextResponse.json({ error: 'Archiving requires archive access.' }, { status: 403 });
     }
 
-    const bodyEditorJs = payload.bodyEditorJs ?? before.bodyEditorJs;
+    const bodyEditorJs = sanitizeEditorData(payload.bodyEditorJs ?? before.bodyEditorJs);
+    const editorDataError = getEditorDataFirestoreError(bodyEditorJs);
+    if (editorDataError) return NextResponse.json({ error: editorDataError }, { status: 400 });
     const bodyText = extractEditorPlainText(bodyEditorJs);
     const title = payload.title?.trim() ?? before.title;
     const summary = payload.summary?.trim() ?? before.summary;
@@ -162,9 +178,19 @@ export async function PATCH(request: Request, context: Context) {
     const updated = await snapshot.ref.get();
     return NextResponse.json({ article: { id: updated.id, ...updated.data() } });
   } catch (error) {
-    console.error('Failed to update wiki article:', error);
+    const params = await context.params.catch(() => ({ id: 'unknown' }));
+    await writeServerErrorLog({
+      context: 'wiki.articles.update',
+      message: 'Failed to update wiki article.',
+      error,
+      request,
+      metadata: { idOrSlug: params.id },
+    });
     return NextResponse.json(
-      { error: `Failed to update wiki article: ${error instanceof Error ? error.message : String(error)}` },
+      {
+        error: 'Failed to update wiki article.',
+        detail: process.env.NODE_ENV === 'production' ? undefined : String(error),
+      },
       { status: 500 }
     );
   }
@@ -206,7 +232,14 @@ export async function DELETE(request: Request, context: Context) {
 
     return NextResponse.json({ success: true, message: 'Article deleted successfully.' });
   } catch (error) {
-    console.error('Failed to delete wiki article:', error);
+    const params = await context.params.catch(() => ({ id: 'unknown' }));
+    await writeServerErrorLog({
+      context: 'wiki.articles.delete',
+      message: 'Failed to delete wiki article.',
+      error,
+      request,
+      metadata: { idOrSlug: params.id },
+    });
     return NextResponse.json({ error: 'Failed to delete wiki article.' }, { status: 500 });
   }
 }

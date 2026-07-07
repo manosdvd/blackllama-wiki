@@ -17,6 +17,54 @@ interface EditorProps {
 
 type EditorMode = 'wysiwyg' | 'markdown' | 'html';
 
+const MAX_EMBEDDED_IMAGE_DIMENSION = 1400;
+const MAX_EMBEDDED_IMAGE_BYTES = 600_000;
+
+function dataUrlByteSize(dataUrl: string) {
+  return Math.ceil(dataUrl.length * 0.75);
+}
+
+function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(reader.error ?? new Error('Could not read image file.'));
+    reader.readAsDataURL(file);
+  });
+}
+
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error('Could not load image file.'));
+    image.src = src;
+  });
+}
+
+async function imageFileToCompressedDataUrl(file: File) {
+  const originalDataUrl = await readFileAsDataUrl(file);
+  const image = await loadImage(originalDataUrl);
+  const scale = Math.min(1, MAX_EMBEDDED_IMAGE_DIMENSION / Math.max(image.width, image.height));
+  const width = Math.max(1, Math.round(image.width * scale));
+  const height = Math.max(1, Math.round(image.height * scale));
+
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return originalDataUrl;
+
+  ctx.drawImage(image, 0, 0, width, height);
+
+  for (const quality of [0.78, 0.68, 0.58, 0.48]) {
+    const compressed = canvas.toDataURL('image/jpeg', quality);
+    if (dataUrlByteSize(compressed) <= MAX_EMBEDDED_IMAGE_BYTES) return compressed;
+  }
+
+  return canvas.toDataURL('image/jpeg', 0.42);
+}
+
 export function convertHtmlToMarkdown(html: string): string {
   let md = html;
   // Replace headers
@@ -306,20 +354,26 @@ export default function Editor({ initialData, onChange }: EditorProps) {
     imageInputRef.current?.click();
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const base64 = reader.result as string;
-      const imgHtml = `<img src="${base64}" alt="${file.name}" style="max-width: 100%; border-radius: 6px; margin: 12px 0; display: block;" />`;
-      const imgMd = `![${file.name}](${base64})`;
-      insertMediaAtCursor(imgHtml, imgMd);
-    };
-    reader.readAsDataURL(file);
+    try {
+      const base64 = await imageFileToCompressedDataUrl(file);
+      if (dataUrlByteSize(base64) > MAX_EMBEDDED_IMAGE_BYTES) {
+        alert('That image is still too large to embed. Please crop or resize it before adding it to the wiki.');
+        return;
+      }
 
-    e.target.value = ''; // Reset file input
+      const safeName = file.name.replace(/"/g, '&quot;');
+      const imgHtml = `<img src="${base64}" alt="${safeName}" style="max-width: 100%; border-radius: 6px; margin: 12px 0; display: block;" />`;
+      const imgMd = `![${file.name.replace(/]/g, '\\]')}](${base64})`;
+      insertMediaAtCursor(imgHtml, imgMd);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Could not embed that image.');
+    } finally {
+      e.target.value = '';
+    }
   };
 
   const handleYoutubeEmbed = () => {

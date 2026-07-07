@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getAdminDb } from '@/lib/firebase/admin';
 import { currentUserHasPermission, verifyRequestUser } from '@/lib/server/auth';
+import { writeServerErrorLog } from '@/lib/server/errorLog';
 import { CURRENT_SEASON_ID } from '@/types/applications';
 import { DEFAULT_ONBOARDING_TASKS } from '@/types/onboarding';
 
@@ -34,7 +35,12 @@ export async function GET(request: Request) {
       uid: requestedUid,
     });
   } catch (error) {
-    console.error('Failed to read onboarding:', error);
+    await writeServerErrorLog({
+      context: 'onboarding.read',
+      message: 'Failed to read onboarding.',
+      error,
+      request,
+    });
     return NextResponse.json({ error: 'Failed to read onboarding.' }, { status: 500 });
   }
 }

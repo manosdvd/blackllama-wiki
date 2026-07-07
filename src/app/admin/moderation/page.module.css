@@ -1,138 +1,60 @@
 .container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 2rem;
   font-family: 'Lexie Readable', sans-serif;
+  margin: 0 auto;
+  max-width: 1200px;
+  padding: 2rem;
 }
 
 .header {
+  border-bottom: 2px solid var(--emergency-red);
   margin-bottom: 3rem;
   padding-bottom: 1.5rem;
-  border-bottom: 2px solid var(--emergency-red);
 }
 
 .header h1 {
-  font-family: 'Lexie Readable', sans-serif;
   color: var(--canvas-tan);
-  margin: 0 0 0.5rem 0;
+  font-family: 'Lexie Readable', sans-serif;
   font-size: 2.5rem;
+  margin: 0 0 0.5rem;
 }
 
 .subtitle {
   color: var(--stone-grey);
-  margin: 0;
   font-size: 1.1rem;
+  margin: 0;
 }
 
 .layout {
   display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 3rem;
+  gap: 2rem;
+  grid-template-columns: minmax(280px, 0.75fr) minmax(0, 1.25fr);
 }
 
-@media (max-width: 768px) {
-  .layout {
-    grid-template-columns: 1fr;
-  }
+.toolPanel {
+  align-self: start;
 }
 
 .sectionTitle {
+  color: var(--canvas-tan);
   font-family: 'Lexie Readable', sans-serif;
-  color: var(--canvas-tan);
-  margin-top: 0;
-  margin-bottom: 1.5rem;
   font-size: 1.5rem;
+  margin: 0 0 1rem;
 }
 
-.flaggedList {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.flaggedCard {
-  background-color: var(--charcoal-lighter);
-  border: 1px solid var(--emergency-red);
-  border-radius: 8px;
-  padding: 1.5rem;
-  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.1);
-}
-
-.cardHeader {
-  display: flex;
-  justify-content: space-between;
+.errorMessage {
+  background: rgba(220, 38, 38, 0.14);
+  border: 1px solid rgba(220, 38, 38, 0.45);
+  border-radius: 6px;
+  color: #fecaca;
   margin-bottom: 1rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
+  padding: 0.85rem 1rem;
 }
 
-.postMeta {
+.emptyState {
   color: var(--stone-grey);
-  font-size: 0.9rem;
+  margin: 0;
 }
 
-.postMeta strong {
-  color: white;
-}
-
-.flagCount {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  background-color: rgba(220, 38, 38, 0.2);
-  color: var(--emergency-red);
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.85rem;
-  font-weight: 600;
-}
-
-.postContent {
-  color: var(--canvas-tan);
-  background-color: rgba(0,0,0,0.2);
-  padding: 1rem;
-  border-radius: 4px;
-  margin-bottom: 1.5rem;
-  border-left: 4px solid var(--stone-grey);
-}
-
-.actions {
-  display: flex;
-  gap: 1rem;
-}
-
-.btnApprove {
-  background-color: var(--pine-green);
-  color: var(--canvas-tan);
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: 600;
-  transition: all 0.2s;
-}
-
-.btnApprove:hover {
-  background-color: var(--pine-green-light);
-}
-
-.btnRemove {
-  background-color: transparent;
-  color: var(--emergency-red);
-  border: 1px solid var(--emergency-red);
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: 600;
-  transition: all 0.2s;
-}
-
-.btnRemove:hover {
-  background-color: var(--emergency-red);
-  color: white;
-}
-
-/* Audit Log */
 .logList {
   display: flex;
   flex-direction: column;
@@ -141,33 +63,87 @@
 
 .logEntry {
   background-color: var(--charcoal-lighter);
-  border: 1px solid rgba(255,255,255,0.05);
-  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-left: 4px solid var(--stone-grey);
+  border-radius: 6px;
+  font-size: 0.92rem;
   padding: 1rem;
-  font-size: 0.9rem;
+}
+
+.warning {
+  border-left-color: var(--lantern-gold);
+}
+
+.error {
+  border-left-color: var(--emergency-red);
+}
+
+.critical {
+  border-left-color: #f87171;
+  box-shadow: 0 0 0 1px rgba(248, 113, 113, 0.14);
 }
 
 .logHeader {
   display: flex;
+  gap: 1rem;
   justify-content: space-between;
   margin-bottom: 0.5rem;
 }
 
-.logModerator {
+.logContext {
   color: var(--pine-green-light);
-  font-weight: 600;
+  font-weight: 700;
+  overflow-wrap: anywhere;
 }
 
 .logDate {
   color: var(--stone-grey);
+  flex: 0 0 auto;
 }
 
 .logAction {
   color: var(--canvas-tan);
+  line-height: 1.5;
 }
 
 .logReason {
   color: var(--stone-grey);
-  font-style: italic;
+  line-height: 1.45;
   margin-top: 0.5rem;
+  overflow-wrap: anywhere;
+}
+
+.logRequest {
+  color: rgba(245, 245, 244, 0.65);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+  font-size: 0.82rem;
+  margin-top: 0.65rem;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 1rem;
+  }
+
+  .header {
+    margin-bottom: 2rem;
+  }
+
+  .header h1 {
+    font-size: 2rem;
+  }
+
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .logHeader {
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .logDate {
+    flex: initial;
+  }
 }

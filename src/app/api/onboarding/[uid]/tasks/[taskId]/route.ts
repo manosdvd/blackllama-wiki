@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { getAdminDb } from '@/lib/firebase/admin';
 import { currentUserHasPermission, verifyRequestUser } from '@/lib/server/auth';
 import { writeAuditLog } from '@/lib/server/audit';
+import { writeServerErrorLog } from '@/lib/server/errorLog';
 import { CURRENT_SEASON_ID } from '@/types/applications';
 import type { OnboardingTaskStatus } from '@/types/onboarding';
 
@@ -96,7 +97,14 @@ export async function PATCH(request: Request, context: Context) {
     const updated = await taskRef.get();
     return NextResponse.json({ taskStatus: { id: updated.id, ...updated.data() } });
   } catch (error) {
-    console.error('Failed to update onboarding task:', error);
+    const params = await context.params.catch(() => ({ uid: 'unknown', taskId: 'unknown' }));
+    await writeServerErrorLog({
+      context: 'onboarding.task.update',
+      message: 'Failed to update onboarding task.',
+      error,
+      request,
+      metadata: { uid: params.uid, taskId: params.taskId },
+    });
     return NextResponse.json({ error: 'Failed to update onboarding task.' }, { status: 500 });
   }
 }

@@ -12,6 +12,12 @@ const withPWA = withPWAInit({
 
 const nextConfig: NextConfig = {
   turbopack: {},
+  logging: {
+    browserToTerminal: 'warn',
+    fetches: {
+      fullUrl: true,
+    },
+  },
   ...(process.env.NODE_ENV === 'production'
     ? { transpilePackages: ['firebase-admin', 'jwks-rsa', 'jose'] }
     : {}),
