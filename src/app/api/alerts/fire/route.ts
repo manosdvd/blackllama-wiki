@@ -49,6 +49,7 @@ export interface FireAggregatorResponse {
 const CAMP_LAT = 32.39806;
 const CAMP_LON = -110.725;
 const WILDCAD_ALERT_RADIUS_MILES = 10;
+const WILDCAD_LOCATION = 'MT BIGALOW';
 // Santa Catalina Mountains FIRMS bounding box: west,south,east,north
 const FIRMS_BBOX = '-111.05,32.20,-110.45,32.65';
 // WFIGS ArcGIS bounding box for spatial query (xmin,ymin,xmax,ymax)
@@ -497,7 +498,10 @@ async function fetchAirNow(airNowKey: string): Promise<{ items: FireAlertItem[];
 
 async function fetchWildCAD(): Promise<{ items: FireAlertItem[]; health: SourceHealthStatus }> {
   try {
-    const res = await fetch('https://snknmqmon6.execute-api.us-west-2.amazonaws.com/centers/AZTDC/incidents', {
+    const wildCadUrl = new URL('https://snknmqmon6.execute-api.us-west-2.amazonaws.com/centers/AZTDC/incidents');
+    wildCadUrl.searchParams.set('loc', WILDCAD_LOCATION);
+
+    const res = await fetch(wildCadUrl, {
       next: { revalidate: 300 }
     });
     if (!res.ok) return { items: [], health: 'degraded' };
