@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import styles from './AlertsHUD.module.css';
 import {
   AlertTriangle, Flame, CloudLightning, Info,
-  Wind, Droplets, ThermometerSun, MapPin, CheckCircle, Satellite,
+  Wind, Droplets, ThermometerSun, MapPin, CheckCircle,
   Trees, Activity, ChevronLeft, ChevronRight, Clock, Radio,
 } from 'lucide-react';
 import type {
@@ -16,35 +16,42 @@ import type {
   WeatherSnapshot,
 } from '@/app/api/alerts/fire/route';
 
-const SOURCE_HEALTH_ORDER: FireAlertSource[] = ['NWS', 'USFS', 'FIRMS', 'WFIGS', 'PIMA_GIS', 'AIRNOW', 'WILDCAD', 'FIREPING'];
+const SOURCE_HEALTH_ORDER: FireAlertSource[] = ['NWS', 'USFS', 'WFIGS', 'PIMA_GIS', 'WILDCAD'];
 
 const SOURCE_LABELS: Record<FireAlertSource, string> = {
   NWS: 'NWS',
   USFS: 'USFS',
-  FIRMS: 'FIRMS',
   WFIGS: 'WFIGS',
   NOAA_HMS: 'HMS',
-  AIRNOW: 'AirNow',
   WILDCAD: 'WildCAD',
-  FIREPING: 'FirePing',
   PIMA_GIS: 'PimaGIS',
 };
 
 const SOURCE_FALLBACK_URLS: Record<FireAlertSource, string> = {
   NWS: 'https://forecast.weather.gov/MapClick.php?lat=32.39806&lon=-110.725',
   USFS: 'https://www.fs.usda.gov/r03/coronado/alerts',
-  FIRMS: 'https://firms.modaps.eosdis.nasa.gov/map/#d:24hrs;@-110.725,32.398,12z',
   WFIGS: 'https://data-nifc.opendata.arcgis.com/datasets/nifc::wfigs-interagency-fire-perimeters/about',
   NOAA_HMS: 'https://www.ospo.noaa.gov/products/land/hms.html',
-  AIRNOW: 'https://www.airnow.gov/',
   WILDCAD: 'https://www.wildwebe.net/?dc_name=AZTDC',
-  FIREPING: 'https://www.ospo.noaa.gov/products/land/fire.html',
   PIMA_GIS: 'https://gisopendata.pima.gov/datasets/pima-county-cwpp-fire-perimeters/about',
 };
 
 function alertTimestamp(alert: FireAlertItem) {
   const parsed = Date.parse(alert.observedAt || alert.updatedAt || '');
   return Number.isNaN(parsed) ? 0 : parsed;
+}
+
+function isCurrentAlertSource(source: string): source is FireAlertSource {
+  return Object.prototype.hasOwnProperty.call(SOURCE_LABELS, source);
+}
+
+function sanitizeFireData(data: FireAggregatorResponse): FireAggregatorResponse {
+  return {
+    ...data,
+    alerts: Array.isArray(data.alerts)
+      ? data.alerts.filter(alert => isCurrentAlertSource(String(alert.source)))
+      : [],
+  };
 }
 
 export default function AlertsHUD() {
@@ -70,7 +77,7 @@ export default function AlertsHUD() {
     const cached = localStorage.getItem('fireAlertCache');
     if (cached) {
       try {
-        const parsed = JSON.parse(cached) as FireAggregatorResponse;
+        const parsed = sanitizeFireData(JSON.parse(cached) as FireAggregatorResponse);
         setTimeout(() => {
           setData(parsed);
           setIsLoading(false);
@@ -86,7 +93,7 @@ export default function AlertsHUD() {
     try {
       const res = await fetch('/api/alerts/fire');
       if (!res.ok) throw new Error(`Fire API returned ${res.status}`);
-      const fresh = (await res.json()) as FireAggregatorResponse;
+      const fresh = sanitizeFireData((await res.json()) as FireAggregatorResponse);
       setData(fresh);
       setIsLoading(false);
       localStorage.setItem('fireAlertCache', JSON.stringify(fresh));
@@ -126,11 +133,8 @@ export default function AlertsHUD() {
   // ─── Render helpers ──────────────────────────────────────────────────────
 
   const getIcon = (level: FireAlertLevel, source?: FireAlertSource) => {
-    if (source === 'FIRMS') return <Satellite className={styles.icon} />;
-    if (source === 'FIREPING') return <Satellite className={styles.icon} />;
     if (source === 'WFIGS') return <Flame className={`${styles.icon} ${styles.warnIcon}`} />;
     if (source === 'PIMA_GIS') return <MapPin className={styles.icon} />;
-    if (source === 'AIRNOW') return <Wind className={styles.icon} />;
     if (source === 'USFS') return <Trees className={styles.icon} />;
     if (source === 'WILDCAD') return <Radio className={styles.icon} />;
     switch (level) {
@@ -149,10 +153,8 @@ export default function AlertsHUD() {
       ok: styles.dotOk,
       degraded: styles.dotDegraded,
       error: styles.dotError,
-      'missing-key': styles.dotMissing,
-      'auth-error': styles.dotError,
     }[normalizedStatus] || styles.dotMissing;
-    const label = { ok: 'OK', degraded: 'Delayed', error: 'Error', 'missing-key': 'No Key', 'auth-error': 'Auth' }[normalizedStatus];
+    const label = { ok: 'OK', degraded: 'Delayed', error: 'Error' }[normalizedStatus];
     return (
       <span className={styles.healthDotWrapper}>
         <span className={`${styles.healthDot} ${cls}`} aria-hidden="true" title={label} />

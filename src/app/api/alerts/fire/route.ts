@@ -5,8 +5,8 @@ import { writeServerErrorLog } from '@/lib/server/errorLog';
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 export type FireAlertLevel = 'normal' | 'info' | 'watch' | 'warning' | 'critical' | 'evacuation';
-export type FireAlertSource = 'NWS' | 'USFS' | 'FIRMS' | 'WFIGS' | 'NOAA_HMS' | 'AIRNOW' | 'WILDCAD' | 'FIREPING' | 'PIMA_GIS';
-export type SourceHealthStatus = 'ok' | 'degraded' | 'error' | 'missing-key' | 'auth-error';
+export type FireAlertSource = 'NWS' | 'USFS' | 'WFIGS' | 'NOAA_HMS' | 'WILDCAD' | 'PIMA_GIS';
+export type SourceHealthStatus = 'ok' | 'degraded' | 'error';
 export type Confidence = 'official' | 'high' | 'medium' | 'low';
 export type Actionability = 'monitor' | 'review-plan' | 'contact-leadership' | 'follow-official-orders';
 
@@ -54,10 +54,9 @@ const NWS_SCOUT_CAMP_STATION = 'QSLA3';
 const PIMA_GIS_ALERT_RADIUS_METERS = 8046.72; // 5 miles
 const PIMA_GIS_FIRE_PERIMETERS_URL = 'https://services2.arcgis.com/UTBp78iglGpbqp1B/arcgis/rest/services/Pima_County_CWPP_Fire_Perimeters/FeatureServer/279/query';
 const PIMA_GIS_SOURCE_URL = 'https://gisopendata.pima.gov/datasets/pima-county-cwpp-fire-perimeters/about';
-// Santa Catalina Mountains FIRMS bounding box: west,south,east,north
-const FIRMS_BBOX = '-111.05,32.20,-110.45,32.65';
 // WFIGS ArcGIS bounding box for spatial query (xmin,ymin,xmax,ymax)
 const WFIGS_BBOX = '-111.05,32.20,-110.45,32.65';
+const ACTIVE_FIRE_ALERT_SOURCES: FireAlertSource[] = ['NWS', 'USFS', 'WFIGS', 'NOAA_HMS', 'WILDCAD', 'PIMA_GIS'];
 
 const NWS_HEADERS = {
   'User-Agent': 'CampLawtonStaffHub/1.0 (contact@camplawton.org)',
@@ -93,12 +92,36 @@ function kmToMiles(km: number): number {
   return km * 0.621371;
 }
 
-function envValue(...names: string[]) {
-  for (const name of names) {
-    const value = process.env[name]?.trim();
-    if (value) return value;
+function isActiveFireAlertSource(source: string): source is FireAlertSource {
+  return ACTIVE_FIRE_ALERT_SOURCES.includes(source as FireAlertSource);
+}
+
+function defaultSourceHealth(): Record<FireAlertSource, SourceHealthStatus> {
+  return {
+    NWS: 'ok',
+    USFS: 'ok',
+    WFIGS: 'ok',
+    NOAA_HMS: 'ok',
+    WILDCAD: 'ok',
+    PIMA_GIS: 'ok',
+  };
+}
+
+function sanitizeCachedAlerts(alerts?: FireAlertItem[]) {
+  return Array.isArray(alerts)
+    ? alerts.filter(alert => isActiveFireAlertSource(String(alert.source)))
+    : [];
+}
+
+function sanitizeCachedSourceHealth(health?: Record<string, unknown>) {
+  const sourceHealth = defaultSourceHealth();
+  for (const source of ACTIVE_FIRE_ALERT_SOURCES) {
+    const status = health?.[source];
+    if (status === 'ok' || status === 'degraded' || status === 'error') {
+      sourceHealth[source] = status;
+    }
   }
-  return undefined;
+  return sourceHealth;
 }
 
 function classifyNWSAlert(event: string, severity: string): FireAlertLevel {
@@ -426,93 +449,6 @@ async function fetchUSFSAlerts(): Promise<{ items: FireAlertItem[]; health: Sour
   }
 }
 
-interface FirmsRow {
-  latitude: string;
-  longitude: string;
-  bright_ti4?: string;
-  bright_t31?: string;
-  frp?: string;
-  confidence?: string;
-  acq_date?: string;
-  acq_time?: string;
-}
-
-function parseFirmsCSV(csv: string): FirmsRow[] {
-  const lines = csv.trim().split('\n');
-  if (lines.length < 2) return [];
-  const headers = lines[0].split(',').map(h => h.trim());
-  return lines.slice(1).map(line => {
-    const values = line.split(',');
-    const row: Record<string, string> = {};
-    headers.forEach((h, i) => { row[h] = values[i]?.trim() ?? ''; });
-    return row as unknown as FirmsRow;
-  });
-}
-
-async function fetchFIRMS(firmsKey: string): Promise<{ items: FireAlertItem[]; health: SourceHealthStatus }> {
-  const sources = ['VIIRS_SNPP_NRT', 'VIIRS_NOAA20_NRT', 'VIIRS_NOAA21_NRT'];
-  const allRows: Array<FirmsRow & { sourceName: string }> = [];
-
-  for (const src of sources) {
-    try {
-      const url = `https://firms.modaps.eosdis.nasa.gov/api/area/csv/${firmsKey}/${src}/${FIRMS_BBOX}/1`;
-      const res = await fetch(url, { next: { revalidate: 300 } });
-      if (res.ok) {
-        const text = await res.text();
-        if (!text.includes('Invalid') && !text.includes('error')) {
-          const rows = parseFirmsCSV(text);
-          rows.forEach(r => allRows.push({ ...r, sourceName: src }));
-        }
-      }
-    } catch {
-      // skip source
-    }
-  }
-
-  if (allRows.length === 0) {
-    return { items: [], health: 'ok' };
-  }
-
-  // Cluster nearby detections — deduplicate within ~5km
-  const clustered: typeof allRows = [];
-  for (const row of allRows) {
-    const lat = parseFloat(row.latitude);
-    const lon = parseFloat(row.longitude);
-    if (isNaN(lat) || isNaN(lon)) continue;
-    const isDuplicate = clustered.some(r => {
-      const d = haversineKm(lat, lon, parseFloat(r.latitude), parseFloat(r.longitude));
-      return d < 5;
-    });
-    if (!isDuplicate) clustered.push(row);
-  }
-
-  const items: FireAlertItem[] = clustered.map((row, i) => {
-    const lat = parseFloat(row.latitude);
-    const lon = parseFloat(row.longitude);
-    const distKm = haversineKm(lat, lon, CAMP_LAT, CAMP_LON);
-    const distMiles = kmToMiles(distKm);
-
-    const level: FireAlertLevel = distMiles < 5 ? 'critical'
-      : distMiles < 15 ? 'warning'
-      : 'watch';
-
-    return {
-      id: `firms-${i}-${row.acq_date}-${row.acq_time}`,
-      level,
-      source: 'FIRMS' as FireAlertSource,
-      title: `Satellite Heat Detection${distMiles < 99 ? ` (~${Math.round(distMiles)} mi from camp)` : ''}`,
-      message: `Satellite sensor detected a heat signature in the Santa Catalina Mountains area. This is a pixel-level detection, not a confirmed fire location. Distance from camp: ~${Math.round(distMiles)} miles. Source: ${row.sourceName}.`,
-      observedAt: row.acq_date ? `${row.acq_date}T${row.acq_time?.slice(0, 2) ?? '00'}:${row.acq_time?.slice(2) ?? '00'}:00Z` : undefined,
-      updatedAt: new Date().toISOString(),
-      distanceMilesFromCamp: Math.round(distMiles),
-      confidence: 'medium' as Confidence,
-      actionability: level === 'critical' ? 'contact-leadership' : level === 'warning' ? 'review-plan' : 'monitor',
-    };
-  });
-
-  return { items, health: 'ok' };
-}
-
 interface WFIGSFeature {
   attributes: {
     poly_IncidentName?: string;
@@ -649,52 +585,6 @@ async function fetchPimaGIS(): Promise<{ items: FireAlertItem[]; health: SourceH
   }
 }
 
-async function fetchAirNow(airNowKey: string): Promise<{ items: FireAlertItem[]; health: SourceHealthStatus }> {
-  try {
-    const url = `https://www.airnowapi.org/aq/observation/zipCode/current/?format=application/json&zipCode=85619&distance=50&API_KEY=${airNowKey}`;
-    const res = await fetch(url, { next: { revalidate: 300 } });
-    if (!res.ok) {
-      console.warn(`AirNow fetch returned ${res.status} ${res.statusText}`);
-      if (res.status === 401 || res.status === 403) return { items: [], health: 'auth-error' };
-      return { items: [], health: 'degraded' };
-    }
-    const data = await res.json();
-
-    if (!Array.isArray(data) || data.length === 0) return { items: [], health: 'ok' };
-
-    // Find worst AQI reading
-    const worst = data.reduce((prev: { AQI: number }, curr: { AQI: number }) => curr.AQI > prev.AQI ? curr : prev);
-    const aqi = worst.AQI;
-    const category = worst.Category?.Name || 'Unknown';
-    const pollutant = worst.ParameterName || 'PM2.5';
-
-    let level: FireAlertLevel = 'info';
-    if (aqi >= 301) level = 'critical';
-    else if (aqi >= 201) level = 'warning';
-    else if (aqi >= 151) level = 'warning';
-    else if (aqi >= 101) level = 'watch';
-    else if (aqi >= 51) level = 'info';
-
-    if (level === 'info') return { items: [], health: 'ok' }; // Don't emit good/moderate AQI as an alert
-
-    const item: FireAlertItem = {
-      id: `airnow-${Date.now()}`,
-      level,
-      source: 'AIRNOW' as FireAlertSource,
-      title: `Air Quality: ${category} (AQI ${aqi})`,
-      message: `${pollutant} AQI is ${aqi} (${category}) near camp. ${aqi >= 151 ? 'Limit outdoor activity. Smoke may be affecting air quality.' : 'Air quality is elevated — monitor conditions.'}`,
-      updatedAt: new Date().toISOString(),
-      confidence: 'high' as Confidence,
-      actionability: aqi >= 201 ? 'contact-leadership' : 'review-plan',
-      url: 'https://www.airnow.gov/',
-    };
-
-    return { items: [item], health: 'ok' };
-  } catch {
-    return { items: [], health: 'error' };
-  }
-}
-
 // ─── WildCAD Dispatch (Tucson Interagency Dispatch - AZTDC) ──────────────────
 
 async function fetchWildCAD(): Promise<{ items: FireAlertItem[]; health: SourceHealthStatus }> {
@@ -825,117 +715,9 @@ async function fetchWildCAD(): Promise<{ items: FireAlertItem[]; health: SourceH
   }
 }
 
-// ─── FirePing / GOES-style Fire Detection Feed ──────────────────────────────
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
-}
-
-function stringField(record: Record<string, unknown>, keys: string[]) {
-  for (const key of keys) {
-    const value = record[key];
-    if (typeof value === 'string' && value.trim()) return value.trim();
-    if (typeof value === 'number' && Number.isFinite(value)) return String(value);
-  }
-  return undefined;
-}
-
-function numberField(record: Record<string, unknown>, keys: string[]) {
-  for (const key of keys) {
-    const value = record[key];
-    if (typeof value === 'number' && Number.isFinite(value)) return value;
-    if (typeof value === 'string') {
-      const parsed = Number(value);
-      if (Number.isFinite(parsed)) return parsed;
-    }
-  }
-  return undefined;
-}
-
-function firepingRowsFromPayload(payload: unknown): Record<string, unknown>[] {
-  if (Array.isArray(payload)) return payload.filter(isRecord);
-  if (!isRecord(payload)) return [];
-
-  const candidates = [
-    payload.items,
-    payload.results,
-    payload.detections,
-    payload.features,
-    payload.data,
-  ];
-
-  for (const candidate of candidates) {
-    if (Array.isArray(candidate)) return candidate.filter(isRecord);
-  }
-
-  return [];
-}
-
-async function fetchFireping(firepingKey: string): Promise<{ items: FireAlertItem[]; health: SourceHealthStatus }> {
-  const endpoint = envValue('FIREPING_API_URL');
-  if (!endpoint) return { items: [], health: 'degraded' };
-
-  try {
-    const res = await fetch(endpoint, {
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${firepingKey}`,
-        'X-API-Key': firepingKey,
-      },
-      next: { revalidate: 300 },
-    });
-
-    if (res.status === 401 || res.status === 403) return { items: [], health: 'auth-error' };
-    if (!res.ok) return { items: [], health: 'degraded' };
-
-    const payload = await res.json();
-    const rows = firepingRowsFromPayload(payload);
-
-    const items: FireAlertItem[] = rows.flatMap((row, index) => {
-      const attributes = isRecord(row.attributes) ? row.attributes : row;
-      const geometry = isRecord(row.geometry) ? row.geometry : undefined;
-      const lat = numberField(attributes, ['latitude', 'lat', 'y'])
-        ?? (geometry ? numberField(geometry, ['latitude', 'lat', 'y']) : undefined);
-      const lon = numberField(attributes, ['longitude', 'lon', 'lng', 'x'])
-        ?? (geometry ? numberField(geometry, ['longitude', 'lon', 'lng', 'x']) : undefined);
-
-      if (lat === undefined || lon === undefined) return [];
-
-      const distMiles = kmToMiles(haversineKm(lat, lon, CAMP_LAT, CAMP_LON));
-      const level: FireAlertLevel = distMiles < 5 ? 'critical'
-        : distMiles < 15 ? 'warning'
-        : 'watch';
-      const observedAt = stringField(attributes, ['observedAt', 'observed_at', 'timestamp', 'time', 'acq_datetime', 'date']);
-      const confidence = stringField(attributes, ['confidence', 'quality', 'status']) ?? 'satellite';
-
-      return [{
-        id: `fireping-${stringField(attributes, ['id', 'uuid', 'objectid']) ?? `${index}-${Math.round(lat * 1000)}-${Math.round(lon * 1000)}`}`,
-        level,
-        source: 'FIREPING' as FireAlertSource,
-        title: `FirePing Satellite Detection (~${Math.round(distMiles)} mi from camp)`,
-        message: `FirePing reported a satellite fire/heat detection near the Santa Catalina Mountains. Treat as a sensor detection until confirmed by official sources. Confidence: ${confidence}.`,
-        observedAt,
-        updatedAt: new Date().toISOString(),
-        distanceMilesFromCamp: Math.round(distMiles),
-        confidence: 'medium' as Confidence,
-        actionability: level === 'critical' ? 'contact-leadership' : level === 'warning' ? 'review-plan' : 'monitor',
-        url: stringField(attributes, ['url', 'link']),
-      }];
-    });
-
-    return { items: items.slice(0, 8), health: 'ok' };
-  } catch {
-    return { items: [], health: 'error' };
-  }
-}
-
 // ─── Main Route ──────────────────────────────────────────────────────────────
 
 export async function GET(request: Request) {
-  const firmsKey = envValue('FIRMS_MAP_KEY', 'NASA_FIRMS_MAP_KEY', 'FIRMS_API_KEY');
-  const airNowKey = envValue('AIRNOW_API_KEY', 'AIR_NOW_API_KEY');
-  const firepingKey = envValue('FIREPING_API_KEY');
-
   const db = getAdminDb();
   let cachedData: FireAggregatorResponse | null = null;
 
@@ -957,38 +739,22 @@ export async function GET(request: Request) {
   }
 
   try {
-    const sourceHealth: Record<FireAlertSource, SourceHealthStatus> = {
-      NWS: 'ok',
-      USFS: 'ok',
-      FIRMS: firmsKey ? 'ok' : 'missing-key',
-      WFIGS: 'ok',
-      NOAA_HMS: 'ok',
-      AIRNOW: airNowKey ? 'ok' : 'missing-key',
-      WILDCAD: 'ok',
-      FIREPING: firepingKey ? 'ok' : 'missing-key',
-      PIMA_GIS: 'ok',
-    };
+    const sourceHealth = defaultSourceHealth();
 
     // Run all fetches in parallel — none block each other
     const [
       nwsAlerts,
       nwsWeather,
       usfsAlerts,
-      firmsResult,
       wfigsResult,
-      airNowResult,
       wildCadResult,
-      firepingResult,
       pimaGisResult,
     ] = await Promise.allSettled([
       fetchNWSAlerts(),
       fetchNWSWeather(),
       fetchUSFSAlerts(),
-      firmsKey ? fetchFIRMS(firmsKey) : Promise.resolve({ items: [], health: 'missing-key' as SourceHealthStatus }),
       fetchWFIGS(),
-      airNowKey ? fetchAirNow(airNowKey) : Promise.resolve({ items: [], health: 'missing-key' as SourceHealthStatus }),
       fetchWildCAD(),
-      firepingKey ? fetchFireping(firepingKey) : Promise.resolve({ items: [], health: 'missing-key' as SourceHealthStatus }),
       fetchPimaGIS(),
     ]);
 
@@ -998,20 +764,14 @@ export async function GET(request: Request) {
     const nwsAlertsData = resolve(nwsAlerts, { items: [], health: 'error' as SourceHealthStatus });
     const nwsWeatherData = resolve(nwsWeather, { weather: null, health: 'error' as SourceHealthStatus });
     const usfsData = resolve(usfsAlerts, { items: [], health: 'error' as SourceHealthStatus });
-    const firmsData = resolve(firmsResult, { items: [], health: firmsKey ? 'error' : 'missing-key' } as { items: FireAlertItem[]; health: SourceHealthStatus });
     const wfigsData = resolve(wfigsResult, { items: [], health: 'error' as SourceHealthStatus });
-    const airNowData = resolve(airNowResult, { items: [], health: airNowKey ? 'error' : 'missing-key' } as { items: FireAlertItem[]; health: SourceHealthStatus });
     const wildCadData = resolve(wildCadResult, { items: [], health: 'error' as SourceHealthStatus });
-    const firepingData = resolve(firepingResult, { items: [], health: firepingKey ? 'error' : 'missing-key' } as { items: FireAlertItem[]; health: SourceHealthStatus });
     const pimaGisData = resolve(pimaGisResult, { items: [], health: 'error' as SourceHealthStatus });
 
     sourceHealth.NWS = nwsAlertsData.health;
     sourceHealth.USFS = usfsData.health;
-    sourceHealth.FIRMS = firmsData.health;
     sourceHealth.WFIGS = wfigsData.health;
-    sourceHealth.AIRNOW = airNowData.health;
     sourceHealth.WILDCAD = wildCadData.health;
-    sourceHealth.FIREPING = firepingData.health;
     sourceHealth.PIMA_GIS = pimaGisData.health;
 
     // 2. Fallback merging for failed sources
@@ -1035,28 +795,10 @@ export async function GET(request: Request) {
       finalAlerts.push(...cachedData.alerts.filter(a => a.source === 'WFIGS'));
     }
 
-    if (firmsData.health !== 'error') {
-      finalAlerts.push(...firmsData.items);
-    } else if (cachedData && Array.isArray(cachedData.alerts)) {
-      finalAlerts.push(...cachedData.alerts.filter(a => a.source === 'FIRMS'));
-    }
-
-    if (airNowData.health !== 'error') {
-      finalAlerts.push(...airNowData.items);
-    } else if (cachedData && Array.isArray(cachedData.alerts)) {
-      finalAlerts.push(...cachedData.alerts.filter(a => a.source === 'AIRNOW'));
-    }
-
     if (wildCadData.health !== 'error') {
       finalAlerts.push(...wildCadData.items);
     } else if (cachedData && Array.isArray(cachedData.alerts)) {
       finalAlerts.push(...cachedData.alerts.filter(a => a.source === 'WILDCAD'));
-    }
-
-    if (firepingData.health !== 'error') {
-      finalAlerts.push(...firepingData.items);
-    } else if (cachedData && Array.isArray(cachedData.alerts)) {
-      finalAlerts.push(...cachedData.alerts.filter(a => a.source === 'FIREPING'));
     }
 
     if (pimaGisData.health !== 'error') {
@@ -1120,8 +862,12 @@ export async function GET(request: Request) {
       metadata: { hasCachedData: !!cachedData },
     });
     if (cachedData) {
+      const alerts = sanitizeCachedAlerts(cachedData.alerts);
       return NextResponse.json({
         ...cachedData,
+        alerts,
+        overallLevel: highestLevel(alerts.map(a => a.level)),
+        sourceHealth: sanitizeCachedSourceHealth(cachedData.sourceHealth),
         lastChecked: cachedData.lastChecked || new Date().toISOString(),
         warning: "Serving cached data from Firestore due to server-side error"
       });
