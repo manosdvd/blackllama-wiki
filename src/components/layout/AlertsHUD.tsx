@@ -16,7 +16,7 @@ import type {
   WeatherSnapshot,
 } from '@/app/api/alerts/fire/route';
 
-const SOURCE_HEALTH_ORDER: FireAlertSource[] = ['NWS', 'USFS', 'FIRMS', 'WFIGS', 'AIRNOW', 'WILDCAD', 'FIREPING', 'OWM_FWI'];
+const SOURCE_HEALTH_ORDER: FireAlertSource[] = ['NWS', 'USFS', 'FIRMS', 'WFIGS', 'AIRNOW', 'WILDCAD', 'FIREPING'];
 
 const SOURCE_LABELS: Record<FireAlertSource, string> = {
   NWS: 'NWS',
@@ -27,7 +27,6 @@ const SOURCE_LABELS: Record<FireAlertSource, string> = {
   AIRNOW: 'AirNow',
   WILDCAD: 'WildCAD',
   FIREPING: 'FirePing',
-  OWM_FWI: 'FWI',
 };
 
 export default function AlertsHUD() {
@@ -114,7 +113,6 @@ export default function AlertsHUD() {
     if (source === 'AIRNOW') return <Wind className={styles.icon} />;
     if (source === 'USFS') return <Trees className={styles.icon} />;
     if (source === 'WILDCAD') return <Radio className={styles.icon} />;
-    if (source === 'OWM_FWI') return <ThermometerSun className={styles.icon} />;
     switch (level) {
       case 'evacuation':
       case 'critical': return <AlertTriangle className={styles.icon} />;

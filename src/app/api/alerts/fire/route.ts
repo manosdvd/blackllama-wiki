@@ -620,9 +620,112 @@ async function fetchWildCAD(): Promise<{ items: FireAlertItem[]; health: SourceH
   }
 }
 
+// ─── FirePing / GOES-style Fire Detection Feed ──────────────────────────────
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function stringField(record: Record<string, unknown>, keys: string[]) {
+  for (const key of keys) {
+    const value = record[key];
+    if (typeof value === 'string' && value.trim()) return value.trim();
+    if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+  }
+  return undefined;
+}
+
+function numberField(record: Record<string, unknown>, keys: string[]) {
+  for (const key of keys) {
+    const value = record[key];
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+    if (typeof value === 'string') {
+      const parsed = Number(value);
+      if (Number.isFinite(parsed)) return parsed;
+    }
+  }
+  return undefined;
+}
+
+function firepingRowsFromPayload(payload: unknown): Record<string, unknown>[] {
+  if (Array.isArray(payload)) return payload.filter(isRecord);
+  if (!isRecord(payload)) return [];
+
+  const candidates = [
+    payload.items,
+    payload.results,
+    payload.detections,
+    payload.features,
+    payload.data,
+  ];
+
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate)) return candidate.filter(isRecord);
+  }
+
+  return [];
+}
+
+async function fetchFireping(firepingKey: string): Promise<{ items: FireAlertItem[]; health: SourceHealthStatus }> {
+  const endpoint = envValue('FIREPING_API_URL');
+  if (!endpoint) return { items: [], health: 'degraded' };
+
+  try {
+    const res = await fetch(endpoint, {
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${firepingKey}`,
+        'X-API-Key': firepingKey,
+      },
+      next: { revalidate: 300 },
+    });
+
+    if (res.status === 401 || res.status === 403) return { items: [], health: 'auth-error' };
+    if (!res.ok) return { items: [], health: 'degraded' };
+
+    const payload = await res.json();
+    const rows = firepingRowsFromPayload(payload);
+
+    const items: FireAlertItem[] = rows.flatMap((row, index) => {
+      const attributes = isRecord(row.attributes) ? row.attributes : row;
+      const geometry = isRecord(row.geometry) ? row.geometry : undefined;
+      const lat = numberField(attributes, ['latitude', 'lat', 'y'])
+        ?? (geometry ? numberField(geometry, ['latitude', 'lat', 'y']) : undefined);
+      const lon = numberField(attributes, ['longitude', 'lon', 'lng', 'x'])
+        ?? (geometry ? numberField(geometry, ['longitude', 'lon', 'lng', 'x']) : undefined);
+
+      if (lat === undefined || lon === undefined) return [];
+
+      const distMiles = kmToMiles(haversineKm(lat, lon, CAMP_LAT, CAMP_LON));
+      const level: FireAlertLevel = distMiles < 5 ? 'critical'
+        : distMiles < 15 ? 'warning'
+        : 'watch';
+      const observedAt = stringField(attributes, ['observedAt', 'observed_at', 'timestamp', 'time', 'acq_datetime', 'date']);
+      const confidence = stringField(attributes, ['confidence', 'quality', 'status']) ?? 'satellite';
+
+      return [{
+        id: `fireping-${stringField(attributes, ['id', 'uuid', 'objectid']) ?? `${index}-${Math.round(lat * 1000)}-${Math.round(lon * 1000)}`}`,
+        level,
+        source: 'FIREPING' as FireAlertSource,
+        title: `FirePing Satellite Detection (~${Math.round(distMiles)} mi from camp)`,
+        message: `FirePing reported a satellite fire/heat detection near the Santa Catalina Mountains. Treat as a sensor detection until confirmed by official sources. Confidence: ${confidence}.`,
+        observedAt,
+        updatedAt: new Date().toISOString(),
+        distanceMilesFromCamp: Math.round(distMiles),
+        confidence: 'medium' as Confidence,
+        actionability: level === 'critical' ? 'contact-leadership' : level === 'warning' ? 'review-plan' : 'monitor',
+        url: stringField(attributes, ['url', 'link']),
+      }];
+    });
+
+    return { items: items.slice(0, 8), health: 'ok' };
+  } catch {
+    return { items: [], health: 'error' };
+  }
+}
+
 // ─── Main Route ──────────────────────────────────────────────────────────────
 
-// ─── Fireping (GOES satellite fire detections via REST API) ─────────────────
 export async function GET(request: Request) {
   const firmsKey = envValue('FIRMS_MAP_KEY', 'NASA_FIRMS_MAP_KEY', 'FIRMS_API_KEY');
   const airNowKey = envValue('AIRNOW_API_KEY', 'AIR_NOW_API_KEY');
@@ -740,21 +843,8 @@ export async function GET(request: Request) {
       finalAlerts.push(...cachedData.alerts.filter(a => a.source === 'WILDCAD'));
     }
 
-    // Fireping (GOES satellite) — deduplicate against FIRMS (VIIRS) detections within 8km
     if (firepingData.health !== 'error') {
-      const firmsItems = firmsData.items.length > 0
-        ? firmsData.items
-        : (cachedData?.alerts?.filter(a => a.source === 'FIRMS') ?? []);
-
-      const deduped = firepingData.items.filter(fp => {
-        const fpLat = CAMP_LAT + (fp.distanceMilesFromCamp ?? 0) * 0; // lat/lon not stored directly
-        // Use all FIREPING items — true dedup would need lat/lon stored in FireAlertItem
-        // For now, if FIRMS already has items within the same general area, we still show
-        // FIREPING as it's a different sensor (GOES geostationary vs VIIRS polar orbit)
-        void firmsItems;
-        return true;
-      });
-      finalAlerts.push(...deduped);
+      finalAlerts.push(...firepingData.items);
     } else if (cachedData && Array.isArray(cachedData.alerts)) {
       finalAlerts.push(...cachedData.alerts.filter(a => a.source === 'FIREPING'));
     }

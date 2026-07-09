@@ -6,6 +6,7 @@ import {
   BookOpen, FileText, MessageSquare, Phone, ArrowRight, Clock, ShieldCheck, Flame, Music
 } from 'lucide-react';
 import { useAuth } from '@/components/auth/AuthContext';
+import WildlifeWatch from '@/components/wildlife/WildlifeWatch';
 import type { ContentItem } from '@/types/content';
 import styles from './page.module.css';
 
@@ -208,6 +209,15 @@ export default function Home() {
 
         {/* Sidebar Column */}
         <div className={styles.sideColumn}>
+          <section className={styles.card}>
+            <div className={styles.cardHeader}>
+              <h3>WILDLIFE WATCH</h3>
+            </div>
+            <div className={styles.cardBody}>
+              <WildlifeWatch />
+            </div>
+          </section>
+
           {/* Featured Culture & Songbook Preview */}
           <section className={styles.card}>
             <div className={styles.cardHeader}>
