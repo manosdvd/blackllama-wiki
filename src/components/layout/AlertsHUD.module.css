@@ -193,6 +193,11 @@
   background: rgba(255,255,255,0.025);
 }
 
+.activeAlert {
+  border-color: rgba(245, 196, 83, 0.35);
+  background: rgba(245, 196, 83, 0.055);
+}
+
 .mobileAlertArrow,
 .mobileAlertCounter {
   display: none;
@@ -416,6 +421,25 @@
   display: flex;
   align-items: center;
   gap: 4px;
+  padding: 0.15rem 0.25rem;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+.sourceHealthItem:hover,
+.sourceHealthItem:focus-visible {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.12);
+  outline: none;
+}
+
+.sourceHealthHasAlert {
+  border-color: rgba(245, 196, 83, 0.16);
 }
 
 .sourceHealthLabel {

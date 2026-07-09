@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import styles from './AlertsHUD.module.css';
 import {
   AlertTriangle, Flame, CloudLightning, Info,
@@ -16,7 +16,7 @@ import type {
   WeatherSnapshot,
 } from '@/app/api/alerts/fire/route';
 
-const SOURCE_HEALTH_ORDER: FireAlertSource[] = ['NWS', 'USFS', 'FIRMS', 'WFIGS', 'AIRNOW', 'WILDCAD', 'FIREPING'];
+const SOURCE_HEALTH_ORDER: FireAlertSource[] = ['NWS', 'USFS', 'FIRMS', 'WFIGS', 'PIMA_GIS', 'AIRNOW', 'WILDCAD', 'FIREPING'];
 
 const SOURCE_LABELS: Record<FireAlertSource, string> = {
   NWS: 'NWS',
@@ -27,7 +27,25 @@ const SOURCE_LABELS: Record<FireAlertSource, string> = {
   AIRNOW: 'AirNow',
   WILDCAD: 'WildCAD',
   FIREPING: 'FirePing',
+  PIMA_GIS: 'PimaGIS',
 };
+
+const SOURCE_FALLBACK_URLS: Record<FireAlertSource, string> = {
+  NWS: 'https://forecast.weather.gov/MapClick.php?lat=32.39806&lon=-110.725',
+  USFS: 'https://www.fs.usda.gov/r03/coronado/alerts',
+  FIRMS: 'https://firms.modaps.eosdis.nasa.gov/map/#d:24hrs;@-110.725,32.398,12z',
+  WFIGS: 'https://data-nifc.opendata.arcgis.com/datasets/nifc::wfigs-interagency-fire-perimeters/about',
+  NOAA_HMS: 'https://www.ospo.noaa.gov/products/land/hms.html',
+  AIRNOW: 'https://www.airnow.gov/',
+  WILDCAD: 'https://www.wildwebe.net/?dc_name=AZTDC',
+  FIREPING: 'https://www.ospo.noaa.gov/products/land/fire.html',
+  PIMA_GIS: 'https://gisopendata.pima.gov/datasets/pima-county-cwpp-fire-perimeters/about',
+};
+
+function alertTimestamp(alert: FireAlertItem) {
+  const parsed = Date.parse(alert.observedAt || alert.updatedAt || '');
+  return Number.isNaN(parsed) ? 0 : parsed;
+}
 
 export default function AlertsHUD() {
   const [data, setData] = useState<FireAggregatorResponse | null>(null);
@@ -35,6 +53,7 @@ export default function AlertsHUD() {
   const [isLoading, setIsLoading] = useState(true);
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
   const [isDetailsExpanded, setIsDetailsExpanded] = useState(false);
+  const alertRefs = useRef<Record<string, HTMLElement | null>>({});
 
   // 1. Live clock — client-only to avoid hydration mismatch
   useEffect(() => {
@@ -110,6 +129,7 @@ export default function AlertsHUD() {
     if (source === 'FIRMS') return <Satellite className={styles.icon} />;
     if (source === 'FIREPING') return <Satellite className={styles.icon} />;
     if (source === 'WFIGS') return <Flame className={`${styles.icon} ${styles.warnIcon}`} />;
+    if (source === 'PIMA_GIS') return <MapPin className={styles.icon} />;
     if (source === 'AIRNOW') return <Wind className={styles.icon} />;
     if (source === 'USFS') return <Trees className={styles.icon} />;
     if (source === 'WILDCAD') return <Radio className={styles.icon} />;
@@ -123,15 +143,16 @@ export default function AlertsHUD() {
     }
   };
 
-  const healthDot = (status: SourceHealthStatus) => {
+  const healthDot = (status?: SourceHealthStatus) => {
+    const normalizedStatus = status ?? 'degraded';
     const cls = {
       ok: styles.dotOk,
       degraded: styles.dotDegraded,
       error: styles.dotError,
       'missing-key': styles.dotMissing,
       'auth-error': styles.dotError,
-    }[status] || styles.dotMissing;
-    const label = { ok: 'OK', degraded: 'Delayed', error: 'Error', 'missing-key': 'No Key', 'auth-error': 'Auth' }[status];
+    }[normalizedStatus] || styles.dotMissing;
+    const label = { ok: 'OK', degraded: 'Delayed', error: 'Error', 'missing-key': 'No Key', 'auth-error': 'Auth' }[normalizedStatus];
     return (
       <span className={styles.healthDotWrapper}>
         <span className={`${styles.healthDot} ${cls}`} aria-hidden="true" title={label} />
@@ -160,6 +181,34 @@ export default function AlertsHUD() {
   const isAllClear = alerts.length === 0;
   const activeAlertIndex = Math.min(currentIndex, Math.max(alerts.length - 1, 0));
   const activeLevel = isAllClear ? 'normal' : alerts[0]?.level || 'info';
+
+  const latestAlertForSource = (source: FireAlertSource) => {
+    return alerts
+      .map((alert, index) => ({ alert, index }))
+      .filter(({ alert }) => alert.source === source)
+      .sort((a, b) => alertTimestamp(b.alert) - alertTimestamp(a.alert))[0];
+  };
+
+  const openFallbackSource = (source: FireAlertSource) => {
+    window.open(SOURCE_FALLBACK_URLS[source], '_blank', 'noopener,noreferrer');
+  };
+
+  const handleSourceHealthClick = (source: FireAlertSource) => {
+    const match = latestAlertForSource(source);
+    if (!match) {
+      openFallbackSource(source);
+      return;
+    }
+
+    setCurrentIndex(match.index);
+    window.setTimeout(() => {
+      alertRefs.current[match.alert.id]?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+        inline: 'center',
+      });
+    }, 0);
+  };
 
   const nextAlert = () => {
     if (alerts.length <= 1) return;
@@ -218,6 +267,7 @@ export default function AlertsHUD() {
           href={alert.url}
           target="_blank"
           rel="noopener noreferrer"
+          ref={(node) => { alertRefs.current[alert.id] = node; }}
           className={cardClass}
         >
           {cardContent}
@@ -226,7 +276,11 @@ export default function AlertsHUD() {
     }
 
     return (
-      <article key={alert.id} className={cardClass}>
+      <article
+        key={alert.id}
+        ref={(node) => { alertRefs.current[alert.id] = node; }}
+        className={cardClass}
+      >
         {cardContent}
       </article>
     );
@@ -349,12 +403,25 @@ export default function AlertsHUD() {
           <Activity size={10} className={styles.sourceHealthIcon} />
         )}
         {isAllClear && <span className={styles.sourceHealthDivider} />}
-        {SOURCE_HEALTH_ORDER.map(src => (
-          <span key={src} className={styles.sourceHealthItem}>
-            {healthDot(data.sourceHealth[src])}
-            <span className={styles.sourceHealthLabel}>{SOURCE_LABELS[src]}</span>
-          </span>
-        ))}
+        {SOURCE_HEALTH_ORDER.map(src => {
+          const matchingAlert = latestAlertForSource(src);
+          const actionLabel = matchingAlert
+            ? `Show latest ${SOURCE_LABELS[src]} alert`
+            : `Open ${SOURCE_LABELS[src]} source page`;
+          return (
+            <button
+              key={src}
+              type="button"
+              className={`${styles.sourceHealthItem} ${matchingAlert ? styles.sourceHealthHasAlert : ''}`}
+              onClick={() => handleSourceHealthClick(src)}
+              aria-label={actionLabel}
+              title={actionLabel}
+            >
+              {healthDot(data.sourceHealth[src])}
+              <span className={styles.sourceHealthLabel}>{SOURCE_LABELS[src]}</span>
+            </button>
+          );
+        })}
         {data.lastChecked && (
           <span className={styles.lastChecked}>
             Checked: {new Date(data.lastChecked).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Phoenix' })}
