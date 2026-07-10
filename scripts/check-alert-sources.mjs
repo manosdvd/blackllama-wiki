@@ -47,7 +47,7 @@ const checks = [
       name: payload?.name ?? null,
       geometryType: payload?.geometryType ?? null,
       maxRecordCount: payload?.maxRecordCount ?? null,
-      fieldNames: Array.isArray(payload?.fields) ? payload.fields.map((field) => field.name).slice(0, 80) : [],
+      fieldNames: Array.isArray(payload?.fields) ? payload.fields.map((field) => field.name).slice(0, 140) : [],
       serviceError: payload?.error ?? null,
     }),
   },
@@ -62,10 +62,16 @@ const checks = [
     }),
   },
   {
-    id: 'WFIGS_CURRENT_QUERY',
-    url: `${WFIGS_LAYER_URL}/query?where=1%3D1&geometry=${encodeURIComponent(WFIGS_BBOX)}&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=poly_IncidentName%2Cattr_FireDiscoveryDateTime%2Cattr_IncidentSize%2Cirwin_ModifiedOnDateTime_dt%2CGISAcres&returnGeometry=false&f=json`,
+    id: 'WFIGS_CORRECTED_QUERY',
+    url: `${WFIGS_LAYER_URL}/query?where=1%3D1&geometry=${encodeURIComponent(WFIGS_BBOX)}&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=poly_IncidentName%2Cpoly_GISAcres%2Cpoly_DeleteThis%2Cpoly_FeatureStatus%2Cpoly_IsVisible%2Cpoly_DateCurrent%2Cpoly_PolygonDateTime%2Cattr_FireDiscoveryDateTime%2Cattr_FireOutDateTime%2Cattr_ContainmentDateTime%2Cattr_PercentContained%2Cattr_IncidentSize%2Cattr_ModifiedOnDateTime_dt&returnGeometry=false&resultRecordCount=50&orderByFields=poly_DateCurrent%20DESC&f=json`,
     validate: (payload) => Array.isArray(payload?.features) && !payload?.error,
-    summarize: arcGisSummary,
+    summarize: (payload) => ({
+      features: Array.isArray(payload?.features) ? payload.features.length : null,
+      samples: Array.isArray(payload?.features)
+        ? payload.features.slice(0, 20).map((feature) => feature.attributes)
+        : [],
+      serviceError: payload?.error ?? null,
+    }),
   },
   {
     id: 'WILDCAD',
