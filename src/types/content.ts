@@ -108,6 +108,7 @@ export interface ContentWritePayload {
   tagIds?: string[];
   visibility: ContentVisibility;
   status: ContentStatus;
+  expectedVersion?: number;
   reviewDueAt?: string | null;
   isPinned?: boolean;
   changeSummary?: string;

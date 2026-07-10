@@ -1,0 +1,150 @@
+.container {
+  margin: 0 auto;
+  max-width: 1000px;
+  padding: 3rem 1rem;
+}
+
+.header {
+  align-items: center;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+}
+
+.header h1 {
+  color: var(--campfire-amber);
+  margin: 0 0 0.4rem;
+}
+
+.header p {
+  color: rgba(245, 245, 244, 0.72);
+  margin: 0;
+}
+
+.forumLink,
+.secondaryButton,
+.primaryButton {
+  border-radius: 5px;
+  display: inline-flex;
+  font: inherit;
+  font-weight: 700;
+  justify-content: center;
+  padding: 0.65rem 1rem;
+  text-decoration: none;
+}
+
+.forumLink,
+.primaryButton {
+  background: var(--pine-green);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: white;
+}
+
+.secondaryButton {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: var(--canvas-tan);
+}
+
+button.secondaryButton,
+button.primaryButton {
+  cursor: pointer;
+}
+
+.secondaryButton:disabled,
+.primaryButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.errorMessage {
+  background: rgba(153, 27, 27, 0.2);
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  border-radius: 8px;
+  color: #fecaca;
+  margin-bottom: 1rem;
+  padding: 1rem;
+}
+
+.emptyState {
+  background: rgba(30, 27, 24, 0.82);
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  color: rgba(245, 245, 244, 0.7);
+  padding: 2rem;
+  text-align: center;
+}
+
+.flagList {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.flagCard {
+  background: rgba(30, 27, 24, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 1.25rem;
+}
+
+.flagMeta {
+  align-items: center;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+}
+
+.flagMeta strong {
+  color: white;
+}
+
+.flagMeta span,
+.reason {
+  color: rgba(245, 245, 244, 0.68);
+}
+
+.postPreview {
+  background: rgba(12, 10, 9, 0.65);
+  border-left: 3px solid var(--lantern-gold);
+  margin: 1rem 0;
+  padding: 1rem;
+}
+
+.postPreview span {
+  color: var(--pine-green-light);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.postPreview p {
+  color: var(--canvas-tan);
+  line-height: 1.5;
+  margin: 0.5rem 0 0;
+  white-space: pre-wrap;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  justify-content: flex-end;
+}
+
+@media (max-width: 700px) {
+  .header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .actions {
+    flex-direction: column;
+  }
+
+  .forumLink,
+  .secondaryButton,
+  .primaryButton {
+    width: 100%;
+  }
+}

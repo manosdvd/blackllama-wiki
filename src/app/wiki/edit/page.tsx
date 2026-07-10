@@ -10,10 +10,9 @@ import { DEFAULT_WIKI_CATEGORIES, type ContentItem, type ContentStatus, type Con
 import EditorOutput from '@/components/wiki/EditorOutput';
 import styles from './page.module.css';
 
-// Editor.js must be imported dynamically with ssr: false
 const Editor = dynamic(() => import('@/components/wiki/Editor'), {
   ssr: false,
-  loading: () => <div className={styles.loadingEditor}>Loading Editor...</div>
+  loading: () => <div className={styles.loadingEditor}>Loading Editor...</div>,
 });
 
 const SELECTABLE_WIKI_CATEGORIES = DEFAULT_WIKI_CATEGORIES.filter((category) => !category.isSuperCategory);
@@ -44,8 +43,6 @@ function WikiEditPageContent() {
   const [isPinned, setIsPinned] = useState(false);
   const [slugTouched, setSlugTouched] = useState(false);
   const [changeSummary, setChangeSummary] = useState('');
-  
-  // State for editor block data and revisions
   const [editorData, setEditorData] = useState<EditorData>(() => ({ time: Date.now(), blocks: [], version: '2.31.6' }));
   const editorDataRef = useRef<EditorData>({ time: 0, blocks: [], version: '2.31.6' });
   const [existingArticle, setExistingArticle] = useState<ContentItem | null>(null);
@@ -53,8 +50,6 @@ function WikiEditPageContent() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-
-  // Revisions and Preview states
   const [revisions, setRevisions] = useState<WikiRevision[]>([]);
   const [loadingRevisions, setLoadingRevisions] = useState(false);
   const [revisionKey, setRevisionKey] = useState(0);
@@ -62,15 +57,14 @@ function WikiEditPageContent() {
 
   const canDraft = hasPermission('canDraftWiki') || hasPermission('canEditWiki') || hasPermission('canPublishWiki');
   const canPublish = hasPermission('canPublishWiki');
+  const canArchive = hasPermission('canArchiveWiki');
+  const publishedArticleRequiresPublisher = existingArticle?.status === 'published' && !canPublish;
+  const canArchiveArticle = Boolean(existingArticle && (canArchive || (existingArticle.createdByUid === user?.uid && existingArticle.status !== 'published')));
 
-  // Trigger login popup automatically on visit if guest
   useEffect(() => {
-    if (!loading && !user) {
-      openAuthModal();
-    }
+    if (!loading && !user) openAuthModal();
   }, [loading, user, openAuthModal]);
 
-  // Load article
   useEffect(() => {
     if (!articleId || loading) return;
 
@@ -106,7 +100,7 @@ function WikiEditPageContent() {
       }
     }
 
-    loadArticle();
+    void loadArticle();
     return () => {
       cancelled = true;
     };
@@ -114,19 +108,19 @@ function WikiEditPageContent() {
 
   useEffect(() => {
     if (!existingArticle) return;
-    const articleId = existingArticle.id;
+    const existingArticleId = existingArticle.id;
     let active = true;
     async function getRevisions() {
       setLoadingRevisions(true);
       try {
         const { db } = await import('@/lib/firebase/client');
         const { collection, getDocs, query: fsQuery, orderBy } = await import('firebase/firestore');
-        const colRef = collection(db, 'contentItems', articleId, 'revisions');
+        const colRef = collection(db, 'contentItems', existingArticleId, 'revisions');
         const q = fsQuery(colRef, orderBy('versionNumber', 'desc'));
         const snap = await getDocs(q);
         const list: WikiRevision[] = [];
-        snap.forEach((doc) => {
-          list.push({ id: doc.id, ...doc.data() } as WikiRevision);
+        snap.forEach((document) => {
+          list.push({ id: document.id, ...document.data() } as WikiRevision);
         });
         if (active) setRevisions(list);
       } catch (err) {
@@ -135,18 +129,14 @@ function WikiEditPageContent() {
         if (active) setLoadingRevisions(false);
       }
     }
-    getRevisions();
+    void getRevisions();
     return () => {
       active = false;
     };
   }, [existingArticle]);
 
   const tagIds = useMemo(
-    () =>
-      tags
-        .split(',')
-        .map((tag) => slugify(tag))
-        .filter(Boolean),
+    () => tags.split(',').map((tag) => slugify(tag)).filter(Boolean),
     [tags],
   );
 
@@ -154,13 +144,26 @@ function WikiEditPageContent() {
     editorDataRef.current = data;
   }, []);
 
+  const refreshRevisions = async (targetId: string) => {
+    const { db } = await import('@/lib/firebase/client');
+    const { collection, getDocs, query: fsQuery, orderBy } = await import('firebase/firestore');
+    const colRef = collection(db, 'contentItems', targetId, 'revisions');
+    const q = fsQuery(colRef, orderBy('versionNumber', 'desc'));
+    const snap = await getDocs(q);
+    const list: WikiRevision[] = [];
+    snap.forEach((document) => {
+      list.push({ id: document.id, ...document.data() } as WikiRevision);
+    });
+    setRevisions(list);
+  };
+
   const saveArticle = async (nextStatus: ContentStatus) => {
     if (!user) {
       setError('Sign in before saving wiki content.');
       return;
     }
-    if (nextStatus === 'published' && !canPublish) {
-      setError('Publishing requires publisher access.');
+    if ((nextStatus === 'published' || existingArticle?.status === 'published') && !canPublish) {
+      setError('Changes to published articles require publisher access.');
       return;
     }
 
@@ -179,6 +182,7 @@ function WikiEditPageContent() {
         tagIds,
         visibility,
         status: nextStatus,
+        expectedVersion: existingArticle?.versionNumber,
         reviewDueAt: reviewDueAt || null,
         isPinned,
         changeSummary: changeSummary.trim() || undefined,
@@ -198,24 +202,10 @@ function WikiEditPageContent() {
       setStatus(data.article.status);
       setChangeSummary('');
       setMessage(nextStatus === 'published' ? 'Article published.' : nextStatus === 'in_review' ? 'Draft submitted for review.' : 'Draft saved.');
-      
-      // Update local revision list to include the newly saved version
-      if (articleId) {
-        const { db } = await import('@/lib/firebase/client');
-        const { collection, getDocs, query: fsQuery, orderBy } = await import('firebase/firestore');
-        const colRef = collection(db, 'contentItems', articleId, 'revisions');
-        const q = fsQuery(colRef, orderBy('versionNumber', 'desc'));
-        const snap = await getDocs(q);
-        const list: WikiRevision[] = [];
-        snap.forEach((doc) => {
-          list.push({ id: doc.id, ...doc.data() } as WikiRevision);
-        });
-        setRevisions(list);
-      }
 
-      if (!articleId) {
-        window.history.replaceState(null, '', `/wiki/edit?id=${data.article.id}`);
-      }
+      const savedId = data.article.id;
+      await refreshRevisions(savedId);
+      if (!articleId) window.history.replaceState(null, '', `/wiki/edit?id=${savedId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -223,11 +213,9 @@ function WikiEditPageContent() {
     }
   };
 
-  const handleDelete = async () => {
-    if (!articleId) return;
-    if (!window.confirm('Are you sure you want to delete this article? This action cannot be undone.')) {
-      return;
-    }
+  const handleArchive = async () => {
+    if (!articleId || !canArchiveArticle) return;
+    if (!window.confirm('Archive this article? It will leave the published wiki, but its complete revision history will be preserved.')) return;
 
     setSaving(true);
     setError(null);
@@ -239,14 +227,13 @@ function WikiEditPageContent() {
         method: 'DELETE',
         headers: token ? { Authorization: `Bearer ${token}` } : undefined,
       });
+      const data = (await response.json()) as { error?: string; message?: string };
+      if (!response.ok) throw new Error(data.error || 'Failed to archive article.');
 
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Failed to delete article.');
-
-      setMessage('Article deleted successfully. Redirecting...');
+      setMessage(data.message || 'Article archived. Redirecting…');
       setTimeout(() => {
         window.location.href = '/wiki';
-      }, 1500);
+      }, 1200);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
       setSaving(false);
@@ -254,29 +241,21 @@ function WikiEditPageContent() {
   };
 
   const togglePreviewMode = () => {
-    if (!isPreviewMode) {
-      setEditorData(editorDataRef.current);
-    }
+    if (!isPreviewMode) setEditorData(editorDataRef.current);
     setIsPreviewMode(!isPreviewMode);
   };
 
-  if (loading || loadingArticle) {
-    return <div className={styles.container}>Loading editor...</div>;
-  }
+  if (loading || loadingArticle) return <div className={styles.container}>Loading editor...</div>;
 
-  if (!canDraft) {
+  if (!canDraft || publishedArticleRequiresPublisher) {
     return (
       <div className={styles.container}>
-        <header className={styles.header}>
-          <h1>Wiki Editor</h1>
-        </header>
+        <header className={styles.header}><h1>Wiki Editor</h1></header>
         <div className={styles.noticePanel}>
-          <p>Wiki editing is available to staff with draft, editor, or publisher access.</p>
-          {!user && (
-            <button className={styles.publishBtn} onClick={openAuthModal}>
-              Sign In / Register
-            </button>
-          )}
+          <p>{publishedArticleRequiresPublisher
+            ? 'This page is already published. Publisher access is required to change live wiki content.'
+            : 'Wiki editing is available to staff with draft, editor, or publisher access.'}</p>
+          {!user && <button className={styles.publishBtn} onClick={openAuthModal}>Sign In / Register</button>}
           <Link href="/wiki" className={styles.secondaryLink}>Back to Wiki</Link>
         </div>
       </div>
@@ -288,46 +267,38 @@ function WikiEditPageContent() {
       <header className={styles.header}>
         <div>
           <h1>{existingArticle ? 'Edit Wiki Article' : 'Create Wiki Article'}</h1>
-          {existingArticle && <p className={styles.subtleMeta}>Current status: {status}</p>}
+          {existingArticle && <p className={styles.subtleMeta}>Current status: {status} · Version {existingArticle.versionNumber}</p>}
         </div>
         <div className={styles.actions}>
-          {existingArticle && (
-            <button className={styles.deleteBtn} onClick={handleDelete} disabled={saving}>
-              Delete
-            </button>
+          {existingArticle && canArchiveArticle && (
+            <button className={styles.deleteBtn} onClick={handleArchive} disabled={saving}>Archive</button>
           )}
-          <button className={styles.saveBtn} onClick={() => saveArticle('draft')} disabled={saving}>Save Draft</button>
-          <button className={styles.saveBtn} onClick={() => saveArticle('in_review')} disabled={saving}>Submit for Review</button>
-          <button className={styles.publishBtn} onClick={() => saveArticle('published')} disabled={saving || !canPublish}>Publish</button>
+          {existingArticle?.status !== 'published' && (
+            <>
+              <button className={styles.saveBtn} onClick={() => saveArticle('draft')} disabled={saving}>Save Draft</button>
+              <button className={styles.saveBtn} onClick={() => saveArticle('in_review')} disabled={saving}>Submit for Review</button>
+            </>
+          )}
+          <button className={styles.publishBtn} onClick={() => saveArticle('published')} disabled={saving || !canPublish}>
+            {existingArticle?.status === 'published' ? 'Publish Update' : 'Publish'}
+          </button>
         </div>
       </header>
 
       {message && <div className={styles.successMessage}>{message}</div>}
       {error && <div className={styles.errorMessage}>{error}</div>}
-      
+
       <div className={styles.editorWrapper}>
         <div className={styles.metadataForm}>
-          <input
-            type="text"
-            placeholder="Article Title"
-            className={styles.titleInput}
-            value={title}
-            onChange={(event) => {
-              const nextTitle = event.target.value;
-              setTitle(nextTitle);
-              if (!slugTouched) setSlug(slugify(nextTitle));
-            }}
-          />
-          <input
-            type="text"
-            placeholder="article-slug"
-            className={styles.slugInput}
-            value={slug}
-            onChange={(event) => {
-              setSlugTouched(true);
-              setSlug(slugify(event.target.value));
-            }}
-          />
+          <input type="text" placeholder="Article Title" className={styles.titleInput} value={title} onChange={(event) => {
+            const nextTitle = event.target.value;
+            setTitle(nextTitle);
+            if (!slugTouched) setSlug(slugify(nextTitle));
+          }} />
+          <input type="text" placeholder="article-slug" className={styles.slugInput} value={slug} onChange={(event) => {
+            setSlugTouched(true);
+            setSlug(slugify(event.target.value));
+          }} />
           <select className={styles.categorySelect} value={categoryId} onChange={(event) => setCategoryId(event.target.value)}>
             {DEFAULT_WIKI_CATEGORIES.map((category) => (
               <option key={category.id} value={category.id} disabled={category.isSuperCategory}>
@@ -340,14 +311,8 @@ function WikiEditPageContent() {
         </div>
 
         <div className={styles.secondaryMetadata}>
-          <label>
-            Summary
-            <textarea value={summary} onChange={(event) => setSummary(event.target.value)} rows={3} />
-          </label>
-          <label>
-            Tags
-            <input value={tags} onChange={(event) => setTags(event.target.value)} placeholder="training, forms, policy" />
-          </label>
+          <label>Summary<textarea value={summary} onChange={(event) => setSummary(event.target.value)} rows={3} /></label>
+          <label>Tags<input value={tags} onChange={(event) => setTags(event.target.value)} placeholder="training, forms, policy" /></label>
           <label>
             Visibility
             <select value={visibility} onChange={(event) => setVisibility(event.target.value as ContentVisibility)}>
@@ -360,24 +325,9 @@ function WikiEditPageContent() {
               <option value="safety_sensitive">Safety sensitive</option>
             </select>
           </label>
-          <label>
-            Review due
-            <input type="date" value={reviewDueAt} onChange={(event) => setReviewDueAt(event.target.value)} />
-          </label>
-          <label className={styles.checkboxLabel}>
-            <input type="checkbox" checked={isPinned} onChange={(event) => setIsPinned(event.target.checked)} />
-            Pin article
-          </label>
-          
-          <label>
-            Change Summary
-            <input
-              type="text"
-              value={changeSummary}
-              onChange={(event) => setChangeSummary(event.target.value)}
-              placeholder="e.g. Fixed typo, updated contact details"
-            />
-          </label>
+          <label>Review due<input type="date" value={reviewDueAt} onChange={(event) => setReviewDueAt(event.target.value)} /></label>
+          <label className={styles.checkboxLabel}><input type="checkbox" checked={isPinned} onChange={(event) => setIsPinned(event.target.checked)} />Pin article</label>
+          <label>Change Summary<input type="text" value={changeSummary} onChange={(event) => setChangeSummary(event.target.value)} placeholder="e.g. Updated contact details" /></label>
 
           {loadingRevisions ? (
             <div className={styles.revisionLoading}>Loading revision list...</div>
@@ -385,55 +335,41 @@ function WikiEditPageContent() {
             <div className={styles.revisionControl}>
               <label>
                 Load Previous Revision
-                <select
-                  onChange={(e) => {
-                    const revId = e.target.value;
-                    if (!revId) return;
-                    const rev = revisions.find((r) => r.id === revId);
-                    if (rev && window.confirm(`Load revision v${rev.versionNumber}? This will overwrite your current unsaved editor content.`)) {
-                      setEditorData(rev.bodyEditorJs);
-                      editorDataRef.current = rev.bodyEditorJs;
-                      setRevisionKey((k) => k + 1);
-                    }
-                  }}
-                  defaultValue=""
-                  className={styles.revisionSelect}
-                >
+                <select onChange={(event) => {
+                  const revId = event.target.value;
+                  if (!revId) return;
+                  const revision = revisions.find((item) => item.id === revId);
+                  if (revision && window.confirm(`Load revision v${revision.versionNumber}? This will overwrite your current unsaved editor content.`)) {
+                    setEditorData(revision.bodyEditorJs);
+                    editorDataRef.current = revision.bodyEditorJs;
+                    setRevisionKey((key) => key + 1);
+                  }
+                }} defaultValue="" className={styles.revisionSelect}>
                   <option value="">-- Choose version --</option>
-                  {revisions.map((rev) => {
-                    const date = rev.createdAt
-                      ? typeof rev.createdAt === 'object' && 'seconds' in rev.createdAt
-                        ? new Date(Number(rev.createdAt.seconds) * 1000).toLocaleDateString()
-                        : new Date(String(rev.createdAt)).toLocaleDateString()
+                  {revisions.map((revision) => {
+                    const date = revision.createdAt
+                      ? typeof revision.createdAt === 'object' && 'seconds' in revision.createdAt
+                        ? new Date(Number(revision.createdAt.seconds) * 1000).toLocaleDateString()
+                        : new Date(String(revision.createdAt)).toLocaleDateString()
                       : 'Recently';
-                    return (
-                      <option key={rev.id} value={rev.id}>
-                        v{rev.versionNumber} ({rev.changeSummary || 'No summary'}) - {date}
-                      </option>
-                    );
+                    return <option key={revision.id} value={revision.id}>v{revision.versionNumber} ({revision.changeSummary || 'No summary'}) - {date}</option>;
                   })}
                 </select>
               </label>
             </div>
           ) : null}
         </div>
-        
+
         <div className={styles.editorAreaWrapper}>
           <div className={styles.editorAreaHeader}>
             <h3>Body Content</h3>
-            <button
-              type="button"
-              className={styles.previewToggleBtn}
-              onClick={togglePreviewMode}
-            >
+            <button type="button" className={styles.previewToggleBtn} onClick={togglePreviewMode}>
               {isPreviewMode ? 'Return to Editor' : 'Show Live Preview'}
             </button>
           </div>
           <div className={styles.editorArea}>
             {isPreviewMode ? (
-              <div className={styles.livePreviewContainer}>
-                <EditorOutput data={editorData} />
-              </div>
+              <div className={styles.livePreviewContainer}><EditorOutput data={editorData} /></div>
             ) : (
               <Editor key={`${existingArticle?.id ?? 'new'}-${revisionKey}`} initialData={editorData} onChange={handleEditorChange} />
             )}

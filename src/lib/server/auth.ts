@@ -39,8 +39,6 @@ function sessionCookieFromRequest(request: Request) {
   return decodeURIComponent(sessionPair.slice(SESSION_COOKIE_NAME.length + 1));
 }
 
-
-
 export async function verifyRequestUser(request: Request): Promise<CurrentUser | null> {
   const adminAuth = await getAdminAuth();
   const idToken = requestIdTokenFromRequest(request);
@@ -86,7 +84,7 @@ export function currentUserHasPermission(currentUser: CurrentUser | null, permis
 
 export function currentUserIsHealthy(currentUser: CurrentUser | null) {
   if (!currentUser) return false;
-  if (!currentUser.profile) return true;
+  if (!currentUser.profile) return false;
   return isHealthyAccountStatus(currentUser.profile.accountStatus);
 }
 
@@ -109,8 +107,8 @@ export async function upsertUserProfileFromToken(decodedToken: DecodedIdToken, c
   if (!snapshot.exists) {
     const profile: Omit<UserProfile, 'createdAt' | 'updatedAt' | 'lastLoginAt'> = {
       ...baseProfile,
-      portalMode: isTokenAdmin ? 'admin' : 'staff',
-      accountStatus: 'active',
+      portalMode: isTokenAdmin ? 'admin' : 'candidate',
+      accountStatus: isTokenAdmin ? 'active' : 'pending',
       currentSeasonId: null,
       primarySeasonRole: null,
       isAdmin: isTokenAdmin,
