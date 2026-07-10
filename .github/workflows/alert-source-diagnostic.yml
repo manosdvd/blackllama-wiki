@@ -1,8 +1,6 @@
 name: Alert Source Diagnostic
 
 on:
-  pull_request:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -24,8 +22,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: alert-source-report
-          path: |
-            alert-source-report.json
-            src/app/api/alerts/fire/route.ts
-            src/components/layout/AlertsHUD.tsx
+          path: alert-source-report.json
           retention-days: 2
