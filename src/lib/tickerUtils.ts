@@ -8,6 +8,30 @@ interface OfflineTickerItem {
   category: string;
   enabled: boolean;
   sourceType?: string;
+  sourceName?: string;
+}
+
+interface CompactTickerSource {
+  name: string;
+  url: string;
+}
+
+type CompactTickerRow = [
+  id: string,
+  title: string,
+  category: string,
+  theme: string,
+  sourceKey: string,
+];
+
+interface CompactTickerFile {
+  version: number;
+  defaults?: {
+    enabled?: boolean;
+    sourceType?: string;
+  };
+  sources: Record<string, CompactTickerSource>;
+  items: CompactTickerRow[];
 }
 
 async function readJsonFile<T>(relativePath: string, fallback: T): Promise<T> {
@@ -19,6 +43,31 @@ async function readJsonFile<T>(relativePath: string, fallback: T): Promise<T> {
     console.warn(`Failed to parse ${relativePath}:`, err);
     return fallback;
   }
+}
+
+function expandCompactTickerFile(file: CompactTickerFile): OfflineTickerItem[] {
+  if (!file || file.version !== 1 || !file.sources || !Array.isArray(file.items)) {
+    return [];
+  }
+
+  return file.items.flatMap((row) => {
+    if (!Array.isArray(row) || row.length < 5) return [];
+
+    const [id, title, category, _theme, sourceKey] = row;
+    const source = file.sources[sourceKey];
+
+    if (!id || !title || !category || !source?.url) return [];
+
+    return [{
+      id,
+      title,
+      url: source.url,
+      category,
+      enabled: file.defaults?.enabled ?? true,
+      sourceType: file.defaults?.sourceType || 'offline',
+      sourceName: source.name,
+    }];
+  });
 }
 
 function stableHash(input: string) {
@@ -48,12 +97,36 @@ function selectOneOfflineItemPerCategory(items: OfflineTickerItem[]) {
 }
 
 export async function getOfflineTickerItems() {
-  const [quoteItems, curatedItems, meritBadgeItems, mythBustingItems, knotItems] = await Promise.all([
+  const [
+    quoteItems,
+    curatedItems,
+    meritBadgeItems,
+    mythBustingItems,
+    knotItems,
+    catalinaFieldGuide,
+    backpackingSkills,
+    campSafety,
+  ] = await Promise.all([
     readJsonFile<OfflineTickerItem[]>('src/data/offlineQuoteTicker.json', []),
     readJsonFile<OfflineTickerItem[]>('src/data/offlineCuratedTicker.json', []),
     readJsonFile<OfflineTickerItem[]>('src/data/offlineMeritBadgeTicker.json', []),
     readJsonFile<OfflineTickerItem[]>('src/data/offlineMythBustingTicker.json', []),
     readJsonFile<OfflineTickerItem[]>('src/data/offlineKnotTicker.json', []),
+    readJsonFile<CompactTickerFile>('src/data/offlineCatalinaFieldGuideTicker.json', {
+      version: 1,
+      sources: {},
+      items: [],
+    }),
+    readJsonFile<CompactTickerFile>('src/data/offlineBackpackingSkillsTicker.json', {
+      version: 1,
+      sources: {},
+      items: [],
+    }),
+    readJsonFile<CompactTickerFile>('src/data/offlineCampSafetyTicker.json', {
+      version: 1,
+      sources: {},
+      items: [],
+    }),
   ]);
 
   const enabledItems = [
@@ -62,6 +135,9 @@ export async function getOfflineTickerItems() {
     ...meritBadgeItems,
     ...mythBustingItems,
     ...knotItems,
+    ...expandCompactTickerFile(catalinaFieldGuide),
+    ...expandCompactTickerFile(backpackingSkills),
+    ...expandCompactTickerFile(campSafety),
   ].filter((item) => item.enabled);
 
   const selectedItems = selectOneOfflineItemPerCategory(enabledItems);
@@ -71,6 +147,7 @@ export async function getOfflineTickerItems() {
     title: item.title,
     url: item.url,
     category: item.category,
-    sourceType: item.sourceType || 'offline'
+    source: item.sourceName || 'Camp Lawton',
+    sourceType: item.sourceType || 'offline',
   }));
 }
