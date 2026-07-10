@@ -6,14 +6,15 @@ import { writeAuditLog } from '@/lib/server/audit';
 import { writeServerErrorLog } from '@/lib/server/errorLog';
 import {
   ADMIN_PERMISSIONS,
+  ADMIN_PRESETS,
   permissionsForPreset,
   type AdminPermission,
   type AdminPresetKey,
 } from '@/types/permissions';
 import type { AccountStatus, PortalMode, UserProfile } from '@/types/users';
 
- type Context = { params: Promise<{ uid: string }> };
- type UserUpdatePayload = Omit<Partial<UserProfile>, 'adminPreset'> & {
+type Context = { params: Promise<{ uid: string }> };
+type UserUpdatePayload = Omit<Partial<UserProfile>, 'adminPreset'> & {
   adminPreset?: AdminPresetKey | '' | null;
 };
 
@@ -29,12 +30,8 @@ function validAccountStatus(value: unknown): value is AccountStatus {
   return ACCOUNT_STATUSES.includes(value as AccountStatus);
 }
 
-function validPreset(value: unknown): value is AdminPresetKey | null {
-  return value === null || value === '' || Object.keys(permissionsForPreset).includes(String(value));
-}
-
 function isAdminPreset(value: unknown): value is AdminPresetKey {
-  return typeof value === 'string' && value.length > 0 && permissionsForPreset(value as AdminPresetKey).length >= 0;
+  return typeof value === 'string' && Object.prototype.hasOwnProperty.call(ADMIN_PRESETS, value);
 }
 
 function cleanNullableString(value: unknown, maxLength: number) {
