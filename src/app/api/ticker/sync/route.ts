@@ -107,7 +107,7 @@ const FEED_URLS = [
 const SCOUT_UNSUITABLE_PATTERNS = [
   /\b(?:fuck|fucking|fucked|fucker|motherfucker|shit|bullshit|bitch|bastard|asshole|cunt)\b/i,
   /\b(?:porn|pornography|onlyfans|nude|nudity|sex\s+toy|sexual\s+content)\b/i,
-  /\b(?:marijuana|cannabis|weed|vape|vaping)\b/i,
+  /\b(?:marijuana|cannabis|thc|vape|vaping)\b/i,
   /\b(?:beer|brewery|wine|winery|whiskey|whisky|vodka|tequila|cocktail)\b/i,
 ];
 
