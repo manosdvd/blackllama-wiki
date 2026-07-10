@@ -65,7 +65,10 @@ export default function ForumPage() {
   }, [selectedCategory]);
 
   useEffect(() => {
-    void loadTopics();
+    const timer = window.setTimeout(() => {
+      void loadTopics();
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [loadTopics]);
 
   const sortedTopics = useMemo(() => (
@@ -202,9 +205,7 @@ export default function ForumPage() {
                 <Link href={`/forum/topic/${topic.id}`} key={topic.id} className={styles.topicCard}>
                   <div className={styles.topicHeader}>
                     <h3>{topic.isPinned ? '📌 ' : ''}{topic.title}</h3>
-                    <div className={styles.replyCount}>
-                      <span>💬</span> {topic.replyCount ?? 0}
-                    </div>
+                    <div className={styles.replyCount}><span>💬</span> {topic.replyCount ?? 0}</div>
                   </div>
                   <p className={styles.topicExcerpt}>{topic.body}</p>
                   <div className={styles.topicMeta}>
