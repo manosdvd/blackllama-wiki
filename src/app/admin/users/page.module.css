@@ -14,10 +14,58 @@
   margin-bottom: 0.5rem;
 }
 
-.pageHeader p {
+.pageHeader p,
+.createPanel p {
   color: rgba(245, 245, 244, 0.78);
   line-height: 1.5;
   max-width: 780px;
+}
+
+.createPanel {
+  background: rgba(30, 27, 24, 0.9);
+  border: 1px solid rgba(247, 183, 51, 0.28);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  padding: 1.25rem;
+}
+
+.createPanel h2 {
+  color: var(--campfire-amber);
+  margin: 0 0 0.25rem;
+}
+
+.createGrid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
+}
+
+.createPanel label,
+.userCard label {
+  color: rgba(245, 245, 244, 0.72);
+  display: flex;
+  flex-direction: column;
+  font-size: 0.78rem;
+  font-weight: 700;
+  gap: 0.35rem;
+  text-transform: uppercase;
+}
+
+.createPanel input,
+.createPanel select,
+.userCard input,
+.userCard select {
+  background: rgba(12, 10, 9, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 4px;
+  color: var(--canvas-tan);
+  font: inherit;
+  min-height: 42px;
+  padding: 0.65rem;
+  text-transform: none;
 }
 
 .userList {
@@ -33,7 +81,7 @@
   border-radius: 8px;
   display: grid;
   gap: 1rem;
-  grid-template-columns: 1.5fr repeat(4, minmax(150px, 1fr));
+  grid-template-columns: 1.5fr repeat(4, minmax(135px, 1fr)) auto;
   padding: 1rem;
 }
 
@@ -43,9 +91,10 @@
   gap: 0.25rem;
 }
 
-.userIdentity strong {
+.userIdentity input {
   color: white;
   font-size: 1.05rem;
+  font-weight: 700;
 }
 
 .userIdentity span {
@@ -54,26 +103,39 @@
   overflow-wrap: anywhere;
 }
 
-.userCard label {
-  color: rgba(245, 245, 244, 0.72);
+.actions {
+  align-items: center;
   display: flex;
-  flex-direction: column;
-  font-size: 0.78rem;
-  font-weight: 700;
-  gap: 0.35rem;
-  text-transform: uppercase;
+  gap: 0.6rem;
+  justify-content: flex-end;
 }
 
-.userCard input,
-.userCard select {
-  background: rgba(12, 10, 9, 0.8);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 4px;
-  color: var(--canvas-tan);
+.primaryButton,
+.dangerButton {
+  border-radius: 5px;
+  cursor: pointer;
   font: inherit;
+  font-weight: 700;
   min-height: 42px;
-  padding: 0.65rem;
-  text-transform: none;
+  padding: 0.65rem 1rem;
+}
+
+.primaryButton {
+  background: var(--pine-green);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: white;
+}
+
+.dangerButton {
+  background: rgba(127, 29, 29, 0.45);
+  border: 1px solid rgba(248, 113, 113, 0.4);
+  color: #fecaca;
+}
+
+.primaryButton:disabled,
+.dangerButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .successMessage,
@@ -95,7 +157,16 @@
   color: #fecaca;
 }
 
-@media (max-width: 1050px) {
+.emptyState {
+  color: rgba(245, 245, 244, 0.66);
+  padding: 1rem 0;
+}
+
+@media (max-width: 1100px) {
+  .createGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+
   .userCard {
     align-items: stretch;
     grid-template-columns: 1fr 1fr;
@@ -103,7 +174,17 @@
 }
 
 @media (max-width: 768px) {
+  .createGrid,
   .userCard {
     grid-template-columns: 1fr;
+  }
+
+  .actions {
+    justify-content: stretch;
+  }
+
+  .primaryButton,
+  .dangerButton {
+    width: 100%;
   }
 }
