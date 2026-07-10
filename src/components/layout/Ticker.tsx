@@ -81,7 +81,11 @@ export default function Ticker({ items }: TickerProps) {
 
   // Keep the public ticker read-only. Sync is handled by the protected cron/admin endpoint.
   useEffect(() => {
-    setIsHidden(localStorage.getItem('ticker_hidden') === 'true');
+    const timer = setTimeout(() => {
+      setIsHidden(localStorage.getItem('ticker_hidden') === 'true');
+    }, 0);
+
+    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
