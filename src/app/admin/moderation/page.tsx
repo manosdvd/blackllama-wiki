@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import TickerSyncButton from '@/components/admin/TickerSyncButton';
 import { useAuth } from '@/components/auth/AuthContext';
 import styles from './page.module.css';
 
@@ -81,14 +80,10 @@ export default function ModerationPage() {
     <div className={styles.container}>
       <header className={styles.header}>
         <h1>System & Moderation</h1>
-        <p className={styles.subtitle}>Ticker controls and recent server-side diagnostics.</p>
+        <p className={styles.subtitle}>Recent server-side diagnostics.</p>
       </header>
 
       <div className={styles.layout}>
-        <section className={styles.toolPanel}>
-          <TickerSyncButton />
-        </section>
-
         <section>
           <h2 className={styles.sectionTitle}>Recent Error Logs</h2>
           {logsError && <div className={styles.errorMessage}>{logsError}</div>}
