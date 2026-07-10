@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import { getAuth } from 'firebase/auth';
 import { useAuth } from '@/components/auth/AuthContext';
 
 interface SyncResponse {
@@ -44,20 +43,9 @@ export default function TickerSyncButton() {
     setResult(null);
 
     try {
-      const auth = getAuth();
-      const token = await auth.currentUser?.getIdToken(true);
-      if (!token) {
-        throw new Error('No Firebase auth token found for the signed-in admin.');
-      }
-
       const res = await fetch('/api/ticker/sync', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'X-Firebase-ID-Token': token,
-        },
+        method: 'GET',
         cache: 'no-store',
-        credentials: 'include',
       });
       const data = await parseSyncResponse(res);
       const debugId = data.syncRunId || data.firstItemId || data.latestId;
