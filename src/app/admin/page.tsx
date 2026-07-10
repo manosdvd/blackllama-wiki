@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { BookOpen, ClipboardList, ShieldCheck, Users } from 'lucide-react';
+import { BookOpen, ClipboardList, MessagesSquare, ShieldCheck, Users } from 'lucide-react';
 import styles from './page.module.css';
 
 const adminLinks = [
@@ -12,7 +12,7 @@ const adminLinks = [
   {
     href: '/admin/users',
     title: 'User Management',
-    description: 'Set portal modes, account status, admin presets, and synced claims.',
+    description: 'Create accounts, set portal access, manage roles, and remove access safely.',
     icon: Users,
   },
   {
@@ -22,9 +22,15 @@ const adminLinks = [
     icon: BookOpen,
   },
   {
+    href: '/admin/community',
+    title: 'Community Moderation',
+    description: 'Review flags and moderate public forum discussions.',
+    icon: MessagesSquare,
+  },
+  {
     href: '/admin/moderation',
-    title: 'System & Moderation',
-    description: 'Ticker sync, future forum moderation, and audit-facing controls.',
+    title: 'System Diagnostics',
+    description: 'Review recent server errors and operational diagnostics.',
     icon: ShieldCheck,
   },
 ];
@@ -34,7 +40,7 @@ export default function AdminPage() {
     <div className={styles.container}>
       <header className={styles.pageHeader}>
         <h1>Admin Console</h1>
-        <p>Plain-language controls for the staff wiki, applications, onboarding, users, and safety-sensitive workflows.</p>
+        <p>Plain-language controls for the staff wiki, applications, onboarding, users, community, and safety-sensitive workflows.</p>
       </header>
 
       <div className={styles.adminGrid}>
