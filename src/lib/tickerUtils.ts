@@ -106,6 +106,7 @@ export async function getOfflineTickerItems() {
     catalinaFieldGuide,
     backpackingSkills,
     campSafety,
+    staffTraining,
   ] = await Promise.all([
     readJsonFile<OfflineTickerItem[]>('src/data/offlineQuoteTicker.json', []),
     readJsonFile<OfflineTickerItem[]>('src/data/offlineCuratedTicker.json', []),
@@ -127,6 +128,11 @@ export async function getOfflineTickerItems() {
       sources: {},
       items: [],
     }),
+    readJsonFile<CompactTickerFile>('src/data/offlineStaffTrainingTicker.json', {
+      version: 1,
+      sources: {},
+      items: [],
+    }),
   ]);
 
   const enabledItems = [
@@ -138,6 +144,7 @@ export async function getOfflineTickerItems() {
     ...expandCompactTickerFile(catalinaFieldGuide),
     ...expandCompactTickerFile(backpackingSkills),
     ...expandCompactTickerFile(campSafety),
+    ...expandCompactTickerFile(staffTraining),
   ].filter((item) => item.enabled);
 
   const selectedItems = selectOneOfflineItemPerCategory(enabledItems);
