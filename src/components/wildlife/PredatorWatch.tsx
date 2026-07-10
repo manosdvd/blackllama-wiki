@@ -90,14 +90,17 @@ export default function PredatorWatch() {
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
-    const cached = window.localStorage.getItem(CACHE_KEY);
-    if (!cached) return;
-    try {
-      setData(JSON.parse(cached) as PredatorWatchResponse);
-      setIsLoading(false);
-    } catch {
-      window.localStorage.removeItem(CACHE_KEY);
-    }
+    const timer = window.setTimeout(() => {
+      const cached = window.localStorage.getItem(CACHE_KEY);
+      if (!cached) return;
+      try {
+        setData(JSON.parse(cached) as PredatorWatchResponse);
+        setIsLoading(false);
+      } catch {
+        window.localStorage.removeItem(CACHE_KEY);
+      }
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   const fetchPredators = useCallback(async () => {
@@ -117,9 +120,14 @@ export default function PredatorWatch() {
   }, []);
 
   useEffect(() => {
-    void fetchPredators();
+    const initialFetch = window.setTimeout(() => {
+      void fetchPredators();
+    }, 0);
     const interval = window.setInterval(fetchPredators, 15 * 60 * 1000);
-    return () => window.clearInterval(interval);
+    return () => {
+      window.clearTimeout(initialFetch);
+      window.clearInterval(interval);
+    };
   }, [fetchPredators]);
 
   if (isLoading && !data) {
