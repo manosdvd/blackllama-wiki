@@ -1,4 +1,4 @@
-name: Lint Diagnostic
+name: Build Diagnostic
 
 on:
   pull_request:
@@ -8,9 +8,9 @@ permissions:
   contents: read
 
 jobs:
-  lint-diagnostic:
+  build-diagnostic:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -18,19 +18,26 @@ jobs:
           node-version: 22.12.0
           cache: npm
       - run: npm ci
-      - name: Capture lint output
+      - name: Capture validation output
         shell: bash
         run: |
           set +e
           npm run lint > lint.log 2>&1
-          status=$?
-          echo "$status" > lint-exit-code.txt
+          echo "$?" > lint-exit-code.txt
+          npm run typecheck > typecheck.log 2>&1
+          echo "$?" > typecheck-exit-code.txt
+          npm run build > build.log 2>&1
+          echo "$?" > build-exit-code.txt
           exit 0
-      - name: Upload lint output
+      - name: Upload validation output
         uses: actions/upload-artifact@v4
         with:
-          name: lint-diagnostic
+          name: build-diagnostic
           path: |
             lint.log
             lint-exit-code.txt
+            typecheck.log
+            typecheck-exit-code.txt
+            build.log
+            build-exit-code.txt
           retention-days: 1
