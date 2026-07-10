@@ -6,8 +6,8 @@ import { writeAuditLog } from '@/lib/server/audit';
 import { writeServerErrorLog } from '@/lib/server/errorLog';
 import type { AccountStatus, PortalMode, UserProfile } from '@/types/users';
 
-const PORTAL_MODES: PortalMode[] = ['guest', 'candidate', 'onboarding', 'staff', 'alumni', 'admin'];
-const ACCOUNT_STATUSES: AccountStatus[] = ['pending', 'active', 'suspended', 'disabled', 'removed'];
+const CREATABLE_PORTAL_MODES: PortalMode[] = ['candidate', 'onboarding', 'staff', 'alumni'];
+const CREATABLE_ACCOUNT_STATUSES: AccountStatus[] = ['pending', 'active', 'suspended', 'disabled'];
 
 type CreateUserPayload = {
   email?: string;
@@ -67,10 +67,11 @@ export async function POST(request: Request) {
     if (!validEmail(email)) return NextResponse.json({ error: 'A valid email address is required.' }, { status: 400 });
     if (!displayName) return NextResponse.json({ error: 'Display name is required.' }, { status: 400 });
     if (password && password.length < 8) return NextResponse.json({ error: 'Temporary passwords must be at least 8 characters.' }, { status: 400 });
-    if (!PORTAL_MODES.includes(portalMode)) return NextResponse.json({ error: 'Portal mode is not valid.' }, { status: 400 });
-    if (!ACCOUNT_STATUSES.includes(accountStatus)) return NextResponse.json({ error: 'Account status is not valid.' }, { status: 400 });
-    if (portalMode === 'admin' && !currentUserHasPermission(currentUser, 'canManageRoles')) {
-      return NextResponse.json({ error: 'Role management access is required to create an admin account.' }, { status: 403 });
+    if (!CREATABLE_PORTAL_MODES.includes(portalMode)) {
+      return NextResponse.json({ error: 'Create a normal account first, then assign administrative roles separately.' }, { status: 400 });
+    }
+    if (!CREATABLE_ACCOUNT_STATUSES.includes(accountStatus)) {
+      return NextResponse.json({ error: 'Account status is not valid for a new user.' }, { status: 400 });
     }
 
     const adminAuth = await getAdminAuth();
@@ -78,7 +79,7 @@ export async function POST(request: Request) {
       email,
       displayName,
       password,
-      disabled: accountStatus === 'disabled' || accountStatus === 'removed',
+      disabled: accountStatus === 'suspended' || accountStatus === 'disabled',
       emailVerified: false,
     });
     createdUid = authUser.uid;
