@@ -42,6 +42,7 @@ export default function TickerSyncButton() {
   const handleSync = async () => {
     setLoading(true);
     setResult(null);
+
     try {
       const auth = getAuth();
       const token = await auth.currentUser?.getIdToken(true);
@@ -49,33 +50,28 @@ export default function TickerSyncButton() {
         throw new Error('No Firebase auth token found for the signed-in admin.');
       }
 
-      await fetch('/api/auth/session', {
+      const res = await fetch('/api/ticker/sync', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idToken: token }),
-        credentials: 'include',
-      }).catch(() => {});
-
-      const headers: HeadersInit = {
-        Authorization: `Bearer ${token}`,
-        'X-Firebase-ID-Token': token,
-      };
-
-      const res = await fetch('/api/ticker/sync?force=true', {
-        headers,
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'X-Firebase-ID-Token': token,
+        },
         cache: 'no-store',
         credentials: 'include',
       });
       const data = await parseSyncResponse(res);
       const debugId = data.syncRunId || data.firstItemId || data.latestId;
+
       if (res.ok && data.success !== false) {
-        const countText = typeof data.count === 'number' ? `Synced ${data.count} items successfully!` : data.message || 'Sync checked.';
+        const countText = typeof data.count === 'number'
+          ? `Synced ${data.count} items successfully!`
+          : data.message || 'Sync checked.';
         setResult(`${countText}${debugId ? ` ID: ${debugId}` : ''}`);
       } else {
         setResult(`Error: ${data.error || data.warning || 'Unknown error'}${debugId ? ` ID: ${debugId}` : ''}`);
       }
-    } catch (e: unknown) {
-      setResult(`Fetch failed: ${e instanceof Error ? e.message : String(e)}`);
+    } catch (error: unknown) {
+      setResult(`Fetch failed: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       setLoading(false);
     }
@@ -85,10 +81,11 @@ export default function TickerSyncButton() {
     <div style={{ padding: '1rem', background: 'rgba(0,0,0,0.2)', border: '1px solid #333', borderRadius: '4px', marginBottom: '1rem' }}>
       <h3 style={{ marginBottom: '0.5rem' }}>System Controls</h3>
       <p style={{ fontSize: '0.85rem', color: '#ccc', marginBottom: '1rem' }}>
-        Manually force the system to fetch current RSS feeds, rebuild the live ticker, and push the result to Firestore.
+        Manually fetch current RSS feeds, rebuild the live ticker, and push the result to Firestore.
       </p>
-      <button 
-        onClick={handleSync} 
+      <button
+        type="button"
+        onClick={handleSync}
         disabled={loading}
         style={{
           background: 'var(--pine-green)',
@@ -96,10 +93,10 @@ export default function TickerSyncButton() {
           border: 'none',
           padding: '0.5rem 1rem',
           cursor: loading ? 'not-allowed' : 'pointer',
-          borderRadius: '4px'
+          borderRadius: '4px',
         }}
       >
-        {loading ? 'Force Syncing...' : 'Force Sync Live Ticker'}
+        {loading ? 'Syncing...' : 'Sync Live Ticker'}
       </button>
       {result && <p style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: 'var(--lantern-gold)' }}>{result}</p>}
     </div>
