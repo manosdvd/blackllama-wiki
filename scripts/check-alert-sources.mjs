@@ -6,6 +6,12 @@ const WFIGS_BBOX = '-111.05,32.20,-110.45,32.65';
 const PIMA_RADIUS_METERS = 8046.72;
 const currentYear = new Date().getUTCFullYear();
 
+const arcGisSummary = (payload) => ({
+  features: Array.isArray(payload?.features) ? payload.features.length : null,
+  serviceError: payload?.error ?? null,
+  keys: payload && typeof payload === 'object' ? Object.keys(payload).slice(0, 12) : [],
+});
+
 const checks = [
   {
     id: 'NWS_ALERTS',
@@ -36,7 +42,7 @@ const checks = [
     id: 'WFIGS',
     url: `https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/WFIGS_Interagency_Perimeters/FeatureServer/0/query?where=1%3D1&geometry=${encodeURIComponent(WFIGS_BBOX)}&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=poly_IncidentName%2Cattr_FireDiscoveryDateTime%2Cattr_IncidentSize%2Cirwin_ModifiedOnDateTime_dt%2CGISAcres&returnGeometry=false&f=json`,
     validate: (payload) => Array.isArray(payload?.features) && !payload?.error,
-    summarize: (payload) => ({ features: payload.features.length, serviceError: payload.error ?? null }),
+    summarize: arcGisSummary,
   },
   {
     id: 'WILDCAD',
@@ -48,7 +54,7 @@ const checks = [
     id: 'PIMA_GIS',
     url: `https://services2.arcgis.com/UTBp78iglGpbqp1B/arcgis/rest/services/Pima_County_CWPP_Fire_Perimeters/FeatureServer/279/query?where=${encodeURIComponent(`Year >= ${currentYear - 1}`)}&geometry=${CAMP_LON}%2C${CAMP_LAT}&geometryType=esriGeometryPoint&inSR=4326&spatialRel=esriSpatialRelIntersects&distance=${PIMA_RADIUS_METERS}&units=esriSRUnit_Meter&outFields=OBJECTID%2CIncidentName%2CYear%2CSize_Acres%2CDate&returnGeometry=false&f=json`,
     validate: (payload) => Array.isArray(payload?.features) && !payload?.error,
-    summarize: (payload) => ({ features: payload.features.length, serviceError: payload.error ?? null }),
+    summarize: arcGisSummary,
   },
 ];
 
