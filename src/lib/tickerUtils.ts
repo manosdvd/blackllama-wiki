@@ -96,6 +96,12 @@ function selectOneOfflineItemPerCategory(items: OfflineTickerItem[]) {
   });
 }
 
+const EMPTY_COMPACT_TICKER: CompactTickerFile = {
+  version: 1,
+  sources: {},
+  items: [],
+};
+
 export async function getOfflineTickerItems() {
   const [
     quoteItems,
@@ -107,32 +113,24 @@ export async function getOfflineTickerItems() {
     backpackingSkills,
     campSafety,
     staffTraining,
+    meritBadgeFacts1,
+    meritBadgeFacts2,
+    meritBadgeFacts3,
+    meritBadgeFacts4,
   ] = await Promise.all([
     readJsonFile<OfflineTickerItem[]>('src/data/offlineQuoteTicker.json', []),
     readJsonFile<OfflineTickerItem[]>('src/data/offlineCuratedTicker.json', []),
     readJsonFile<OfflineTickerItem[]>('src/data/offlineMeritBadgeTicker.json', []),
     readJsonFile<OfflineTickerItem[]>('src/data/offlineMythBustingTicker.json', []),
     readJsonFile<OfflineTickerItem[]>('src/data/offlineKnotTicker.json', []),
-    readJsonFile<CompactTickerFile>('src/data/offlineCatalinaFieldGuideTicker.json', {
-      version: 1,
-      sources: {},
-      items: [],
-    }),
-    readJsonFile<CompactTickerFile>('src/data/offlineBackpackingSkillsTicker.json', {
-      version: 1,
-      sources: {},
-      items: [],
-    }),
-    readJsonFile<CompactTickerFile>('src/data/offlineCampSafetyTicker.json', {
-      version: 1,
-      sources: {},
-      items: [],
-    }),
-    readJsonFile<CompactTickerFile>('src/data/offlineStaffTrainingTicker.json', {
-      version: 1,
-      sources: {},
-      items: [],
-    }),
+    readJsonFile<CompactTickerFile>('src/data/offlineCatalinaFieldGuideTicker.json', EMPTY_COMPACT_TICKER),
+    readJsonFile<CompactTickerFile>('src/data/offlineBackpackingSkillsTicker.json', EMPTY_COMPACT_TICKER),
+    readJsonFile<CompactTickerFile>('src/data/offlineCampSafetyTicker.json', EMPTY_COMPACT_TICKER),
+    readJsonFile<CompactTickerFile>('src/data/offlineStaffTrainingTicker.json', EMPTY_COMPACT_TICKER),
+    readJsonFile<CompactTickerFile>('src/data/offlineMeritBadgeFacts1.json', EMPTY_COMPACT_TICKER),
+    readJsonFile<CompactTickerFile>('src/data/offlineMeritBadgeFacts2.json', EMPTY_COMPACT_TICKER),
+    readJsonFile<CompactTickerFile>('src/data/offlineMeritBadgeFacts3.json', EMPTY_COMPACT_TICKER),
+    readJsonFile<CompactTickerFile>('src/data/offlineMeritBadgeFacts4.json', EMPTY_COMPACT_TICKER),
   ]);
 
   const enabledItems = [
@@ -145,6 +143,10 @@ export async function getOfflineTickerItems() {
     ...expandCompactTickerFile(backpackingSkills),
     ...expandCompactTickerFile(campSafety),
     ...expandCompactTickerFile(staffTraining),
+    ...expandCompactTickerFile(meritBadgeFacts1),
+    ...expandCompactTickerFile(meritBadgeFacts2),
+    ...expandCompactTickerFile(meritBadgeFacts3),
+    ...expandCompactTickerFile(meritBadgeFacts4),
   ].filter((item) => item.enabled);
 
   const selectedItems = selectOneOfflineItemPerCategory(enabledItems);
