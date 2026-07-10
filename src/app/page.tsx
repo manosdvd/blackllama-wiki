@@ -6,6 +6,7 @@ import {
   BookOpen, FileText, MessageSquare, Phone, ArrowRight, Clock, ShieldCheck, Flame, Music
 } from 'lucide-react';
 import { useAuth } from '@/components/auth/AuthContext';
+import PredatorWatch from '@/components/wildlife/PredatorWatch';
 import WildlifeWatch from '@/components/wildlife/WildlifeWatch';
 import type { ContentItem } from '@/types/content';
 import styles from './page.module.css';
@@ -214,6 +215,7 @@ export default function Home() {
               <h3>WILDLIFE WATCH</h3>
             </div>
             <div className={styles.cardBody}>
+              <PredatorWatch />
               <WildlifeWatch />
             </div>
           </section>
