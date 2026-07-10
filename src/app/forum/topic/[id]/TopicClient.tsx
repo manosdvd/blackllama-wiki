@@ -64,7 +64,10 @@ export default function TopicClient({ id }: { id: string }) {
 
   useEffect(() => {
     if (authLoading) return;
-    void loadTopic();
+    const timer = window.setTimeout(() => {
+      void loadTopic();
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [authLoading, loadTopic]);
 
   const submitReply = async (event: React.FormEvent) => {
@@ -175,9 +178,7 @@ export default function TopicClient({ id }: { id: string }) {
     }
   };
 
-  if (loading || authLoading) {
-    return <div className={styles.container}>Loading discussion…</div>;
-  }
+  if (loading || authLoading) return <div className={styles.container}>Loading discussion…</div>;
 
   if (error && !topic) {
     return (
