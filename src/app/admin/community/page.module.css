@@ -52,7 +52,8 @@ button.primaryButton {
   cursor: pointer;
 }
 
-button:disabled {
+.secondaryButton:disabled,
+.primaryButton:disabled {
   cursor: not-allowed;
   opacity: 0.5;
 }
