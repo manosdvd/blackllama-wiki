@@ -99,9 +99,25 @@ const FEED_URLS = [
 
   // Family-friendly podcast and YouTube feeds.
   'http://birdnote.org/get-podcasts-rss',
+
+  // Existing YouTube: SmarterEveryDay, Primitive Technology, and Practical Engineering.
   'https://www.youtube.com/feeds/videos.xml?channel_id=UC6107grRI4m0o2-emgoDnAA',
   'https://www.youtube.com/feeds/videos.xml?channel_id=UCAL3JXZSzSm8AlZyD3nQdBA',
   'https://www.youtube.com/feeds/videos.xml?channel_id=UCMOqf8ab-42UUQIdVoKwjlQ',
+
+  // Arizona wildlife, outdoor science, natural history, and Scout-friendly STEM.
+  'https://www.youtube.com/feeds/videos.xml?channel_id=UCASn7tMQBJvzAnOQ3yHoBWw', // Arizona Game and Fish
+  'https://www.youtube.com/feeds/videos.xml?channel_id=UCZYTClx2T1of7BRZ86-8fow', // SciShow
+  'https://www.youtube.com/feeds/videos.xml?channel_id=UCRFIPG2u1DxKLNuE3y2SjHA', // SciShow Kids
+  'https://www.youtube.com/feeds/videos.xml?channel_id=UC-3SbfTPJsL8fJAPKiVqBLg', // Deep Look
+  'https://www.youtube.com/feeds/videos.xml?channel_id=UCeiYXex_fwgYDonaTcSIk6w', // MinuteEarth
+  'https://www.youtube.com/feeds/videos.xml?channel_id=UC6E2mP01ZLH_kbAyeazCNdg', // Brave Wilderness
+  'https://www.youtube.com/feeds/videos.xml?channel_id=UCXVCgDuD_QCkI7gTKU7-tpg', // Nat Geo Kids
+  'https://www.youtube.com/feeds/videos.xml?channel_id=UCY1kMZp36IQSyNx_9h4mpCg', // Mark Rober
+  'https://www.youtube.com/feeds/videos.xml?channel_id=UCHnyfMqiRRG1u-2MsSQLbXA', // Veritasium
+  'https://www.youtube.com/feeds/videos.xml?channel_id=UCH4BNI0-FOK2dMXoFtViWHw', // Be Smart
+  'https://www.youtube.com/feeds/videos.xml?channel_id=UCHsRtomD4twRf5WVHHk-cMw', // TierZoo
+  'https://www.youtube.com/feeds/videos.xml?channel_id=UCZXZQxS3d6NpR-eH_gdDwYA', // Cornell Lab Bird Cams
 ];
 
 const SCOUT_UNSUITABLE_PATTERNS = [
