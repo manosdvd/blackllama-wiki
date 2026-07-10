@@ -3,6 +3,7 @@ import { writeFile } from 'node:fs/promises';
 const CAMP_LAT = 32.39806;
 const CAMP_LON = -110.725;
 const WFIGS_BBOX = '-111.05,32.20,-110.45,32.65';
+const WFIGS_LAYER_URL = 'https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/WFIGS_Interagency_Perimeters/FeatureServer/0';
 const PIMA_RADIUS_METERS = 8046.72;
 const currentYear = new Date().getUTCFullYear();
 
@@ -39,8 +40,30 @@ const checks = [
     summarize: (text) => ({ bytes: text.length, noFireRestrictions: /No Fire Restrictions/i.test(text) }),
   },
   {
-    id: 'WFIGS',
-    url: `https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/WFIGS_Interagency_Perimeters/FeatureServer/0/query?where=1%3D1&geometry=${encodeURIComponent(WFIGS_BBOX)}&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=poly_IncidentName%2Cattr_FireDiscoveryDateTime%2Cattr_IncidentSize%2Cirwin_ModifiedOnDateTime_dt%2CGISAcres&returnGeometry=false&f=json`,
+    id: 'WFIGS_METADATA',
+    url: `${WFIGS_LAYER_URL}?f=json`,
+    validate: (payload) => Array.isArray(payload?.fields) && !payload?.error,
+    summarize: (payload) => ({
+      name: payload?.name ?? null,
+      geometryType: payload?.geometryType ?? null,
+      maxRecordCount: payload?.maxRecordCount ?? null,
+      fieldNames: Array.isArray(payload?.fields) ? payload.fields.map((field) => field.name).slice(0, 80) : [],
+      serviceError: payload?.error ?? null,
+    }),
+  },
+  {
+    id: 'WFIGS_MINIMAL',
+    url: `${WFIGS_LAYER_URL}/query?where=1%3D1&outFields=*&returnGeometry=false&resultRecordCount=1&f=json`,
+    validate: (payload) => Array.isArray(payload?.features) && !payload?.error,
+    summarize: (payload) => ({
+      features: Array.isArray(payload?.features) ? payload.features.length : null,
+      attributeKeys: payload?.features?.[0]?.attributes ? Object.keys(payload.features[0].attributes) : [],
+      serviceError: payload?.error ?? null,
+    }),
+  },
+  {
+    id: 'WFIGS_CURRENT_QUERY',
+    url: `${WFIGS_LAYER_URL}/query?where=1%3D1&geometry=${encodeURIComponent(WFIGS_BBOX)}&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=poly_IncidentName%2Cattr_FireDiscoveryDateTime%2Cattr_IncidentSize%2Cirwin_ModifiedOnDateTime_dt%2CGISAcres&returnGeometry=false&f=json`,
     validate: (payload) => Array.isArray(payload?.features) && !payload?.error,
     summarize: arcGisSummary,
   },
