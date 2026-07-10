@@ -55,17 +55,17 @@ const FEED_URLS = [
   'smithsonianmag.com/rss/science-nature',
   'archives.gov/global-pages/rss/news.xml', 'tucsonbirdalliance.blogspot.com/feeds/posts/default',
   'freshoffthegrid.com/feed/', 'www.rei.com/blog/feed', 'wildlandtrekking.com/feed/',
-  'thehikinglife.com/feed/', 'https://nationaldaycalendar.com/rss', 
+  'thehikinglife.com/feed/', 'https://nationaldaycalendar.com/rss',
   'https://rss.app/feeds/nDqCGtfjaZ6wn10I.xml', 'https://paulkirtley.co.uk/feed/',
   'https://blog.nols.edu/rss.xml',
-  'https://theazhikeaholics.com/feed/', 'https://www.archaeologysouthwest.org/feed/', 
-  'https://tucsonastronomy.org/feed/', 'https://rss.app/feeds/AztZJf5NpmcSMJg4.xml', 
+  'https://theazhikeaholics.com/feed/', 'https://www.archaeologysouthwest.org/feed/',
+  'https://tucsonastronomy.org/feed/', 'https://rss.app/feeds/AztZJf5NpmcSMJg4.xml',
   'https://woodbeecarver.com/feed/',
-  'https://www.redcross.ca/blog/rss', 'https://survivalsherpa.wordpress.com/feed/', 
+  'https://www.redcross.ca/blog/rss', 'https://survivalsherpa.wordpress.com/feed/',
   'https://skyislandalliance.org/feed/', 'https://www.southwestdiscoveries.com/feed/',
   'https://rss.app/feeds/7OILicWFV8pBtyvV.xml', 'https://mountlemmonlodge.com/feed/',
-  'https://rss.app/feeds/nnhnHtHV5szfQ3my.xml', 
-  'https://rss.app/feeds/iD5DWYJEvW2o6Ojz.xml','https://rss.app/feeds/5DoloBF2LLaDqyjO.xml', 
+  'https://rss.app/feeds/nnhnHtHV5szfQ3my.xml',
+  'https://rss.app/feeds/iD5DWYJEvW2o6Ojz.xml', 'https://rss.app/feeds/5DoloBF2LLaDqyjO.xml',
   'https://rss.app/feeds/89yasnMYbdnFJLbM.xml', 'https://rss.app/feeds/BkR3o4Rmc1cfBkvp.xml',
   'https://rss.app/feeds/MtXqTr6RztcQ5yJM.xml', 'https://rss.app/feeds/SmsCTDwybGojxVzH.xml',
   'https://www.youtube.com/feeds/videos.xml?channel_id=UC7r-LubEzJEec5b9qYJVcpA',
@@ -73,6 +73,42 @@ const FEED_URLS = [
   'https://www.youtube.com/feeds/videos.xml?channel_id=UC415bOPUcGSamy543abLmRA',
   'https://www.youtube.com/feeds/videos.xml?channel_id=UCWXWkY9L14tgx9JFTzn_uaA',
   'https://www.youtube.com/feeds/videos.xml?channel_id=UClFrYG5h7Vbz-Y2CEIEU6EQ',
+
+  // Southern Arizona, desert ecology, public lands, and current safety information.
+  'https://api.weather.gov/alerts/active.atom?area=AZ',
+  'https://www.sonorandesert.org/feed/',
+  'https://tohonochul.org/feed/',
+  'https://www.westernnationalparksassociation.org/feed/',
+  'https://www.grandcanyontrust.org/feed',
+  'https://blog.nature.org/feed/',
+  'https://www.sciencedaily.com/rss/plants_animals.xml',
+  'https://www.sciencedaily.com/rss/earth_climate/environment.xml',
+
+  // Scouting, high-adventure bases, outdoor skills, navigation, climbing, and pioneering.
+  'https://catalinacouncil.org/feed/',
+  'https://oa-bsa.org/news/feed',
+  'https://www.philmontscoutranch.org/feed/',
+  'https://www.summitbsa.org/feed/',
+  'https://www.ntier.org/feed/',
+  'https://www.bsaseabase.org/feed/',
+  'https://scoutpioneering.com/feed/',
+  'https://orienteeringusa.org/feed/',
+  'https://www.americanalpineclub.org/news?format=rss',
+  'https://www.backpacker.com/feed/',
+  'https://www.climbing.com/feed/',
+
+  // Family-friendly podcast and YouTube feeds.
+  'http://birdnote.org/get-podcasts-rss',
+  'https://www.youtube.com/feeds/videos.xml?channel_id=UC6107grRI4m0o2-emgoDnAA',
+  'https://www.youtube.com/feeds/videos.xml?channel_id=UCAL3JXZSzSm8AlZyD3nQdBA',
+  'https://www.youtube.com/feeds/videos.xml?channel_id=UCMOqf8ab-42UUQIdVoKwjlQ',
+];
+
+const SCOUT_UNSUITABLE_PATTERNS = [
+  /\b(?:fuck|fucking|fucked|fucker|motherfucker|shit|bullshit|bitch|bastard|asshole|cunt)\b/i,
+  /\b(?:porn|pornography|onlyfans|nude|nudity|sex\s+toy|sexual\s+content)\b/i,
+  /\b(?:marijuana|cannabis|weed|vape|vaping)\b/i,
+  /\b(?:beer|brewery|wine|winery|whiskey|whisky|vodka|tequila|cocktail)\b/i,
 ];
 
 function getPhoenixDateStamp() {
@@ -112,6 +148,17 @@ function trimHeadline(headline: string) {
   const cleaned = cleanText(headline);
   if (cleaned.length <= 150) return cleaned;
   return `${cleaned.slice(0, 147).trim()}...`;
+}
+
+function isScoutAppropriate(item: ParsedRssItem) {
+  const text = cleanText([
+    item.title,
+    item.contentSnippet,
+    item.summary,
+    item.content,
+  ].filter(Boolean).join(' '));
+
+  return !SCOUT_UNSUITABLE_PATTERNS.some((pattern) => pattern.test(text));
 }
 
 function parsePublishedTime(item: ParsedRssItem) {
@@ -162,6 +209,7 @@ async function generateRssTicker() {
         const publishedTime = parsePublishedTime(item);
 
         if (!title || !link || !publishedTime || !isWithinLast24Hours(publishedTime, now)) return null;
+        if (!isScoutAppropriate(item)) return null;
 
         return {
           headline: title,
@@ -279,17 +327,17 @@ export async function GET(req: Request) {
 
     try {
       const batch = db.batch();
-      
+
       const snapshot = await db.collection('liveTicker').get();
       snapshot.docs.forEach((doc) => batch.delete(doc.ref));
-      
+
       liveItems.forEach((item) => {
         const docRef = db.collection('liveTicker').doc(item.id);
         batch.set(docRef, item);
       });
-      
+
       await batch.commit();
-      
+
       return NextResponse.json({
         success: true,
         mode: 'rss-local-only',
