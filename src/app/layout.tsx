@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import Header from "@/components/layout/Header";
 import BottomNav from "@/components/layout/BottomNav";
+import TickerRefreshOnLoad from "@/components/layout/TickerRefreshOnLoad";
 import EmbersBackground from "@/components/ui/EmbersBackground";
 import { AuthProvider } from "@/components/auth/AuthContext";
 
@@ -24,6 +25,7 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <AuthProvider>
+          <TickerRefreshOnLoad />
           <a href="#main-content" className="skip-link">Skip to Main Content</a>
           <EmbersBackground />
           <Header />

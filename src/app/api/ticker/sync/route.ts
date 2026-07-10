@@ -39,6 +39,7 @@ type ParsedRssItem = {
 
 const TARGET_LOCATION = 'Camp Lawton, Mt Lemmon, Santa Catalina Mountains';
 const RSS_FEED_TIMEOUT_MS = 6_000;
+const RSS_FEED_CONCURRENCY = 8;
 const RSS_ITEMS_PER_FEED = 5;
 const RSS_MAX_ITEMS = 36;
 const RSS_MAX_AGE_MS = 24 * 60 * 60 * 1000;
@@ -55,17 +56,17 @@ const FEED_URLS = [
   'smithsonianmag.com/rss/science-nature',
   'archives.gov/global-pages/rss/news.xml', 'tucsonbirdalliance.blogspot.com/feeds/posts/default',
   'freshoffthegrid.com/feed/', 'www.rei.com/blog/feed', 'wildlandtrekking.com/feed/',
-  'thehikinglife.com/feed/', 'https://nationaldaycalendar.com/rss', 
+  'thehikinglife.com/feed/', 'https://nationaldaycalendar.com/rss',
   'https://rss.app/feeds/nDqCGtfjaZ6wn10I.xml', 'https://paulkirtley.co.uk/feed/',
   'https://blog.nols.edu/rss.xml',
-  'https://theazhikeaholics.com/feed/', 'https://www.archaeologysouthwest.org/feed/', 
-  'https://tucsonastronomy.org/feed/', 'https://rss.app/feeds/AztZJf5NpmcSMJg4.xml', 
+  'https://theazhikeaholics.com/feed/', 'https://www.archaeologysouthwest.org/feed/',
+  'https://tucsonastronomy.org/feed/', 'https://rss.app/feeds/AztZJf5NpmcSMJg4.xml',
   'https://woodbeecarver.com/feed/',
-  'https://www.redcross.ca/blog/rss', 'https://survivalsherpa.wordpress.com/feed/', 
+  'https://www.redcross.ca/blog/rss', 'https://survivalsherpa.wordpress.com/feed/',
   'https://skyislandalliance.org/feed/', 'https://www.southwestdiscoveries.com/feed/',
   'https://rss.app/feeds/7OILicWFV8pBtyvV.xml', 'https://mountlemmonlodge.com/feed/',
-  'https://rss.app/feeds/nnhnHtHV5szfQ3my.xml', 
-  'https://rss.app/feeds/iD5DWYJEvW2o6Ojz.xml','https://rss.app/feeds/5DoloBF2LLaDqyjO.xml', 
+  'https://rss.app/feeds/nnhnHtHV5szfQ3my.xml',
+  'https://rss.app/feeds/iD5DWYJEvW2o6Ojz.xml', 'https://rss.app/feeds/5DoloBF2LLaDqyjO.xml',
   'https://rss.app/feeds/89yasnMYbdnFJLbM.xml', 'https://rss.app/feeds/BkR3o4Rmc1cfBkvp.xml',
   'https://rss.app/feeds/MtXqTr6RztcQ5yJM.xml', 'https://rss.app/feeds/SmsCTDwybGojxVzH.xml',
   'https://www.youtube.com/feeds/videos.xml?channel_id=UC7r-LubEzJEec5b9qYJVcpA',
@@ -125,10 +126,45 @@ function isWithinLast24Hours(publishedTime: number, now = Date.now()) {
   return publishedTime <= now + RSS_CLOCK_SKEW_MS && now - publishedTime <= RSS_MAX_AGE_MS;
 }
 
-function rssTimeoutAfter(ms: number, feedUrl: string) {
-  return new Promise<never>((_, reject) => {
-    setTimeout(() => reject(new Error(`RSS feed timed out after ${ms}ms: ${feedUrl}`)), ms);
-  });
+async function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+      }),
+    ]);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
+}
+
+async function mapSettledWithConcurrency<T, R>(
+  items: T[],
+  concurrency: number,
+  worker: (item: T, index: number) => Promise<R>,
+): Promise<PromiseSettledResult<R>[]> {
+  const results = new Array<PromiseSettledResult<R>>(items.length);
+  let nextIndex = 0;
+
+  async function runWorker() {
+    while (nextIndex < items.length) {
+      const index = nextIndex;
+      nextIndex += 1;
+
+      try {
+        results[index] = { status: 'fulfilled', value: await worker(items[index], index) };
+      } catch (reason) {
+        results[index] = { status: 'rejected', reason };
+      }
+    }
+  }
+
+  const workerCount = Math.min(Math.max(1, concurrency), items.length);
+  await Promise.all(Array.from({ length: workerCount }, () => runWorker()));
+  return results;
 }
 
 function dedupeTickerItems(items: NewsTickerItem[]) {
@@ -146,14 +182,16 @@ async function generateRssTicker() {
   const parser = new Parser<Record<string, unknown>, ParsedRssItem>();
   const now = Date.now();
 
-  const feedResults = await Promise.allSettled(
-    FEED_URLS.map(async (feedUrl) => {
+  const feedResults = await mapSettledWithConcurrency(
+    FEED_URLS,
+    RSS_FEED_CONCURRENCY,
+    async (feedUrl) => {
       const normalizedFeedUrl = normalizeFeedUrl(feedUrl);
-      const feed = await Promise.race([
+      const feed = await withTimeout(
         parser.parseURL(normalizedFeedUrl),
-        rssTimeoutAfter(RSS_FEED_TIMEOUT_MS, normalizedFeedUrl),
-      ]);
-
+        RSS_FEED_TIMEOUT_MS,
+        `RSS feed ${normalizedFeedUrl}`,
+      );
       const source = cleanText(feed.title || sourceFromUrl(feedUrl));
 
       return (feed.items || []).slice(0, RSS_ITEMS_PER_FEED).map((item: ParsedRssItem): RssCandidateItem | null => {
@@ -171,7 +209,7 @@ async function generateRssTicker() {
           publishedTime,
         };
       }).filter(Boolean) as RssCandidateItem[];
-    })
+    },
   );
 
   const candidates = feedResults
@@ -212,9 +250,9 @@ function tickerResponseItem(item: LiveTickerItem): TickerResponseItem {
   };
 }
 
-export async function GET(req: Request) {
+export async function GET(request: Request) {
   try {
-    const url = new URL(req.url);
+    const url = new URL(request.url);
 
     if (url.searchParams.get('health') === 'true') {
       return NextResponse.json({
@@ -222,18 +260,16 @@ export async function GET(req: Request) {
         route: 'ticker-sync',
         rssFeeds: FEED_URLS.length,
         maxAgeHours: 24,
+      }, {
+        headers: { 'Cache-Control': 'no-store' },
       });
     }
 
-    // The user requested removing the auth requirement for the sync endpoint.
-    // Cron requests passing ?force=true will automatically proceed.
     const [{ getAdminDbOnly }, { FieldValue }] = await Promise.all([
       import('@/lib/firebase/adminDb'),
       import('firebase-admin/firestore'),
     ]);
-
     const db = getAdminDbOnly();
-
     const rssTicker = await generateRssTicker();
 
     if (rssTicker.items.length === 0) {
@@ -241,7 +277,7 @@ export async function GET(req: Request) {
         context: 'ticker.sync.rss_empty',
         message: 'No recent RSS ticker items could be generated.',
         severity: 'warning',
-        request: req,
+        request,
         metadata: {
           feedCount: rssTicker.feedCount,
           failedFeedCount: rssTicker.failedFeedCount,
@@ -258,14 +294,15 @@ export async function GET(req: Request) {
         rssFailedFeedCount: rssTicker.failedFeedCount,
         rssFailedFeeds: rssTicker.failedFeeds,
         maxAgeHours: 24,
-      }, { status: 503 });
+      }, {
+        status: 503,
+        headers: { 'Cache-Control': 'no-store' },
+      });
     }
 
-    const combinedItems = rssTicker.items;
     const generatedAt = new Date().toISOString();
     const syncRunId = `sync_${getPhoenixDateStamp()}_${Date.now()}`;
-
-    const liveItems: LiveTickerItem[] = combinedItems.map((item: NewsTickerItem, index: number) => ({
+    const liveItems: LiveTickerItem[] = rssTicker.items.map((item: NewsTickerItem, index: number) => ({
       id: `${syncRunId}_${String(index + 1).padStart(2, '0')}`,
       title: item.headline,
       url: normalizeTickerLink(item.link),
@@ -274,77 +311,74 @@ export async function GET(req: Request) {
       position: index,
       generatedAt,
       syncRunId,
-      timestamp: FieldValue.serverTimestamp()
+      timestamp: FieldValue.serverTimestamp(),
     }));
 
     try {
       const batch = db.batch();
-      
       const snapshot = await db.collection('liveTicker').get();
+
       snapshot.docs.forEach((doc) => batch.delete(doc.ref));
-      
       liveItems.forEach((item) => {
         const docRef = db.collection('liveTicker').doc(item.id);
         batch.set(docRef, item);
       });
-      
       await batch.commit();
-      
-      return NextResponse.json({
-        success: true,
-        mode: 'rss-local-only',
-        count: liveItems.length,
-        syncRunId,
-        firstItemId: liveItems[0]?.id || null,
-        rssCount: rssTicker.items.length,
-        rssFailedFeedCount: rssTicker.failedFeedCount,
-        aiStatus: 'disabled',
-        aiError: null,
-        maxAgeHours: 24,
-        metadata: {
-          generated_at: generatedAt,
-          target_location: TARGET_LOCATION,
-          rss_feed_count: rssTicker.feedCount,
-          rss_failed_feed_count: rssTicker.failedFeedCount,
-          rss_failed_feeds: rssTicker.failedFeeds.slice(0, 12),
-          ai_status: 'disabled',
-          max_age_hours: 24,
-        },
-        items: liveItems.map(tickerResponseItem)
-      });
-    } catch (e) {
+    } catch (error) {
       await writeServerErrorLog({
         context: 'ticker.sync.firestore_write',
         message: 'Failed to write liveTicker items to Firestore.',
-        error: e,
-        request: req,
+        error,
+        request,
         metadata: { syncRunId, itemCount: liveItems.length },
       });
+
       return NextResponse.json({
-        success: true,
-        mode: 'rss-local-only',
-        count: liveItems.length,
+        success: false,
+        error: 'Failed to write ticker items to Firestore.',
         syncRunId,
-        firstItemId: liveItems[0]?.id || null,
-        rssCount: rssTicker.items.length,
-        rssFailedFeedCount: rssTicker.failedFeedCount,
-        aiStatus: 'disabled',
-        aiError: null,
-        maxAgeHours: 24,
-        warning: 'Failed to write to DB',
-        items: liveItems.map(tickerResponseItem)
+      }, {
+        status: 500,
+        headers: { 'Cache-Control': 'no-store' },
       });
     }
 
-  } catch (err) {
+    return NextResponse.json({
+      success: true,
+      mode: 'rss-local-only',
+      count: liveItems.length,
+      syncRunId,
+      firstItemId: liveItems[0]?.id || null,
+      rssCount: rssTicker.items.length,
+      rssFailedFeedCount: rssTicker.failedFeedCount,
+      aiStatus: 'disabled',
+      aiError: null,
+      maxAgeHours: 24,
+      metadata: {
+        generated_at: generatedAt,
+        target_location: TARGET_LOCATION,
+        rss_feed_count: rssTicker.feedCount,
+        rss_failed_feed_count: rssTicker.failedFeedCount,
+        rss_failed_feeds: rssTicker.failedFeeds.slice(0, 12),
+        ai_status: 'disabled',
+        max_age_hours: 24,
+      },
+      items: liveItems.map(tickerResponseItem),
+    }, {
+      headers: { 'Cache-Control': 'no-store' },
+    });
+  } catch (error) {
     await writeServerErrorLog({
       context: 'ticker.sync.fatal',
       message: 'Fatal error in ticker sync route.',
-      error: err,
+      error,
       severity: 'critical',
-      request: req,
+      request,
     });
 
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Ticker sync failed.' }, {
+      status: 500,
+      headers: { 'Cache-Control': 'no-store' },
+    });
   }
 }

@@ -53,33 +53,20 @@ function getCategoryColor(category?: string) {
 }
 
 export default function Ticker({ items }: TickerProps) {
-
   const [dbItems, setDbItems] = useState<TickerItem[]>([]);
-  const [apiItems] = useState<TickerItem[]>([]);
   const [shuffledLocalItems, setShuffledLocalItems] = useState<TickerItem[]>(items);
   const [mobileIndex, setMobileIndex] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
   const [isFeedOpen, setIsFeedOpen] = useState(false);
   const [mobileScrollAmount, setMobileScrollAmount] = useState(0);
   const [mobileShouldScroll, setMobileShouldScroll] = useState(false);
-
   const [isPaused, setIsPaused] = useState(false);
+  const [isHidden, setIsHidden] = useState(false);
   const lowMotion = useSyncExternalStore(
     subscribeMotionPreference,
     shouldReduceMotion,
     () => false,
   );
-  const [isHidden, setIsHidden] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('ticker_hidden') === 'true';
-    }
-    return false;
-  });
-
-  const toggleHidden = (val: boolean) => {
-    setIsHidden(val);
-    localStorage.setItem('ticker_hidden', String(val));
-  };
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const feedButtonRef = useRef<HTMLButtonElement>(null);
@@ -87,61 +74,38 @@ export default function Ticker({ items }: TickerProps) {
   const mobileContainerRef = useRef<HTMLDivElement>(null);
   const mobileTextRef = useRef<HTMLDivElement>(null);
 
-  // Sync is performed automatically by the Netlify cron function (6am, 12pm, 5pm MST).
-  // Manual admin sync has been removed from the UI.
+  const toggleHidden = (hidden: boolean) => {
+    setIsHidden(hidden);
+    localStorage.setItem('ticker_hidden', String(hidden));
+  };
 
-  // Subscribe to Firestore liveTicker collection
+  // Keep ordinary page loads read-only; scheduled and manual syncs use the public endpoint.
   useEffect(() => {
-    let unsubscribe: (() => void) | undefined;
+    const timer = setTimeout(() => {
+      setIsHidden(localStorage.getItem('ticker_hidden') === 'true');
+    }, 0);
 
-    if (db) {
-      const liveTickerQuery = query(collection(db, 'liveTicker'), orderBy('position', 'asc'));
-      unsubscribe = onSnapshot(liveTickerQuery, (snapshot) => {
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    if (!db) return;
+
+    const liveTickerQuery = query(collection(db, 'liveTicker'), orderBy('position', 'asc'));
+    const unsubscribe = onSnapshot(
+      liveTickerQuery,
+      (snapshot) => {
         const live: TickerItem[] = [];
         snapshot.forEach((doc) => {
           const data = doc.data() as TickerItem;
           live.push({ ...data, id: data.id || doc.id });
         });
         setDbItems(live);
-      });
-    }
+      },
+      () => setDbItems([]),
+    );
 
-    return () => {
-      unsubscribe?.();
-    };
-  }, []);
-
-  // On page load, trigger a background RSS sync if liveTicker is empty or stale
-  useEffect(() => {
-    const STALE_THRESHOLD_MS = 6 * 60 * 60 * 1000; // 6 hours
-
-    async function triggerSyncIfNeeded() {
-      try {
-        // Check if we already have fresh items in Firestore
-        const { collection: col, getDocs, query: fsQuery, orderBy: fsOrderBy, limit } = await import('firebase/firestore');
-        const snap = await getDocs(fsQuery(col(db, 'liveTicker'), fsOrderBy('position', 'asc'), limit(1)));
-
-        if (!snap.empty) {
-          const firstItem = snap.docs[0].data() as TickerItem;
-          const generatedAt = firstItem.generatedAt ? new Date(firstItem.generatedAt).getTime() : 0;
-          const age = Date.now() - generatedAt;
-          if (age < STALE_THRESHOLD_MS) {
-            // Data is fresh enough, no sync needed
-            return;
-          }
-        }
-
-        // Data is empty or stale — trigger a background sync (fire-and-forget)
-        console.info('[Ticker] Triggering background RSS sync...');
-        fetch('/api/ticker/sync').catch(() => {
-          // Silently ignore if sync fails — offline or slow network
-        });
-      } catch {
-        // Ignore errors — just skip the sync attempt silently
-      }
-    }
-
-    triggerSyncIfNeeded();
+    return unsubscribe;
   }, []);
 
   useEffect(() => {
@@ -152,14 +116,13 @@ export default function Ticker({ items }: TickerProps) {
   }, [items]);
 
   const combinedItems = useMemo(() => {
-    const activeLiveItems = dbItems.length > 0 ? dbItems : apiItems;
-    const hasLiveFeedContent = activeLiveItems.length > 0;
+    const hasLiveFeedContent = dbItems.length > 0;
     const localItems = hasLiveFeedContent
       ? shuffledLocalItems.slice(0, OFFLINE_ITEM_LIMIT_WHEN_LIVE)
       : shuffledLocalItems;
 
-    return [...activeLiveItems, ...localItems];
-  }, [apiItems, dbItems, shuffledLocalItems]);
+    return [...dbItems, ...localItems];
+  }, [dbItems, shuffledLocalItems]);
 
   const displayItems = useMemo(() => {
     if (combinedItems.length === 0) return [];
@@ -169,8 +132,8 @@ export default function Ticker({ items }: TickerProps) {
   useEffect(() => {
     if (combinedItems.length <= 1) return;
     if (lowMotion) return;
-    
-    let intervalId: NodeJS.Timeout;
+
+    let intervalId: ReturnType<typeof setInterval>;
     let isActive = true;
 
     const startInterval = () => {
@@ -185,11 +148,9 @@ export default function Ticker({ items }: TickerProps) {
       if (document.hidden) {
         isActive = false;
         clearInterval(intervalId);
-      } else {
-        if (!isActive) {
-          isActive = true;
-          startInterval();
-        }
+      } else if (!isActive) {
+        isActive = true;
+        startInterval();
       }
     };
 
@@ -224,11 +185,9 @@ export default function Ticker({ items }: TickerProps) {
       if (document.hidden) {
         isActive = false;
         cancelAnimationFrame(animationId);
-      } else {
-        if (!isActive) {
-          isActive = true;
-          animationId = requestAnimationFrame(scroll);
-        }
+      } else if (!isActive) {
+        isActive = true;
+        animationId = requestAnimationFrame(scroll);
       }
     };
 
@@ -266,8 +225,8 @@ export default function Ticker({ items }: TickerProps) {
   useEffect(() => {
     if (!isFeedOpen) return;
 
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
         setIsFeedOpen(false);
         feedButtonRef.current?.focus();
       }
@@ -281,8 +240,8 @@ export default function Ticker({ items }: TickerProps) {
     };
   }, [isFeedOpen]);
 
-  const nextMobile = () => setMobileIndex((p) => (p + 1) % combinedItems.length);
-  const prevMobile = () => setMobileIndex((p) => (p - 1 + combinedItems.length) % combinedItems.length);
+  const nextMobile = () => setMobileIndex((previous) => (previous + 1) % combinedItems.length);
+  const prevMobile = () => setMobileIndex((previous) => (previous - 1 + combinedItems.length) % combinedItems.length);
 
   if (combinedItems.length === 0) return null;
 
@@ -290,6 +249,7 @@ export default function Ticker({ items }: TickerProps) {
     return (
       <div className={styles.restoreBar}>
         <button
+          type="button"
           onClick={() => toggleHidden(false)}
           className={styles.restoreBtn}
           title="Restore news ticker"
@@ -308,6 +268,7 @@ export default function Ticker({ items }: TickerProps) {
   return (
     <div className={styles.tickerContainer}>
       <button
+        type="button"
         ref={feedButtonRef}
         onClick={() => setIsFeedOpen(true)}
         className={styles.tickerLabel}
@@ -318,13 +279,17 @@ export default function Ticker({ items }: TickerProps) {
 
       <div className={styles.desktopArrows}>
         <button
+          type="button"
           onClick={() => {
             if (scrollRef.current) scrollRef.current.scrollLeft -= 300;
             setIsHovered(true);
             setTimeout(() => setIsHovered(false), 2000);
           }}
           className={styles.desktopArrowBtn}
-        >◀</button>
+          aria-label="Scroll ticker backward"
+        >
+          ◀
+        </button>
       </div>
 
       <div
@@ -353,13 +318,17 @@ export default function Ticker({ items }: TickerProps) {
 
       <div className={styles.desktopArrows}>
         <button
+          type="button"
           onClick={() => {
             if (scrollRef.current) scrollRef.current.scrollLeft += 300;
             setIsHovered(true);
             setTimeout(() => setIsHovered(false), 2000);
           }}
           className={styles.desktopArrowBtn}
-        >▶</button>
+          aria-label="Scroll ticker forward"
+        >
+          ▶
+        </button>
       </div>
 
       <div className={styles.tickerControls}>
@@ -367,8 +336,8 @@ export default function Ticker({ items }: TickerProps) {
           type="button"
           onClick={() => setIsPaused(!isPaused)}
           className={styles.controlBtn}
-          title={isPaused ? "Play news ticker" : "Pause news ticker"}
-          aria-label={isPaused ? "Play news ticker" : "Pause news ticker"}
+          title={isPaused ? 'Play news ticker' : 'Pause news ticker'}
+          aria-label={isPaused ? 'Play news ticker' : 'Pause news ticker'}
         >
           {isPaused ? <Play size={14} /> : <Pause size={14} />}
         </button>
@@ -384,7 +353,7 @@ export default function Ticker({ items }: TickerProps) {
       </div>
 
       <div className={styles.tickerMobileContent}>
-        <button onClick={prevMobile} className={styles.arrowBtn}>◀</button>
+        <button type="button" onClick={prevMobile} className={styles.arrowBtn} aria-label="Previous ticker item">◀</button>
         <div className={`${styles.tickerItem} ${styles.mobileItem}`} ref={mobileContainerRef} title={mobileItem.id ? `Ticker ID: ${mobileItem.id}` : undefined}>
           <div
             key={safeMobileIndex}
@@ -404,7 +373,7 @@ export default function Ticker({ items }: TickerProps) {
             )}
           </div>
         </div>
-        <button onClick={nextMobile} className={styles.arrowBtn}>▶</button>
+        <button type="button" onClick={nextMobile} className={styles.arrowBtn} aria-label="Next ticker item">▶</button>
       </div>
 
       {isFeedOpen && (
@@ -418,7 +387,7 @@ export default function Ticker({ items }: TickerProps) {
         >
           <div
             className={styles.modalContainer}
-            onClick={(e) => e.stopPropagation()}
+            onClick={(event) => event.stopPropagation()}
             role="dialog"
             aria-modal="true"
             aria-labelledby="feed-modal-title"
@@ -426,6 +395,7 @@ export default function Ticker({ items }: TickerProps) {
             <div className={styles.modalHeader}>
               <h2 id="feed-modal-title" className={styles.modalTitle}>CAMP FEED BULLETIN</h2>
               <button
+                type="button"
                 ref={closeButtonRef}
                 onClick={() => {
                   setIsFeedOpen(false);
