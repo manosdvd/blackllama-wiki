@@ -1,0 +1,28 @@
+name: Alert Source Diagnostic
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check-alert-sources:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.12.0
+      - name: Check live alert sources
+        run: node scripts/check-alert-sources.mjs
+      - name: Upload source report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: alert-source-report
+          path: alert-source-report.json
+          retention-days: 2
