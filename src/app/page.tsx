@@ -206,19 +206,6 @@ export default function Home() {
               )}
             </div>
           </section>
-        </div>
-
-        {/* Sidebar Column */}
-        <div className={styles.sideColumn}>
-          <section className={styles.card}>
-            <div className={styles.cardHeader}>
-              <h3>WILDLIFE WATCH</h3>
-            </div>
-            <div className={styles.cardBody}>
-              <PredatorWatch />
-              <WildlifeWatch />
-            </div>
-          </section>
 
           {/* Featured Culture & Songbook Preview */}
           <section className={styles.card}>
@@ -261,6 +248,19 @@ export default function Home() {
               )}
             </div>
           </section>
+        </div>
+        <div className={styles.sideColumn}>
+          <section className={styles.card}>
+            <div className={styles.cardHeader}>
+              <h3>WILDLIFE WATCH</h3>
+            </div>
+            <div className={styles.cardBody}>
+              <PredatorWatch />
+              <WildlifeWatch />
+            </div>
+          </section>
+
+
 
           {/* Emergency Directory */}
           <section className={styles.card}>
