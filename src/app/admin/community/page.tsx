@@ -48,7 +48,11 @@ export default function CommunityModerationPage() {
   }, [authHeaders, canModerate, user]);
 
   useEffect(() => {
-    if (!loading) void loadFlags();
+    if (loading) return;
+    const timer = window.setTimeout(() => {
+      void loadFlags();
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [loadFlags, loading]);
 
   const resolveFlag = async (flag: FlagQueueItem, status: 'resolved' | 'dismissed', removePost = false) => {
