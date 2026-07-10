@@ -24,5 +24,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: alert-source-report
-          path: alert-source-report.json
+          path: |
+            alert-source-report.json
+            src/app/api/alerts/fire/route.ts
+            src/components/layout/AlertsHUD.tsx
           retention-days: 2
