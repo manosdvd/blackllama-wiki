@@ -1,0 +1,31 @@
+name: Apply Alert Fixes
+
+on:
+  push:
+    branches: [debug/alert-source-health]
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: debug/alert-source-health
+      - name: Apply verified source fixes
+        run: python scripts/apply-alert-source-fixes.py
+      - name: Commit fixes
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo "No alert source changes needed."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/app/api/alerts/fire/route.ts src/components/layout/AlertsHUD.tsx
+          git commit -m "Repair verified alert sources"
+          git push origin HEAD:debug/alert-source-health
