@@ -2,6 +2,7 @@ import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import AlertsHUD from './AlertsHUD';
+import BearAlertHUD from './BearAlertHUD';
 import Ticker from './Ticker';
 import ThemeToggle from './ThemeToggle';
 import AccessibilitySettings from './AccessibilitySettings';
@@ -42,7 +43,10 @@ export default async function Header() {
         </div>
       </div>
 
-      {/* Alerts HUD below the main nav */}
+      {/* Distance-triggered bear alerts take priority above the standard HUD. */}
+      <BearAlertHUD />
+
+      {/* Fire, weather, smoke, and forest alerts HUD */}
       <AlertsHUD />
       
       {/* Ticker at the bottom of the header */}
