@@ -53,7 +53,7 @@ function expandCompactTickerFile(file: CompactTickerFile): OfflineTickerItem[] {
   return file.items.flatMap((row) => {
     if (!Array.isArray(row) || row.length < 5) return [];
 
-    const [id, title, category, _theme, sourceKey] = row;
+    const [id, title, category, , sourceKey] = row;
     const source = file.sources[sourceKey];
 
     if (!id || !title || !category || !source?.url) return [];
