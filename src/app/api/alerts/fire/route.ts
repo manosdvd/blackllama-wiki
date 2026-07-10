@@ -521,7 +521,10 @@ async function fetchWFIGS(): Promise<{ items: FireAlertItem[]; health: SourceHea
     });
 
     const url = `https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/WFIGS_Interagency_Perimeters/FeatureServer/0/query?${params}`;
-    const res = await fetch(url, { next: { revalidate: 300 } });
+    const res = await fetch(url, { 
+      headers: { 'User-Agent': 'CampLawtonStaffHub/1.0 (contact@camplawton.org)' },
+      next: { revalidate: 300 } 
+    });
     if (!res.ok) return { items: [], health: 'degraded' };
     const data = await res.json() as { features?: WFIGSFeature[]; error?: unknown };
     if (data.error || !Array.isArray(data.features)) return { items: [], health: 'degraded' };
@@ -619,6 +622,7 @@ async function fetchPimaGIS(): Promise<{ items: FireAlertItem[]; health: SourceH
     });
 
     const res = await fetch(`${PIMA_GIS_FIRE_PERIMETERS_URL}?${params}`, {
+      headers: { 'User-Agent': 'CampLawtonStaffHub/1.0 (contact@camplawton.org)' },
       next: { revalidate: 900 },
     });
     if (!res.ok) return { items: [], health: 'degraded' };
@@ -673,6 +677,7 @@ async function fetchWildCAD(): Promise<{ items: FireAlertItem[]; health: SourceH
     wildCadUrl.searchParams.set('loc', WILDCAD_LOCATION);
 
     const res = await fetch(wildCadUrl, {
+      headers: { 'User-Agent': 'CampLawtonStaffHub/1.0 (contact@camplawton.org)' },
       next: { revalidate: 300 }
     });
     if (!res.ok) return { items: [], health: 'degraded' };
