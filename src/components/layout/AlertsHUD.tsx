@@ -22,7 +22,6 @@ const SOURCE_LABELS: Record<FireAlertSource, string> = {
   NWS: 'NWS',
   USFS: 'USFS',
   WFIGS: 'WFIGS',
-  NOAA_HMS: 'HMS',
   WILDCAD: 'WildCAD',
   PIMA_GIS: 'PimaGIS',
 };
@@ -31,7 +30,6 @@ const SOURCE_FALLBACK_URLS: Record<FireAlertSource, string> = {
   NWS: 'https://forecast.weather.gov/MapClick.php?lat=32.39806&lon=-110.725',
   USFS: 'https://www.fs.usda.gov/r03/coronado/alerts',
   WFIGS: 'https://data-nifc.opendata.arcgis.com/datasets/nifc::wfigs-interagency-fire-perimeters/about',
-  NOAA_HMS: 'https://www.ospo.noaa.gov/products/land/hms.html',
   WILDCAD: 'https://www.wildwebe.net/?dc_name=AZTDC',
   PIMA_GIS: 'https://gisopendata.pima.gov/datasets/pima-county-cwpp-fire-perimeters/about',
 };

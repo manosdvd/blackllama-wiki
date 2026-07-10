@@ -5,7 +5,7 @@ import { writeServerErrorLog } from '@/lib/server/errorLog';
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 export type FireAlertLevel = 'normal' | 'info' | 'watch' | 'warning' | 'critical' | 'evacuation';
-export type FireAlertSource = 'NWS' | 'USFS' | 'WFIGS' | 'NOAA_HMS' | 'WILDCAD' | 'PIMA_GIS';
+export type FireAlertSource = 'NWS' | 'USFS' | 'WFIGS' | 'WILDCAD' | 'PIMA_GIS';
 export type SourceHealthStatus = 'ok' | 'degraded' | 'error';
 export type Confidence = 'official' | 'high' | 'medium' | 'low';
 export type Actionability = 'monitor' | 'review-plan' | 'contact-leadership' | 'follow-official-orders';
@@ -56,7 +56,7 @@ const PIMA_GIS_FIRE_PERIMETERS_URL = 'https://services2.arcgis.com/UTBp78iglGpbq
 const PIMA_GIS_SOURCE_URL = 'https://gisopendata.pima.gov/datasets/pima-county-cwpp-fire-perimeters/about';
 // WFIGS ArcGIS bounding box for spatial query (xmin,ymin,xmax,ymax)
 const WFIGS_BBOX = '-111.05,32.20,-110.45,32.65';
-const ACTIVE_FIRE_ALERT_SOURCES: FireAlertSource[] = ['NWS', 'USFS', 'WFIGS', 'NOAA_HMS', 'WILDCAD', 'PIMA_GIS'];
+const ACTIVE_FIRE_ALERT_SOURCES: FireAlertSource[] = ['NWS', 'USFS', 'WFIGS', 'WILDCAD', 'PIMA_GIS'];
 
 const NWS_HEADERS = {
   'User-Agent': 'CampLawtonStaffHub/1.0 (contact@camplawton.org)',
@@ -77,6 +77,12 @@ function highestLevel(levels: FireAlertLevel[]): FireAlertLevel {
     levelToScore(current) > levelToScore(best) ? current : best,
     'normal' as FireAlertLevel
   );
+}
+
+function combineSourceHealth(...statuses: SourceHealthStatus[]): SourceHealthStatus {
+  if (statuses.every((status) => status === 'ok')) return 'ok';
+  if (statuses.every((status) => status === 'error')) return 'error';
+  return 'degraded';
 }
 
 function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -101,7 +107,6 @@ function defaultSourceHealth(): Record<FireAlertSource, SourceHealthStatus> {
     NWS: 'ok',
     USFS: 'ok',
     WFIGS: 'ok',
-    NOAA_HMS: 'ok',
     WILDCAD: 'ok',
     PIMA_GIS: 'ok',
   };
@@ -389,6 +394,7 @@ async function fetchUSFSAlerts(): Promise<{ items: FireAlertItem[]; health: Sour
 
     const levelFromText = (text: string): FireAlertLevel => {
       const t = text.toLowerCase();
+      if (/no (?:active )?fire restrictions|fire restrictions? (?:have been )?lifted/.test(t)) return 'normal';
       if (t.includes('evacuation') || t.includes('critical closure')) return 'critical';
       if (t.includes('closure') || t.includes('fire restriction') || t.includes('red flag') || t.includes('fire')) return 'warning';
       if (t.includes('caution') || t.includes('watch')) return 'watch';
@@ -402,6 +408,7 @@ async function fetchUSFSAlerts(): Promise<{ items: FireAlertItem[]; health: Sour
       const href = $(el).find('a').first().attr('href');
       if (title) {
         const level = levelFromText(title + ' ' + body);
+        if (level === 'normal') return;
         items.push({
           id: `usfs-${i}`,
           level,
@@ -426,6 +433,7 @@ async function fetchUSFSAlerts(): Promise<{ items: FireAlertItem[]; health: Sour
             const href = $(li).find('a').first().attr('href');
             if (text) {
               const level = levelFromText(text);
+              if (level === 'normal') return;
               items.push({
                 id: `usfs-li-${i}`,
                 level,
@@ -451,13 +459,36 @@ async function fetchUSFSAlerts(): Promise<{ items: FireAlertItem[]; health: Sour
 
 interface WFIGSFeature {
   attributes: {
-    poly_IncidentName?: string;
-    attr_FireDiscoveryDateTime?: number;
-    attr_IncidentSize?: number;
-    irwin_ModifiedOnDateTime_dt?: string;
-    GISAcres?: number;
+    poly_IncidentName?: string | null;
+    poly_GISAcres?: number | null;
+    poly_DeleteThis?: string | boolean | number | null;
+    poly_FeatureStatus?: string | null;
+    poly_IsVisible?: string | boolean | number | null;
+    poly_DateCurrent?: number | null;
+    poly_PolygonDateTime?: number | null;
+    attr_FireDiscoveryDateTime?: number | null;
+    attr_FireOutDateTime?: number | null;
+    attr_ContainmentDateTime?: number | null;
+    attr_PercentContained?: number | null;
+    attr_IncidentSize?: number | null;
+    attr_ModifiedOnDateTime_dt?: number | string | null;
   };
-  geometry?: { rings?: number[][][] };
+}
+
+function arcGisMillis(value?: number | string | null) {
+  if (value === null || value === undefined || value === '') return 0;
+  const parsed = typeof value === 'number' ? value : Date.parse(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function arcGisBoolean(value: string | boolean | number | null | undefined, defaultValue: boolean) {
+  if (value === null || value === undefined) return defaultValue;
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number') return value !== 0;
+  const normalized = value.trim().toLowerCase();
+  if (['yes', 'true', '1'].includes(normalized)) return true;
+  if (['no', 'false', '0'].includes(normalized)) return false;
+  return defaultValue;
 }
 
 async function fetchWFIGS(): Promise<{ items: FireAlertItem[]; health: SourceHealthStatus }> {
@@ -468,34 +499,83 @@ async function fetchWFIGS(): Promise<{ items: FireAlertItem[]; health: SourceHea
       geometryType: 'esriGeometryEnvelope',
       inSR: '4326',
       spatialRel: 'esriSpatialRelIntersects',
-      outFields: 'poly_IncidentName,attr_FireDiscoveryDateTime,attr_IncidentSize,irwin_ModifiedOnDateTime_dt,GISAcres',
+      outFields: [
+        'poly_IncidentName',
+        'poly_GISAcres',
+        'poly_DeleteThis',
+        'poly_FeatureStatus',
+        'poly_IsVisible',
+        'poly_DateCurrent',
+        'poly_PolygonDateTime',
+        'attr_FireDiscoveryDateTime',
+        'attr_FireOutDateTime',
+        'attr_ContainmentDateTime',
+        'attr_PercentContained',
+        'attr_IncidentSize',
+        'attr_ModifiedOnDateTime_dt',
+      ].join(','),
       returnGeometry: 'false',
+      resultRecordCount: '200',
+      orderByFields: 'poly_DateCurrent DESC',
       f: 'json',
     });
 
     const url = `https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/WFIGS_Interagency_Perimeters/FeatureServer/0/query?${params}`;
     const res = await fetch(url, { next: { revalidate: 300 } });
     if (!res.ok) return { items: [], health: 'degraded' };
-    const data = await res.json();
+    const data = await res.json() as { features?: WFIGSFeature[]; error?: unknown };
+    if (data.error || !Array.isArray(data.features)) return { items: [], health: 'degraded' };
 
-    const features: WFIGSFeature[] = data.features || [];
-    if (features.length === 0) return { items: [], health: 'ok' };
+    const freshnessCutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    const currentFeatures = data.features.filter((feature) => {
+      const attributes = feature.attributes;
+      const isVisible = arcGisBoolean(attributes.poly_IsVisible, true);
+      const isDeleted = arcGisBoolean(attributes.poly_DeleteThis, false);
+      const fireOutAt = arcGisMillis(attributes.attr_FireOutDateTime);
+      const percentContained = attributes.attr_PercentContained;
+      const latestActivity = Math.max(
+        arcGisMillis(attributes.poly_DateCurrent),
+        arcGisMillis(attributes.poly_PolygonDateTime),
+        arcGisMillis(attributes.attr_ModifiedOnDateTime_dt),
+        arcGisMillis(attributes.attr_FireDiscoveryDateTime),
+      );
 
-    const items: FireAlertItem[] = features.map((f, i) => {
-      const name = f.attributes.poly_IncidentName || 'Unknown Incident';
-      const acres = f.attributes.GISAcres || f.attributes.attr_IncidentSize;
-      const discoveryTs = f.attributes.attr_FireDiscoveryDateTime;
-      return {
-        id: `wfigs-${i}-${name.replace(/\s+/g, '-').toLowerCase()}`,
-        level: 'critical' as FireAlertLevel,
-        source: 'WFIGS' as FireAlertSource,
+      return isVisible
+        && !isDeleted
+        && fireOutAt === 0
+        && (percentContained === undefined || percentContained === null || percentContained < 100)
+        && latestActivity >= freshnessCutoff;
+    });
+
+    const seenIncidents = new Set<string>();
+    const items: FireAlertItem[] = [];
+
+    currentFeatures.forEach((feature, index) => {
+      const attributes = feature.attributes;
+      const name = attributes.poly_IncidentName?.trim() || 'Unknown Incident';
+      const incidentKey = name.toLowerCase();
+      if (seenIncidents.has(incidentKey)) return;
+      seenIncidents.add(incidentKey);
+
+      const acres = attributes.poly_GISAcres || attributes.attr_IncidentSize;
+      const discoveryAt = arcGisDateToIso(attributes.attr_FireDiscoveryDateTime);
+      const updatedAt = arcGisDateToIso(attributes.attr_ModifiedOnDateTime_dt)
+        || arcGisDateToIso(attributes.poly_DateCurrent)
+        || discoveryAt
+        || new Date().toISOString();
+
+      items.push({
+        id: `wfigs-${index}-${name.replace(/\s+/g, '-').toLowerCase()}`,
+        level: 'critical',
+        source: 'WFIGS',
         title: `Official Fire Perimeter: ${name}`,
-        message: `An official mapped fire perimeter (${acres ? Math.round(acres) + ' acres' : 'size unknown'}) is intersecting or is very near the Santa Catalina Mountains area. This is a confirmed, tracked wildfire incident. Review camp evacuation procedures.`,
-        observedAt: discoveryTs ? new Date(discoveryTs).toISOString() : undefined,
-        updatedAt: f.attributes.irwin_ModifiedOnDateTime_dt || new Date().toISOString(),
-        confidence: 'official' as Confidence,
-        actionability: 'contact-leadership' as Actionability,
-      };
+        message: `A current official fire perimeter (${acres ? `${Math.round(acres)} acres` : 'size unknown'}) intersects the Santa Catalina Mountains monitoring area. Review camp evacuation procedures and confirm conditions with official incident sources.`,
+        observedAt: discoveryAt,
+        updatedAt,
+        confidence: 'official',
+        actionability: 'contact-leadership',
+        url: 'https://data-nifc.opendata.arcgis.com/datasets/nifc::wfigs-interagency-fire-perimeters/about',
+      });
     });
 
     return { items, health: 'ok' };
@@ -768,7 +848,7 @@ export async function GET(request: Request) {
     const wildCadData = resolve(wildCadResult, { items: [], health: 'error' as SourceHealthStatus });
     const pimaGisData = resolve(pimaGisResult, { items: [], health: 'error' as SourceHealthStatus });
 
-    sourceHealth.NWS = nwsAlertsData.health;
+    sourceHealth.NWS = combineSourceHealth(nwsAlertsData.health, nwsWeatherData.health);
     sourceHealth.USFS = usfsData.health;
     sourceHealth.WFIGS = wfigsData.health;
     sourceHealth.WILDCAD = wildCadData.health;
