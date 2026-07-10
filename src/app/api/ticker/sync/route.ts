@@ -250,45 +250,17 @@ function tickerResponseItem(item: LiveTickerItem): TickerResponseItem {
   };
 }
 
-function requestHasValidCronSecret(request: Request) {
-  const expected = process.env.CRON_SECRET?.trim();
-  const provided = request.headers.get('x-cron-secret')?.trim();
-  return Boolean(expected && provided && expected === provided);
-}
-
-async function requestIsAuthorizedAdmin(request: Request) {
+export async function GET(request: Request) {
   try {
-    const { verifyRequestUser, currentUserIsHealthy } = await import('@/lib/server/auth');
-    const currentUser = await verifyRequestUser(request);
-    if (!currentUserIsHealthy(currentUser)) return false;
+    const url = new URL(request.url);
 
-    return currentUser?.decodedToken.admin === true || currentUser?.profile?.isAdmin === true;
-  } catch {
-    return false;
-  }
-}
-
-export async function GET() {
-  return NextResponse.json({
-    success: true,
-    route: 'ticker-sync',
-    syncMethod: 'POST',
-    rssFeeds: FEED_URLS.length,
-    maxAgeHours: 24,
-  }, {
-    headers: {
-      Allow: 'GET, POST',
-      'Cache-Control': 'no-store',
-    },
-  });
-}
-
-export async function POST(request: Request) {
-  try {
-    const isAuthorized = requestHasValidCronSecret(request) || await requestIsAuthorizedAdmin(request);
-    if (!isAuthorized) {
-      return NextResponse.json({ success: false, error: 'Unauthorized.' }, {
-        status: 401,
+    if (url.searchParams.get('health') === 'true') {
+      return NextResponse.json({
+        success: true,
+        route: 'ticker-sync',
+        rssFeeds: FEED_URLS.length,
+        maxAgeHours: 24,
+      }, {
         headers: { 'Cache-Control': 'no-store' },
       });
     }
@@ -379,6 +351,8 @@ export async function POST(request: Request) {
       firstItemId: liveItems[0]?.id || null,
       rssCount: rssTicker.items.length,
       rssFailedFeedCount: rssTicker.failedFeedCount,
+      aiStatus: 'disabled',
+      aiError: null,
       maxAgeHours: 24,
       metadata: {
         generated_at: generatedAt,
@@ -386,6 +360,7 @@ export async function POST(request: Request) {
         rss_feed_count: rssTicker.feedCount,
         rss_failed_feed_count: rssTicker.failedFeedCount,
         rss_failed_feeds: rssTicker.failedFeeds.slice(0, 12),
+        ai_status: 'disabled',
         max_age_hours: 24,
       },
       items: liveItems.map(tickerResponseItem),
