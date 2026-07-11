@@ -93,7 +93,7 @@ export default function MobileMenu() {
                 Dashboard
               </Link>
               <Link href="/wiki" className={styles.navItem} onClick={() => setIsOpen(false)}>
-                Wiki &amp; Procedures
+                Handbook Wiki
               </Link>
               <Link href={actionLink} className={styles.navItem} onClick={() => setIsOpen(false)}>
                 {actionLabel}

@@ -18,7 +18,7 @@ export default function DesktopNav() {
   return (
     <nav className={styles.menuLinks}>
       <Link href="/" className={styles.menuItem}>Dashboard</Link>
-      <Link href="/wiki" className={styles.menuItem}>Wiki &amp; Procedures</Link>
+      <Link href="/wiki" className={styles.menuItem}>Handbook Wiki</Link>
       <Link href={actionLink} className={styles.menuItem}>{actionLabel}</Link>
       {isAdmin && (
         <Link href="/admin/review" className={styles.menuItem}>Admin</Link>
