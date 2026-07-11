@@ -34,6 +34,8 @@ interface CompactTickerFile {
   items: CompactTickerRow[];
 }
 
+type OfflineTickerFile = CompactTickerFile | OfflineTickerItem[];
+
 async function readJsonFile<T>(relativePath: string, fallback: T): Promise<T> {
   try {
     const jsonPath = path.join(process.cwd(), relativePath);
@@ -96,12 +98,6 @@ function selectOneOfflineItemPerCategory(items: OfflineTickerItem[]) {
   });
 }
 
-const EMPTY_COMPACT_TICKER: CompactTickerFile = {
-  version: 1,
-  sources: {},
-  items: [],
-};
-
 export async function getOfflineTickerItems() {
   const dataDir = path.join(process.cwd(), 'src/data');
   let files: string[] = [];
@@ -112,13 +108,10 @@ export async function getOfflineTickerItems() {
     return [];
   }
 
-  const jsonFiles = files.filter(f => f.startsWith('offline') && f.endsWith('.json'));
-  
+  const jsonFiles = files.filter((file) => file.startsWith('offline') && file.endsWith('.json'));
+
   const allParsed = await Promise.all(
-    jsonFiles.map(async (file) => {
-      const parsed = await readJsonFile<any>(`src/data/${file}`, null);
-      return parsed;
-    })
+    jsonFiles.map((file) => readJsonFile<OfflineTickerFile | null>(`src/data/${file}`, null)),
   );
 
   const enabledItems: OfflineTickerItem[] = [];
@@ -126,13 +119,14 @@ export async function getOfflineTickerItems() {
   for (const parsed of allParsed) {
     if (!parsed) continue;
 
-    // Check if it's a CompactTickerFile
-    if (parsed.version === 1 && Array.isArray(parsed.items) && parsed.items.length > 0 && Array.isArray(parsed.items[0])) {
-      const expanded = expandCompactTickerFile(parsed as CompactTickerFile);
-      enabledItems.push(...expanded.filter(item => item.enabled));
-    } else if (Array.isArray(parsed)) {
-      // It's an OfflineTickerItem[]
-      enabledItems.push(...(parsed as OfflineTickerItem[]).filter(item => item.enabled));
+    if (Array.isArray(parsed)) {
+      enabledItems.push(...parsed.filter((item) => item.enabled));
+      continue;
+    }
+
+    if (parsed.version === 1 && Array.isArray(parsed.items)) {
+      const expanded = expandCompactTickerFile(parsed);
+      enabledItems.push(...expanded.filter((item) => item.enabled));
     }
   }
 
