@@ -61,6 +61,8 @@ function FeedImage({ item }: { item: CampFeedBulletinItem }) {
   if (!item.imageUrl || failed) return null;
 
   const image = (
+    // Feed image hosts are dynamic, so they cannot be exhaustively configured for next/image.
+    // eslint-disable-next-line @next/next/no-img-element
     <img
       src={item.imageUrl}
       alt=""
