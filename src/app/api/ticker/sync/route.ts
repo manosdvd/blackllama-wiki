@@ -7,6 +7,8 @@ interface NewsTickerItem {
   headline: string;
   source: string;
   link: string;
+  publishedAt?: string;
+  imageUrl?: string;
 }
 
 interface RssCandidateItem extends NewsTickerItem {
@@ -22,6 +24,8 @@ interface LiveTickerItem {
   sourceType: string;
   position: number;
   generatedAt: string;
+  publishedAt?: string;
+  imageUrl?: string;
   syncRunId: string;
   timestamp: unknown;
 }
@@ -35,6 +39,16 @@ type ParsedRssItem = {
   contentSnippet?: string;
   summary?: string;
   content?: string;
+  contentEncoded?: string;
+  enclosure?: {
+    url?: string;
+    type?: string;
+  };
+  mediaContent?: unknown;
+  mediaThumbnail?: unknown;
+  mediaGroup?: unknown;
+  image?: unknown;
+  [key: string]: unknown;
 };
 
 const TARGET_LOCATION = 'Camp Lawton, Mt Lemmon, Santa Catalina Mountains';
@@ -106,18 +120,18 @@ const FEED_URLS = [
   'https://www.youtube.com/feeds/videos.xml?channel_id=UCMOqf8ab-42UUQIdVoKwjlQ',
 
   // Arizona wildlife, outdoor science, natural history, and Scout-friendly STEM.
-  'https://www.youtube.com/feeds/videos.xml?channel_id=UCASn7tMQBJvzAnOQ3yHoBWw', // Arizona Game and Fish
-  'https://www.youtube.com/feeds/videos.xml?channel_id=UCZYTClx2T1of7BRZ86-8fow', // SciShow
-  'https://www.youtube.com/feeds/videos.xml?channel_id=UCRFIPG2u1DxKLNuE3y2SjHA', // SciShow Kids
-  'https://www.youtube.com/feeds/videos.xml?channel_id=UC-3SbfTPJsL8fJAPKiVqBLg', // Deep Look
-  'https://www.youtube.com/feeds/videos.xml?channel_id=UCeiYXex_fwgYDonaTcSIk6w', // MinuteEarth
-  'https://www.youtube.com/feeds/videos.xml?channel_id=UC6E2mP01ZLH_kbAyeazCNdg', // Brave Wilderness
-  'https://www.youtube.com/feeds/videos.xml?channel_id=UCXVCgDuD_QCkI7gTKU7-tpg', // Nat Geo Kids
-  'https://www.youtube.com/feeds/videos.xml?channel_id=UCY1kMZp36IQSyNx_9h4mpCg', // Mark Rober
-  'https://www.youtube.com/feeds/videos.xml?channel_id=UCHnyfMqiRRG1u-2MsSQLbXA', // Veritasium
-  'https://www.youtube.com/feeds/videos.xml?channel_id=UCH4BNI0-FOK2dMXoFtViWHw', // Be Smart
-  'https://www.youtube.com/feeds/videos.xml?channel_id=UCHsRtomD4twRf5WVHHk-cMw', // TierZoo
-  'https://www.youtube.com/feeds/videos.xml?channel_id=UCZXZQxS3d6NpR-eH_gdDwYA', // Cornell Lab Bird Cams
+  'https://www.youtube.com/feeds/videos.xml?channel_id=UCASn7tMQBJvzAnOQ3yHoBWw',
+  'https://www.youtube.com/feeds/videos.xml?channel_id=UCZYTClx2T1of7BRZ86-8fow',
+  'https://www.youtube.com/feeds/videos.xml?channel_id=UCRFIPG2u1DxKLNuE3y2SjHA',
+  'https://www.youtube.com/feeds/videos.xml?channel_id=UC-3SbfTPJsL8fJAPKiVqBLg',
+  'https://www.youtube.com/feeds/videos.xml?channel_id=UCeiYXex_fwgYDonaTcSIk6w',
+  'https://www.youtube.com/feeds/videos.xml?channel_id=UC6E2mP01ZLH_kbAyeazCNdg',
+  'https://www.youtube.com/feeds/videos.xml?channel_id=UCXVCgDuD_QCkI7gTKU7-tpg',
+  'https://www.youtube.com/feeds/videos.xml?channel_id=UCY1kMZp36IQSyNx_9h4mpCg',
+  'https://www.youtube.com/feeds/videos.xml?channel_id=UCHnyfMqiRRG1u-2MsSQLbXA',
+  'https://www.youtube.com/feeds/videos.xml?channel_id=UCH4BNI0-FOK2dMXoFtViWHw',
+  'https://www.youtube.com/feeds/videos.xml?channel_id=UCHsRtomD4twRf5WVHHk-cMw',
+  'https://www.youtube.com/feeds/videos.xml?channel_id=UCZXZQxS3d6NpR-eH_gdDwYA',
 ];
 
 const SCOUT_UNSUITABLE_PATTERNS = [
@@ -172,7 +186,8 @@ function isScoutAppropriate(item: ParsedRssItem) {
     item.contentSnippet,
     item.summary,
     item.content,
-  ].filter(Boolean).join(' '));
+    item.contentEncoded,
+  ].filter((value): value is string => typeof value === 'string').join(' '));
 
   return !SCOUT_UNSUITABLE_PATTERNS.some((pattern) => pattern.test(text));
 }
@@ -188,13 +203,102 @@ function isWithinLast24Hours(publishedTime: number, now = Date.now()) {
   return publishedTime <= now + RSS_CLOCK_SKEW_MS && now - publishedTime <= RSS_MAX_AGE_MS;
 }
 
+function safeImageUrl(value: unknown) {
+  if (typeof value !== 'string') return undefined;
+  const decoded = value.replace(/&amp;/g, '&').trim();
+  if (!decoded) return undefined;
+  try {
+    const parsed = new URL(decoded);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return undefined;
+    return parsed.toString();
+  } catch {
+    return undefined;
+  }
+}
+
+function findMediaUrl(value: unknown, depth = 0): string | undefined {
+  if (depth > 4 || value === null || value === undefined) return undefined;
+
+  const direct = safeImageUrl(value);
+  if (direct) return direct;
+
+  if (Array.isArray(value)) {
+    for (const entry of value) {
+      const found = findMediaUrl(entry, depth + 1);
+      if (found) return found;
+    }
+    return undefined;
+  }
+
+  if (typeof value !== 'object') return undefined;
+  const record = value as Record<string, unknown>;
+
+  for (const key of ['url', 'href', 'src']) {
+    const found = safeImageUrl(record[key]);
+    if (found) return found;
+  }
+
+  const attributes = record.$;
+  if (attributes && typeof attributes === 'object') {
+    const attributeRecord = attributes as Record<string, unknown>;
+    for (const key of ['url', 'href', 'src']) {
+      const found = safeImageUrl(attributeRecord[key]);
+      if (found) return found;
+    }
+  }
+
+  for (const nested of Object.values(record)) {
+    const found = findMediaUrl(nested, depth + 1);
+    if (found) return found;
+  }
+
+  return undefined;
+}
+
+function imageFromHtml(html?: string) {
+  if (!html) return undefined;
+  const match = html.match(/<img\b[^>]*\bsrc=["']([^"']+)["'][^>]*>/i);
+  return safeImageUrl(match?.[1]);
+}
+
+function youtubeThumbnail(link: string) {
+  try {
+    const url = new URL(link);
+    let videoId: string | null = null;
+    if (url.hostname === 'youtu.be') videoId = url.pathname.split('/').filter(Boolean)[0] || null;
+    if (url.hostname.endsWith('youtube.com')) videoId = url.searchParams.get('v');
+    if (!videoId || !/^[\w-]{6,}$/.test(videoId)) return undefined;
+    return `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+  } catch {
+    return undefined;
+  }
+}
+
+function extractImageUrl(item: ParsedRssItem, link: string) {
+  const enclosureType = item.enclosure?.type?.toLowerCase() || '';
+  const enclosureUrl = safeImageUrl(item.enclosure?.url);
+  if (enclosureUrl && (enclosureType.startsWith('image/') || !enclosureType)) return enclosureUrl;
+
+  for (const media of [item.mediaContent, item.mediaThumbnail, item.mediaGroup, item.image]) {
+    const found = findMediaUrl(media);
+    if (found) return found;
+  }
+
+  for (const html of [item.contentEncoded, item.content, item.summary]) {
+    const found = imageFromHtml(html);
+    if (found) return found;
+  }
+
+  return youtubeThumbnail(link);
+}
+
 function rssTimeoutAfter(ms: number, feedUrl: string) {
   return new Promise<never>((_, reject) => {
     setTimeout(() => reject(new Error(`RSS feed timed out after ${ms}ms: ${feedUrl}`)), ms);
   });
 }
 
-function dedupeTickerItems(items: NewsTickerItem[]) {
+function dedupeTickerItems<T extends NewsTickerItem>(items: T[]) {
   const seen = new Set<string>();
   return items.filter((item) => {
     const key = `${item.link || item.headline}`.toLowerCase().trim();
@@ -206,7 +310,16 @@ function dedupeTickerItems(items: NewsTickerItem[]) {
 
 async function generateRssTicker() {
   const Parser = (await import('rss-parser')).default;
-  const parser = new Parser<Record<string, unknown>, ParsedRssItem>();
+  const parser = new Parser<Record<string, unknown>, ParsedRssItem>({
+    customFields: {
+      item: [
+        ['content:encoded', 'contentEncoded'],
+        ['media:content', 'mediaContent', { keepArray: true }],
+        ['media:thumbnail', 'mediaThumbnail', { keepArray: true }],
+        ['media:group', 'mediaGroup'],
+      ],
+    },
+  });
   const now = Date.now();
 
   const feedResults = await Promise.allSettled(
@@ -227,15 +340,17 @@ async function generateRssTicker() {
         if (!title || !link || !publishedTime || !isWithinLast24Hours(publishedTime, now)) return null;
         if (!isScoutAppropriate(item)) return null;
 
+        const imageUrl = extractImageUrl(item, link);
         return {
           headline: title,
           source,
           link,
           publishedAt: new Date(publishedTime).toISOString(),
           publishedTime,
+          ...(imageUrl ? { imageUrl } : {}),
         };
       }).filter(Boolean) as RssCandidateItem[];
-    })
+    }),
   );
 
   const candidates = feedResults
@@ -272,6 +387,8 @@ function tickerResponseItem(item: LiveTickerItem): TickerResponseItem {
     sourceType: item.sourceType,
     position: item.position,
     generatedAt: item.generatedAt,
+    publishedAt: item.publishedAt,
+    imageUrl: item.imageUrl,
     syncRunId: item.syncRunId,
   };
 }
@@ -289,15 +406,12 @@ export async function GET(req: Request) {
       });
     }
 
-    // The user requested removing the auth requirement for the sync endpoint.
-    // Cron requests passing ?force=true will automatically proceed.
     const [{ getAdminDbOnly }, { FieldValue }] = await Promise.all([
       import('@/lib/firebase/adminDb'),
       import('firebase-admin/firestore'),
     ]);
 
     const db = getAdminDbOnly();
-
     const rssTicker = await generateRssTicker();
 
     if (rssTicker.items.length === 0) {
@@ -325,11 +439,10 @@ export async function GET(req: Request) {
       }, { status: 503 });
     }
 
-    const combinedItems = rssTicker.items;
     const generatedAt = new Date().toISOString();
     const syncRunId = `sync_${getPhoenixDateStamp()}_${Date.now()}`;
 
-    const liveItems: LiveTickerItem[] = combinedItems.map((item: NewsTickerItem, index: number) => ({
+    const liveItems: LiveTickerItem[] = rssTicker.items.map((item, index) => ({
       id: `${syncRunId}_${String(index + 1).padStart(2, '0')}`,
       title: item.headline,
       url: normalizeTickerLink(item.link),
@@ -337,13 +450,14 @@ export async function GET(req: Request) {
       sourceType: 'rss',
       position: index,
       generatedAt,
+      publishedAt: item.publishedAt,
+      ...(item.imageUrl ? { imageUrl: item.imageUrl } : {}),
       syncRunId,
-      timestamp: FieldValue.serverTimestamp()
+      timestamp: FieldValue.serverTimestamp(),
     }));
 
     try {
       const batch = db.batch();
-
       const snapshot = await db.collection('liveTicker').get();
       snapshot.docs.forEach((doc) => batch.delete(doc.ref));
 
@@ -374,13 +488,13 @@ export async function GET(req: Request) {
           ai_status: 'disabled',
           max_age_hours: 24,
         },
-        items: liveItems.map(tickerResponseItem)
+        items: liveItems.map(tickerResponseItem),
       });
-    } catch (e) {
+    } catch (error) {
       await writeServerErrorLog({
         context: 'ticker.sync.firestore_write',
         message: 'Failed to write liveTicker items to Firestore.',
-        error: e,
+        error,
         request: req,
         metadata: { syncRunId, itemCount: liveItems.length },
       });
@@ -396,19 +510,18 @@ export async function GET(req: Request) {
         aiError: null,
         maxAgeHours: 24,
         warning: 'Failed to write to DB',
-        items: liveItems.map(tickerResponseItem)
+        items: liveItems.map(tickerResponseItem),
       });
     }
-
-  } catch (err) {
+  } catch (error) {
     await writeServerErrorLog({
       context: 'ticker.sync.fatal',
       message: 'Fatal error in ticker sync route.',
-      error: err,
+      error,
       severity: 'critical',
       request: req,
     });
 
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    return NextResponse.json({ error: String(error) }, { status: 500 });
   }
 }
