@@ -1,7 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import AlertsHUD from './AlertsHUD';
+import AlertsRail from './AlertsRail';
 import BearAlertHUD from './BearAlertHUD';
 import Ticker from './Ticker';
 import ThemeToggle from './ThemeToggle';
@@ -47,8 +47,8 @@ export default async function Header() {
       {/* Distance-triggered bear alerts take priority above the standard HUD. */}
       <BearAlertHUD />
 
-      {/* Fire, weather, smoke, and forest alerts HUD */}
-      <AlertsHUD />
+      {/* Coronado fire danger plus fire, weather, smoke, and forest alerts. */}
+      <AlertsRail />
       
       {/* Ticker at the bottom of the header */}
       <Ticker items={tickerItems} />
