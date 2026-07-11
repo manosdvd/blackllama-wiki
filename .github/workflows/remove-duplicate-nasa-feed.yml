@@ -1,0 +1,44 @@
+name: Remove duplicate NASA ticker feed
+
+on:
+  push:
+    branches:
+      - ticker/fix-feed-timestamps
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: ticker/fix-feed-timestamps
+
+      - name: Remove duplicate NASA feed and this temporary workflow
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          route = Path('src/app/api/ticker/sync/route.ts')
+          text = route.read_text()
+          target = "  'scoutingnewsroom.org/feed', 'nasa.gov/feeds/iotd-feed', 'nasa.gov/feed',\n"
+          replacement = "  'scoutingnewsroom.org/feed', 'nasa.gov/feed',\n"
+          if target not in text:
+              raise SystemExit('NASA Image of the Day feed entry was not found')
+          route.write_text(text.replace(target, replacement, 1))
+          Path('.github/workflows/remove-duplicate-nasa-feed.yml').unlink()
+          PY
+
+      - name: Commit source removal
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/app/api/ticker/sync/route.ts .github/workflows/remove-duplicate-nasa-feed.yml
+          git commit -m "Remove duplicate NASA image feed"
+          git push origin HEAD:ticker/fix-feed-timestamps
