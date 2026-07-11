@@ -29,7 +29,6 @@ function ImageResizerOverlay({
 }) {
   const [rect, setRect] = useState({ top: 0, left: 0, width: 0, height: 0 });
   const startPos = useRef({ x: 0, width: 0, height: 0 });
-  const [alignment, setAlignment] = useState<string>('left');
 
   useEffect(() => {
     const updateRect = () => {
@@ -55,8 +54,9 @@ function ImageResizerOverlay({
     const handlePointerMove = (ev: PointerEvent) => {
       const dx = ev.clientX - startPos.current.x;
       const newWidth = corner.includes('right') ? startPos.current.width + dx : startPos.current.width - dx;
-      imgNode.style.width = `${Math.max(50, newWidth)}px`;
-      imgNode.style.height = 'auto';
+      const targetNode = imgNode;
+      targetNode.style.width = `${Math.max(50, newWidth)}px`;
+      targetNode.style.height = 'auto';
     };
 
     const handlePointerUp = () => {
@@ -70,28 +70,28 @@ function ImageResizerOverlay({
   };
 
   const applyAlignment = (newAlignment: string) => {
+    const node = imgNode;
     if (newAlignment === 'left') {
-      imgNode.style.display = 'block';
-      imgNode.style.margin = '12px auto 12px 0';
-      imgNode.style.float = 'none';
+      node.style.display = 'block';
+      node.style.margin = '12px auto 12px 0';
+      node.style.float = 'none';
     } else if (newAlignment === 'center') {
-      imgNode.style.display = 'block';
-      imgNode.style.margin = '12px auto';
-      imgNode.style.float = 'none';
+      node.style.display = 'block';
+      node.style.margin = '12px auto';
+      node.style.float = 'none';
     } else if (newAlignment === 'right') {
-      imgNode.style.display = 'block';
-      imgNode.style.margin = '12px 0 12px auto';
-      imgNode.style.float = 'none';
+      node.style.display = 'block';
+      node.style.margin = '12px 0 12px auto';
+      node.style.float = 'none';
     } else if (newAlignment === 'float-left') {
-      imgNode.style.display = 'inline';
-      imgNode.style.margin = '12px 16px 12px 0';
-      imgNode.style.float = 'left';
+      node.style.display = 'inline';
+      node.style.margin = '12px 16px 12px 0';
+      node.style.float = 'left';
     } else if (newAlignment === 'float-right') {
-      imgNode.style.display = 'inline';
-      imgNode.style.margin = '12px 0 12px 16px';
-      imgNode.style.float = 'right';
+      node.style.display = 'inline';
+      node.style.margin = '12px 0 12px 16px';
+      node.style.float = 'right';
     }
-    setAlignment(newAlignment);
     onUpdate();
   };
 
