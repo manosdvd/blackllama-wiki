@@ -4,7 +4,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   Bold, Italic, Underline, Heading2, Heading3,
   List, ListOrdered, Link as LinkIcon, Link2, RemoveFormatting,
-  Quote, Image as ImageIcon, Video
+  Quote, Image as ImageIcon, Video,
+  AlignLeft, AlignCenter, AlignRight, Indent, Outdent
 } from 'lucide-react';
 import { convertMarkdownToHtml } from './EditorOutput';
 import type { EditorData } from '@/types/content';
@@ -456,6 +457,24 @@ export default function Editor({ initialData, onChange }: EditorProps) {
           </button>
           <button type="button" className={styles.toolbarBtn} onClick={() => execCmd('insertOrderedList')} title="Numbered List">
             <ListOrdered size={16} />
+          </button>
+          <button type="button" className={styles.toolbarBtn} onClick={() => execCmd('outdent')} title="Decrease Indent">
+            <Outdent size={16} />
+          </button>
+          <button type="button" className={styles.toolbarBtn} onClick={() => execCmd('indent')} title="Increase Indent">
+            <Indent size={16} />
+          </button>
+          
+          <div className={styles.toolbarSeparator} />
+          
+          <button type="button" className={styles.toolbarBtn} onClick={() => execCmd('justifyLeft')} title="Align Left">
+            <AlignLeft size={16} />
+          </button>
+          <button type="button" className={styles.toolbarBtn} onClick={() => execCmd('justifyCenter')} title="Align Center">
+            <AlignCenter size={16} />
+          </button>
+          <button type="button" className={styles.toolbarBtn} onClick={() => execCmd('justifyRight')} title="Align Right">
+            <AlignRight size={16} />
           </button>
           
           <div className={styles.toolbarSeparator} />

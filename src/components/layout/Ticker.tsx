@@ -117,30 +117,9 @@ export default function Ticker({ items }: TickerProps) {
   }, []);
 
   useEffect(() => {
-    const STALE_THRESHOLD_MS = 6 * 60 * 60 * 1000;
-
-    async function triggerSyncIfNeeded() {
-      try {
-        const { collection: col, getDocs, query: fsQuery, orderBy: fsOrderBy, limit } = await import('firebase/firestore');
-        const snap = await getDocs(fsQuery(col(db, 'liveTicker'), fsOrderBy('position', 'asc'), limit(1)));
-
-        if (!snap.empty) {
-          const firstItem = snap.docs[0].data() as TickerItem;
-          const generatedAt = firstItem.generatedAt ? new Date(firstItem.generatedAt).getTime() : 0;
-          const isFresh = Date.now() - generatedAt < STALE_THRESHOLD_MS;
-          const hasPostMetadata = firstItem.sourceType !== 'rss' || Boolean(firstItem.publishedAt);
-
-          if (isFresh && hasPostMetadata) return;
-        }
-
-        console.info('[Ticker] Triggering background RSS sync...');
-        fetch('/api/ticker/sync?force=true').catch(() => undefined);
-      } catch {
-        // The offline ticker remains available when Firestore or the sync endpoint is unavailable.
-      }
-    }
-
-    void triggerSyncIfNeeded();
+    // Trigger background RSS sync on page load asynchronously.
+    console.info('[Ticker] Triggering background RSS sync...');
+    fetch('/api/ticker/sync?force=true').catch(() => undefined);
   }, []);
 
   useEffect(() => {

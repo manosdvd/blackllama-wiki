@@ -86,9 +86,23 @@ export default function AuthModal() {
     setIsSubmitting(true);
     try {
       await loginWithGoogle();
-    } catch (err) {
+    } catch (err: unknown) {
       console.error(err);
-      setErrorMsg('Google Sign-In failed.');
+      let friendlyMessage = 'Google Sign-In failed.';
+      if (err && typeof err === 'object') {
+        const code = 'code' in err ? String((err as { code: string }).code) : '';
+        const message = 'message' in err ? String((err as { message: string }).message) : '';
+        if (code === 'auth/popup-closed-by-user') {
+          friendlyMessage = 'Sign-in popup was closed before completing.';
+        } else if (code === 'auth/popup-blocked') {
+          friendlyMessage = 'Sign-in popup was blocked by your browser. Please allow popups for this site.';
+        } else if (code === 'auth/unauthorized-domain') {
+          friendlyMessage = 'This domain is not authorized for Google Sign-In. Check Firebase settings.';
+        } else if (message) {
+          friendlyMessage = `Google Sign-In Error: ${message}`;
+        }
+      }
+      setErrorMsg(friendlyMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -208,6 +222,7 @@ export default function AuthModal() {
         </div>
 
         <button 
+          type="button"
           onClick={handleGoogleSignIn} 
           className={styles.googleBtn} 
           disabled={isSubmitting}

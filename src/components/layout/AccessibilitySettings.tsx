@@ -8,29 +8,37 @@ import {
 } from '@/lib/accessibilityPreferences';
 import styles from './AccessibilitySettings.module.css';
 
-type FontChoice = 'default' | 'opendyslexic';
+type FontChoice = 'default' | 'opendyslexic' | 'atkinson' | 'inter';
 
 function storedFontChoice(): FontChoice {
   if (typeof window === 'undefined') return 'default';
   const storedFont = localStorage.getItem('access-font');
-  return storedFont === 'opendyslexic' ? 'opendyslexic' : 'default';
+  if (storedFont === 'opendyslexic' || storedFont === 'atkinson' || storedFont === 'inter') {
+    return storedFont as FontChoice;
+  }
+  return 'default';
 }
 
 function storedHighLegibility() {
   return typeof window !== 'undefined' && localStorage.getItem('access-high-legibility') === 'true';
 }
 
+function storedHighContrast() {
+  return typeof window !== 'undefined' && localStorage.getItem('access-high-contrast') === 'true';
+}
+
 export default function AccessibilitySettings() {
   const [isOpen, setIsOpen] = useState(false);
   const [font, setFont] = useState<FontChoice>(storedFontChoice);
   const [highLegibility, setHighLegibility] = useState(storedHighLegibility);
+  const [highContrast, setHighContrast] = useState(storedHighContrast);
   const [lowMotion, setLowMotion] = useState(readLowMotionPreference);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Migrate removed font options to the Lexie Readable default.
   useEffect(() => {
     const storedFont = localStorage.getItem('access-font');
-    if (storedFont === 'atkinson' || storedFont === 'dyslexia') {
+    if (storedFont === 'dyslexia') {
       localStorage.setItem('access-font', 'default');
     }
   }, []);
@@ -39,10 +47,9 @@ export default function AccessibilitySettings() {
   useEffect(() => {
     const root = document.documentElement;
 
-    if (font === 'opendyslexic') {
-      root.classList.add('font-opendyslexic');
-    } else {
-      root.classList.remove('font-opendyslexic');
+    root.classList.remove('font-opendyslexic', 'font-atkinson', 'font-inter');
+    if (font !== 'default') {
+      root.classList.add(`font-${font}`);
     }
 
     if (highLegibility) {
@@ -51,12 +58,18 @@ export default function AccessibilitySettings() {
       root.classList.remove('high-legibility');
     }
 
+    if (highContrast) {
+      root.classList.add('high-contrast');
+    } else {
+      root.classList.remove('high-contrast');
+    }
+
     if (lowMotion) {
       root.classList.add('low-motion');
     } else {
       root.classList.remove('low-motion');
     }
-  }, [font, highLegibility, lowMotion]);
+  }, [font, highLegibility, highContrast, lowMotion]);
 
   // Click outside to close dropdown handler
   useEffect(() => {
@@ -82,6 +95,12 @@ export default function AccessibilitySettings() {
     const nextVal = !highLegibility;
     setHighLegibility(nextVal);
     localStorage.setItem('access-high-legibility', String(nextVal));
+  };
+
+  const toggleHighContrast = () => {
+    const nextVal = !highContrast;
+    setHighContrast(nextVal);
+    localStorage.setItem('access-high-contrast', String(nextVal));
   };
 
   const toggleLowMotion = () => {
@@ -127,6 +146,22 @@ export default function AccessibilitySettings() {
               >
                 OpenDyslexic
               </button>
+              <button
+                type="button"
+                className={`${styles.optionBtn} ${font === 'atkinson' ? styles.optionBtnActive : ''}`}
+                onClick={() => selectFont('atkinson')}
+                style={{ fontFamily: 'var(--font-atkinson), sans-serif' }}
+              >
+                Atkinson Hyperlegible
+              </button>
+              <button
+                type="button"
+                className={`${styles.optionBtn} ${font === 'inter' ? styles.optionBtnActive : ''}`}
+                onClick={() => selectFont('inter')}
+                style={{ fontFamily: 'var(--font-inter), sans-serif' }}
+              >
+                Inter
+              </button>
             </div>
           </div>
 
@@ -141,6 +176,23 @@ export default function AccessibilitySettings() {
                   type="checkbox"
                   checked={highLegibility}
                   onChange={toggleHighLegibility}
+                />
+                <span className={styles.slider} />
+              </label>
+            </div>
+          </div>
+
+          <div className={styles.settingGroup}>
+            <div className={styles.toggleRow}>
+              <div className={styles.toggleLabelText}>
+                <strong>High Contrast Mode</strong>
+                <span>Maximize contrast and simplify colors</span>
+              </div>
+              <label className={styles.switch} aria-label="Toggle High Contrast Mode">
+                <input
+                  type="checkbox"
+                  checked={highContrast}
+                  onChange={toggleHighContrast}
                 />
                 <span className={styles.slider} />
               </label>

@@ -20,62 +20,7 @@
   max-width: 780px;
 }
 
-.userList {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.userCard {
-  align-items: end;
-  background: rgba(30, 27, 24, 0.86);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  display: grid;
-  gap: 1rem;
-  grid-template-columns: 1.5fr repeat(4, minmax(150px, 1fr));
-  padding: 1rem;
-}
-
-.userIdentity {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.userIdentity strong {
-  color: white;
-  font-size: 1.05rem;
-}
-
-.userIdentity span {
-  color: rgba(245, 245, 244, 0.62);
-  font-size: 0.82rem;
-  overflow-wrap: anywhere;
-}
-
-.userCard label {
-  color: rgba(245, 245, 244, 0.72);
-  display: flex;
-  flex-direction: column;
-  font-size: 0.78rem;
-  font-weight: 700;
-  gap: 0.35rem;
-  text-transform: uppercase;
-}
-
-.userCard input,
-.userCard select {
-  background: rgba(12, 10, 9, 0.8);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 4px;
-  color: var(--canvas-tan);
-  font: inherit;
-  min-height: 42px;
-  padding: 0.65rem;
-  text-transform: none;
-}
-
+/* Success/Error Messaging */
 .successMessage,
 .errorMessage {
   border-radius: 8px;
@@ -95,15 +40,248 @@
   color: #fecaca;
 }
 
-@media (max-width: 1050px) {
-  .userCard {
-    align-items: stretch;
-    grid-template-columns: 1fr 1fr;
-  }
+/* Table container styling */
+.tableContainer {
+  background: rgba(30, 27, 24, 0.86);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
 }
 
-@media (max-width: 768px) {
-  .userCard {
-    grid-template-columns: 1fr;
+.usersTable {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.usersTable th {
+  background: rgba(0, 0, 0, 0.2);
+  padding: 1rem 1.25rem;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  color: rgba(245, 245, 244, 0.5);
+  font-weight: 700;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.usersTable td {
+  padding: 1.25rem;
+  vertical-align: middle;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.tableRow {
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.tableRow:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.chevronCell {
+  width: 50px;
+  text-align: center;
+  color: rgba(245, 245, 244, 0.4);
+}
+
+/* User Identity Cell */
+.userIdentity {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.userIdentity strong {
+  color: white;
+  font-size: 1.05rem;
+}
+
+.userIdentity span {
+  color: rgba(245, 245, 244, 0.62);
+  font-size: 0.82rem;
+  overflow-wrap: anywhere;
+}
+
+/* Badges */
+.badge {
+  display: inline-block;
+  padding: 0.35rem 0.6rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.badgeActive {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.badgeError {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.badgeWarning {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.badgePending {
+  background: rgba(99, 102, 241, 0.15);
+  color: #818cf8;
+  border: 1px solid rgba(99, 102, 241, 0.3);
+}
+
+.portalModeBadge {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0.35rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  color: #e5e7eb;
+}
+
+.roleText {
+  color: #9ca3af;
+  font-size: 0.9rem;
+}
+
+.adminBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--campfire-amber);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.noAdminBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: rgba(245, 245, 244, 0.3);
+  font-size: 0.85rem;
+}
+
+/* Expanded Row Content */
+.expandedRow {
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.expandedRow td {
+  padding: 0;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.08);
+}
+
+.expandedContent {
+  padding: 2rem 1.25rem;
+  border-left: 3px solid var(--campfire-amber);
+}
+
+.controlsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.controlGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.controlGroup label {
+  color: rgba(245, 245, 244, 0.72);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.controlGroup input,
+.controlGroup select {
+  background: rgba(12, 10, 9, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 4px;
+  color: var(--canvas-tan);
+  font: inherit;
+  min-height: 42px;
+  padding: 0.65rem;
+  width: 100%;
+}
+
+.controlGroup input:focus,
+.controlGroup select:focus {
+  outline: none;
+  border-color: var(--campfire-amber);
+  background: rgba(30, 27, 24, 0.9);
+}
+
+/* Permissions Grid */
+.permissionsSection h4 {
+  color: white;
+  margin-bottom: 1rem;
+  font-size: 1rem;
+}
+
+.permissionsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.75rem;
+}
+
+.permBadge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  transition: all 0.2s ease;
+}
+
+.permActive {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #34d399;
+}
+
+.permInactive {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  color: rgba(245, 245, 244, 0.3);
+}
+
+@media (max-width: 900px) {
+  .usersTable thead {
+    display: none;
+  }
+  
+  .usersTable tr {
+    display: flex;
+    flex-direction: column;
+    padding: 1rem;
+    position: relative;
+  }
+
+  .usersTable td {
+    padding: 0.5rem 0;
+    border: none;
+  }
+  
+  .chevronCell {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+  }
+
+  .expandedContent {
+    padding: 1.5rem 1rem;
   }
 }

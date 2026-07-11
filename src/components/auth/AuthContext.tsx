@@ -154,6 +154,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await signInWithPopup(auth, provider);
     } catch (error) {
       console.error("Login failed:", error);
+      throw error;
     }
   };
 

@@ -103,60 +103,38 @@ const EMPTY_COMPACT_TICKER: CompactTickerFile = {
 };
 
 export async function getOfflineTickerItems() {
-  const [
-    quoteItems,
-    curatedItems,
-    meritBadgeItems,
-    mythBustingItems,
-    knotItems,
-    catalinaFieldGuide,
-    backpackingSkills,
-    campSafety,
-    staffTraining,
-    meritBadgeFacts1,
-    meritBadgeFacts2,
-    meritBadgeFacts3,
-    meritBadgeFacts4,
-    meritBadgeMyths1,
-    meritBadgeMyths2,
-    meritBadgeMyths3,
-  ] = await Promise.all([
-    readJsonFile<OfflineTickerItem[]>('src/data/offlineQuoteTicker.json', []),
-    readJsonFile<OfflineTickerItem[]>('src/data/offlineCuratedTicker.json', []),
-    readJsonFile<OfflineTickerItem[]>('src/data/offlineMeritBadgeTicker.json', []),
-    readJsonFile<OfflineTickerItem[]>('src/data/offlineMythBustingTicker.json', []),
-    readJsonFile<OfflineTickerItem[]>('src/data/offlineKnotTicker.json', []),
-    readJsonFile<CompactTickerFile>('src/data/offlineCatalinaFieldGuideTicker.json', EMPTY_COMPACT_TICKER),
-    readJsonFile<CompactTickerFile>('src/data/offlineBackpackingSkillsTicker.json', EMPTY_COMPACT_TICKER),
-    readJsonFile<CompactTickerFile>('src/data/offlineCampSafetyTicker.json', EMPTY_COMPACT_TICKER),
-    readJsonFile<CompactTickerFile>('src/data/offlineStaffTrainingTicker.json', EMPTY_COMPACT_TICKER),
-    readJsonFile<CompactTickerFile>('src/data/offlineMeritBadgeFacts1.json', EMPTY_COMPACT_TICKER),
-    readJsonFile<CompactTickerFile>('src/data/offlineMeritBadgeFacts2.json', EMPTY_COMPACT_TICKER),
-    readJsonFile<CompactTickerFile>('src/data/offlineMeritBadgeFacts3.json', EMPTY_COMPACT_TICKER),
-    readJsonFile<CompactTickerFile>('src/data/offlineMeritBadgeFacts4.json', EMPTY_COMPACT_TICKER),
-    readJsonFile<CompactTickerFile>('src/data/offlineMeritBadgeMyths1.json', EMPTY_COMPACT_TICKER),
-    readJsonFile<CompactTickerFile>('src/data/offlineMeritBadgeMyths2.json', EMPTY_COMPACT_TICKER),
-    readJsonFile<CompactTickerFile>('src/data/offlineMeritBadgeMyths3.json', EMPTY_COMPACT_TICKER),
-  ]);
+  const dataDir = path.join(process.cwd(), 'src/data');
+  let files: string[] = [];
+  try {
+    files = await fs.readdir(dataDir);
+  } catch (err) {
+    console.warn('Failed to read src/data directory:', err);
+    return [];
+  }
 
-  const enabledItems = [
-    ...quoteItems,
-    ...curatedItems,
-    ...meritBadgeItems,
-    ...mythBustingItems,
-    ...knotItems,
-    ...expandCompactTickerFile(catalinaFieldGuide),
-    ...expandCompactTickerFile(backpackingSkills),
-    ...expandCompactTickerFile(campSafety),
-    ...expandCompactTickerFile(staffTraining),
-    ...expandCompactTickerFile(meritBadgeFacts1),
-    ...expandCompactTickerFile(meritBadgeFacts2),
-    ...expandCompactTickerFile(meritBadgeFacts3),
-    ...expandCompactTickerFile(meritBadgeFacts4),
-    ...expandCompactTickerFile(meritBadgeMyths1),
-    ...expandCompactTickerFile(meritBadgeMyths2),
-    ...expandCompactTickerFile(meritBadgeMyths3),
-  ].filter((item) => item.enabled);
+  const jsonFiles = files.filter(f => f.startsWith('offline') && f.endsWith('.json'));
+  
+  const allParsed = await Promise.all(
+    jsonFiles.map(async (file) => {
+      const parsed = await readJsonFile<any>(`src/data/${file}`, null);
+      return parsed;
+    })
+  );
+
+  const enabledItems: OfflineTickerItem[] = [];
+
+  for (const parsed of allParsed) {
+    if (!parsed) continue;
+
+    // Check if it's a CompactTickerFile
+    if (parsed.version === 1 && Array.isArray(parsed.items) && parsed.items.length > 0 && Array.isArray(parsed.items[0])) {
+      const expanded = expandCompactTickerFile(parsed as CompactTickerFile);
+      enabledItems.push(...expanded.filter(item => item.enabled));
+    } else if (Array.isArray(parsed)) {
+      // It's an OfflineTickerItem[]
+      enabledItems.push(...(parsed as OfflineTickerItem[]).filter(item => item.enabled));
+    }
+  }
 
   const selectedItems = selectOneOfflineItemPerCategory(enabledItems);
 

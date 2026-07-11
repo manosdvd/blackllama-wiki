@@ -96,6 +96,27 @@ html.light-theme {
   --embers-opacity: 0.15;
 }
 
+html.high-contrast {
+  /* Ultra-High Contrast Theme */
+  --charcoal-base: #000000;
+  --canvas-tan: #ffffff;
+  --pine-green: #00ff00;
+  --pine-green-light: #00ff00;
+  --campfire-amber: #ffff00;
+  --lantern-gold: #ffff00;
+  --red-ember: #ff0000;
+  --emergency-red: #ff0000;
+  --stone-grey: #cccccc;
+  --charcoal-dark: #000000;
+  --charcoal-lighter: #222222;
+  --charcoal-darker: #000000;
+
+  --background: var(--charcoal-base);
+  --foreground: var(--canvas-tan);
+  --surface: #000000;
+  --surface-border: #ffffff;
+  --embers-opacity: 0;
+}
 
 
 /* Accessibility Toggles (Classes added via JS) */
@@ -130,6 +151,14 @@ body {
 
 html.font-opendyslexic body {
   font-family: 'OpenDyslexic', 'Lexie Readable', system-ui, sans-serif;
+}
+
+html.font-atkinson body {
+  font-family: var(--font-atkinson), system-ui, sans-serif;
+}
+
+html.font-inter body {
+  font-family: var(--font-inter), system-ui, sans-serif;
 }
 
 h1, h2, h3, h4, h5, h6 {
