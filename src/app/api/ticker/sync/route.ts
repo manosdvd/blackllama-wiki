@@ -60,7 +60,7 @@ const RSS_CLOCK_SKEW_MS = 5 * 60 * 1000;
 
 const FEED_URLS = [
   'aztrail.org/feed', 'onscouting.org/feed', 'scoutlife.org/feed', 'scoutingwire.org/feed',
-  'scoutingnewsroom.org/feed', 'nasa.gov/feeds/iotd-feed', 'nasa.gov/feed',
+  'scoutingnewsroom.org/feed', 'nasa.gov/feed',
   'atlasobscura.com/feeds/latest',
   'goodnewsnetwork.org/feed', 'tucson.com/search/?f=rss&t=article&c=sports/outdoors', 'lnt.org/feed',
   'fs.usda.gov/news/r3/news-events.xml', 'azgfd.com/feed', 'outsideonline.com/feed',
@@ -89,7 +89,6 @@ const FEED_URLS = [
   'https://www.youtube.com/feeds/videos.xml?channel_id=UClFrYG5h7Vbz-Y2CEIEU6EQ',
 
   // Southern Arizona, desert ecology, public lands, and current safety information.
-  'https://api.weather.gov/alerts/active.atom?area=AZ',
   'https://www.sonorandesert.org/feed/',
   'https://tohonochul.org/feed/',
   'https://www.westernnationalparksassociation.org/feed/',
