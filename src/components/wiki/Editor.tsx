@@ -29,34 +29,42 @@ function ImageResizerOverlay({
 }) {
   const [rect, setRect] = useState({ top: 0, left: 0, width: 0, height: 0 });
   const startPos = useRef({ x: 0, width: 0, height: 0 });
+  // Store imgNode in a ref so we can mutate its style without violating immutability rules.
+  // Initialized with imgNode; synced via useEffect whenever the prop changes.
+  const imgRef = useRef<HTMLImageElement>(imgNode);
 
   useEffect(() => {
+    imgRef.current = imgNode;
+  }, [imgNode]);
+
+  useEffect(() => {
+    const el = imgRef.current;
     const updateRect = () => {
-      if (!imgNode) return;
+      if (!el) return;
       setRect({
-        top: imgNode.offsetTop,
-        left: imgNode.offsetLeft,
-        width: imgNode.offsetWidth,
-        height: imgNode.offsetHeight
+        top: el.offsetTop,
+        left: el.offsetLeft,
+        width: el.offsetWidth,
+        height: el.offsetHeight
       });
     };
     updateRect();
     const ro = new ResizeObserver(updateRect);
-    ro.observe(imgNode);
+    ro.observe(el);
     return () => ro.disconnect();
   }, [imgNode]);
 
   const handlePointerDown = (e: React.PointerEvent, corner: string) => {
     e.preventDefault();
     e.stopPropagation();
-    startPos.current = { x: e.clientX, width: imgNode.offsetWidth, height: imgNode.offsetHeight };
+    const el = imgRef.current;
+    startPos.current = { x: e.clientX, width: el.offsetWidth, height: el.offsetHeight };
     
     const handlePointerMove = (ev: PointerEvent) => {
       const dx = ev.clientX - startPos.current.x;
       const newWidth = corner.includes('right') ? startPos.current.width + dx : startPos.current.width - dx;
-      const targetNode = imgNode;
-      targetNode.style.width = `${Math.max(50, newWidth)}px`;
-      targetNode.style.height = 'auto';
+      imgRef.current.style.width = `${Math.max(50, newWidth)}px`;
+      imgRef.current.style.height = 'auto';
     };
 
     const handlePointerUp = () => {
@@ -70,27 +78,27 @@ function ImageResizerOverlay({
   };
 
   const applyAlignment = (newAlignment: string) => {
-    const node = imgNode;
+    const el = imgRef.current;
     if (newAlignment === 'left') {
-      node.style.display = 'block';
-      node.style.margin = '12px auto 12px 0';
-      node.style.float = 'none';
+      el.style.display = 'block';
+      el.style.margin = '12px auto 12px 0';
+      el.style.float = 'none';
     } else if (newAlignment === 'center') {
-      node.style.display = 'block';
-      node.style.margin = '12px auto';
-      node.style.float = 'none';
+      el.style.display = 'block';
+      el.style.margin = '12px auto';
+      el.style.float = 'none';
     } else if (newAlignment === 'right') {
-      node.style.display = 'block';
-      node.style.margin = '12px 0 12px auto';
-      node.style.float = 'none';
+      el.style.display = 'block';
+      el.style.margin = '12px 0 12px auto';
+      el.style.float = 'none';
     } else if (newAlignment === 'float-left') {
-      node.style.display = 'inline';
-      node.style.margin = '12px 16px 12px 0';
-      node.style.float = 'left';
+      el.style.display = 'inline';
+      el.style.margin = '12px 16px 12px 0';
+      el.style.float = 'left';
     } else if (newAlignment === 'float-right') {
-      node.style.display = 'inline';
-      node.style.margin = '12px 0 12px 16px';
-      node.style.float = 'right';
+      el.style.display = 'inline';
+      el.style.margin = '12px 0 12px 16px';
+      el.style.float = 'right';
     }
     onUpdate();
   };

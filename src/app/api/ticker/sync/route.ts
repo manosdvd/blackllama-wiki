@@ -380,23 +380,6 @@ async function generateRssTicker() {
   };
 }
 
-type TickerResponseItem = Omit<LiveTickerItem, 'timestamp'>;
-
-function tickerResponseItem(item: LiveTickerItem): TickerResponseItem {
-  return {
-    id: item.id,
-    title: item.title,
-    url: item.url,
-    source: item.source,
-    sourceType: item.sourceType,
-    position: item.position,
-    generatedAt: item.generatedAt,
-    publishedAt: item.publishedAt,
-    imageUrl: item.imageUrl,
-    category: item.category,
-    syncRunId: item.syncRunId,
-  };
-}
 
 export async function GET(req: Request) {
   try {

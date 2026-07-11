@@ -239,16 +239,18 @@ function WikiEditPageContent() {
     }
   };
 
-  // Auto-save logic
+  // Auto-save logic: only re-runs when content changes (lastEdited).
+  // Intentionally excludes articleId, canDraft, saving, saveArticle, status —
+  // including them would cause duplicate saves on every state update.
   useEffect(() => {
     if (!articleId || !lastEdited || !canDraft || saving) return;
     const timeout = setTimeout(() => {
-      // Only auto-save if status is currently a draft (or we're just updating the body and staying in draft)
       if (status === 'draft' || status === 'in_review') {
          saveArticle(status, true);
       }
     }, 5000);
     return () => clearTimeout(timeout);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lastEdited]);
 
   const handleDelete = async () => {

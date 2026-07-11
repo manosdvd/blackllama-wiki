@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import Image from 'next/image';
+
 import styles from './AlertsHUD.module.css';
 import {
   AlertTriangle, Flame, CloudLightning, Info,
@@ -374,7 +376,7 @@ export default function AlertsHUD() {
                 <div className={styles.currentWeatherSection}>
                   <div className={styles.currentTempLarge}>
                     {weather?.periods?.[0]?.icon ? (
-                      <img src={weather.periods[0].icon} alt="Weather Icon" className={styles.currentIcon} />
+                      <Image src={weather.periods[0].icon} alt="Weather Icon" width={64} height={64} className={styles.currentIcon} />
                     ) : (
                       <ThermometerSun size={64} className={styles.currentIcon} />
                     )}
@@ -425,7 +427,7 @@ export default function AlertsHUD() {
                         <div key={idx} className={styles.forecastCard}>
                           <span className={styles.forecastDayName}>{period.name}</span>
                           {period.icon ? (
-                            <img src={period.icon} alt={period.shortForecast} className={styles.forecastIcon} />
+                            <Image src={period.icon} alt={period.shortForecast} width={32} height={32} className={styles.forecastIcon} />
                           ) : (
                             <ThermometerSun size={32} className={styles.forecastIcon} />
                           )}
