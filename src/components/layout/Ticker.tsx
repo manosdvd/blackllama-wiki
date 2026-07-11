@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import {
@@ -87,10 +87,10 @@ export default function Ticker({ items }: TickerProps) {
     localStorage.setItem('ticker_hidden', String(value));
   };
 
-  const closeFeed = () => {
+  const closeFeed = useCallback(() => {
     setIsFeedOpen(false);
     feedButtonRef.current?.focus();
-  };
+  }, []);
 
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
@@ -251,7 +251,7 @@ export default function Ticker({ items }: TickerProps) {
     window.addEventListener('keydown', handleKeyDown);
     closeButtonRef.current?.focus();
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isFeedOpen]);
+  }, [closeFeed, isFeedOpen]);
 
   if (combinedItems.length === 0) return null;
 
