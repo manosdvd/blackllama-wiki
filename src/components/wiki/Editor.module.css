@@ -1,18 +1,21 @@
 .editorContainer {
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--surface-border);
-  border-radius: 6px;
-  background-color: var(--charcoal-dark);
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   overflow: hidden;
   color: var(--canvas-tan);
+  box-shadow: inset 0 0 20px rgba(0,0,0,0.2);
 }
 
 /* Tabs Header */
 .tabsHeader {
   display: flex;
-  background-color: rgba(0, 0, 0, 0.3);
-  border-bottom: 1px solid var(--surface-border);
+  background: rgba(0, 0, 0, 0.4);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   padding: 0.5rem;
   gap: 0.5rem;
 }
@@ -21,12 +24,12 @@
   background: transparent;
   border: 1px solid transparent;
   color: var(--stone-grey);
-  padding: 0.5rem 1rem;
+  padding: 0.6rem 1.25rem;
   font-size: 0.85rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  border-radius: 4px;
+  border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s;
 }
@@ -39,66 +42,76 @@
 .activeTabBtn {
   color: var(--lantern-gold) !important;
   border-color: rgba(234, 179, 8, 0.3) !important;
-  background-color: rgba(234, 179, 8, 0.08) !important;
+  background-color: rgba(234, 179, 8, 0.1) !important;
+  box-shadow: 0 2px 8px rgba(234, 179, 8, 0.15);
 }
 
 /* Toolbar */
 .toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  background-color: rgba(0, 0, 0, 0.15);
-  border-bottom: 1px solid var(--surface-border);
-  padding: 0.5rem;
-  gap: 0.25rem;
+  background: rgba(30, 41, 59, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 0.75rem;
+  gap: 0.5rem;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
 }
 
 .toolbarBtn {
   background: transparent;
   border: 1px solid transparent;
-  color: var(--canvas-tan);
-  padding: 0.4rem;
-  border-radius: 4px;
+  color: rgba(255,255,255,0.7);
+  padding: 0.5rem;
+  border-radius: 6px;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.15s;
-  opacity: 0.8;
+  transition: all 0.2s;
 }
 
 .toolbarBtn:hover {
-  opacity: 1;
-  background-color: rgba(255, 255, 255, 0.08);
+  background-color: rgba(255, 255, 255, 0.1);
   color: var(--lantern-gold);
+  transform: translateY(-1px);
+}
+
+.toolbarBtn:active {
+  transform: translateY(1px);
 }
 
 .toolbarSeparator {
   width: 1px;
-  height: 20px;
-  background-color: var(--surface-border);
-  margin: 0 0.4rem;
+  height: 24px;
+  background-color: rgba(255, 255, 255, 0.1);
+  margin: 0 0.5rem;
 }
 
 /* Viewport Areas */
 .viewport {
-  min-height: 450px;
-  padding: 1.5rem;
+  min-height: 500px;
+  padding: 2rem 2.5rem;
   font-family: inherit;
-  font-size: 1rem;
-  line-height: 1.6;
+  font-size: 1.1rem;
+  line-height: 1.7;
   outline: none;
 }
 
 .textareaInput {
   width: 100%;
-  min-height: 450px;
+  min-height: 500px;
   background: transparent;
   border: none;
   color: var(--canvas-tan);
-  padding: 1.5rem;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.95rem;
+  padding: 2rem 2.5rem;
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+  font-size: 1rem;
   line-height: 1.6;
   resize: vertical;
   outline: none;
@@ -106,38 +119,57 @@
 
 /* WYSIWYG Specific Style */
 .wysiwygArea {
-  background-color: rgba(12, 10, 9, 0.2);
-  color: var(--canvas-tan);
+  background-color: transparent;
+  color: rgba(245, 245, 244, 0.9);
 }
 
 .wysiwygArea h2,
 .wysiwygArea h3,
 .wysiwygArea h4 {
-  font-family: 'Lexie Readable', sans-serif;
+  font-family: 'Inter', 'Lexie Readable', sans-serif;
+  color: var(--canvas-tan);
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+  font-weight: 700;
+}
+
+.wysiwygArea h2 {
+  font-size: 2rem;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  padding-bottom: 0.5rem;
+}
+
+.wysiwygArea h3 {
+  font-size: 1.5rem;
   color: var(--pine-green-light);
-  margin-top: 1.5rem;
-  margin-bottom: 0.75rem;
 }
 
 .wysiwygArea ul,
 .wysiwygArea ol {
-  padding-left: 2rem;
-  margin-bottom: 1rem;
+  padding-left: 2.5rem;
+  margin-bottom: 1.5rem;
 }
 
 .wysiwygArea blockquote {
+  background: rgba(234, 179, 8, 0.05);
   border-left: 4px solid var(--lantern-gold);
-  color: var(--stone-grey);
-  margin: 1rem 0;
-  padding-left: 1rem;
+  color: rgba(245, 245, 244, 0.8);
+  margin: 1.5rem 0;
+  padding: 1.5rem;
   font-style: italic;
+  font-size: 1.25rem;
+  border-radius: 0 8px 8px 0;
 }
 
 .wysiwygArea a {
   color: var(--lantern-gold);
-  text-decoration: underline;
+  text-decoration: none;
+  border-bottom: 1px dashed rgba(234, 179, 8, 0.5);
+  font-weight: 600;
+  transition: all 0.2s;
 }
 
 .wysiwygArea a:hover {
   color: var(--campfire-amber);
+  border-bottom-color: var(--campfire-amber);
 }

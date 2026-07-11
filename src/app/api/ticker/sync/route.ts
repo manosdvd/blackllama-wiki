@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { after } from 'next/server';
 import { writeServerErrorLog } from '@/lib/server/errorLog';
 
 export const runtime = 'nodejs';
@@ -14,6 +15,7 @@ interface NewsTickerItem {
 interface RssCandidateItem extends NewsTickerItem {
   publishedAt: string;
   publishedTime: number;
+  category?: string;
 }
 
 interface LiveTickerItem {
@@ -26,6 +28,7 @@ interface LiveTickerItem {
   generatedAt: string;
   publishedAt?: string;
   imageUrl?: string;
+  category?: string;
   syncRunId: string;
   timestamp: unknown;
 }
@@ -340,12 +343,14 @@ async function generateRssTicker() {
         if (!isScoutAppropriate(item)) return null;
 
         const imageUrl = extractImageUrl(item, link);
+        const isYoutube = normalizedFeedUrl.includes('youtube.com');
         return {
           headline: title,
           source,
           link,
           publishedAt: new Date(publishedTime).toISOString(),
           publishedTime,
+          category: isYoutube ? 'YouTube' : undefined,
           ...(imageUrl ? { imageUrl } : {}),
         };
       }).filter(Boolean) as RssCandidateItem[];
@@ -388,6 +393,7 @@ function tickerResponseItem(item: LiveTickerItem): TickerResponseItem {
     generatedAt: item.generatedAt,
     publishedAt: item.publishedAt,
     imageUrl: item.imageUrl,
+    category: item.category,
     syncRunId: item.syncRunId,
   };
 }
@@ -405,113 +411,81 @@ export async function GET(req: Request) {
       });
     }
 
-    const [{ getAdminDbOnly }, { FieldValue }] = await Promise.all([
-      import('@/lib/firebase/adminDb'),
-      import('firebase-admin/firestore'),
-    ]);
-
-    const db = getAdminDbOnly();
-    const rssTicker = await generateRssTicker();
-
-    if (rssTicker.items.length === 0) {
-      await writeServerErrorLog({
-        context: 'ticker.sync.rss_empty',
-        message: 'No recent RSS ticker items could be generated.',
-        severity: 'warning',
-        request: req,
-        metadata: {
-          feedCount: rssTicker.feedCount,
-          failedFeedCount: rssTicker.failedFeedCount,
-          failedFeeds: rssTicker.failedFeeds,
-          maxAgeHours: 24,
-        },
-      });
-
-      return NextResponse.json({
-        success: false,
-        error: 'No RSS ticker items from the last 24 hours could be generated. Keeping existing cached ticker items in Firestore.',
-        mode: 'rss-local-only',
-        rssFeedCount: rssTicker.feedCount,
-        rssFailedFeedCount: rssTicker.failedFeedCount,
-        rssFailedFeeds: rssTicker.failedFeeds,
-        maxAgeHours: 24,
-      }, { status: 503 });
-    }
-
     const generatedAt = new Date().toISOString();
     const syncRunId = `sync_${getPhoenixDateStamp()}_${Date.now()}`;
 
-    const liveItems: LiveTickerItem[] = rssTicker.items.map((item, index) => ({
-      id: `${syncRunId}_${String(index + 1).padStart(2, '0')}`,
-      title: item.headline,
-      url: normalizeTickerLink(item.link),
-      source: item.source || 'RSS Feed',
-      sourceType: 'rss',
-      position: index,
-      generatedAt,
-      publishedAt: item.publishedAt,
-      ...(item.imageUrl ? { imageUrl: item.imageUrl } : {}),
+    // Queue the heavy RSS fetching and DB writes in the background
+    after(async () => {
+      try {
+        const [{ getAdminDbOnly }, { FieldValue }] = await Promise.all([
+          import('@/lib/firebase/adminDb'),
+          import('firebase-admin/firestore'),
+        ]);
+
+        const db = getAdminDbOnly();
+        const rssTicker = await generateRssTicker();
+
+        if (rssTicker.items.length === 0) {
+          await writeServerErrorLog({
+            context: 'ticker.sync.rss_empty',
+            message: 'No recent RSS ticker items could be generated.',
+            severity: 'warning',
+            request: req,
+            metadata: {
+              feedCount: rssTicker.feedCount,
+              failedFeedCount: rssTicker.failedFeedCount,
+              failedFeeds: rssTicker.failedFeeds,
+              maxAgeHours: 24,
+            },
+          });
+          return;
+        }
+
+        const liveItems: LiveTickerItem[] = rssTicker.items.map((item, index) => ({
+          id: `${syncRunId}_${String(index + 1).padStart(2, '0')}`,
+          title: item.headline,
+          url: normalizeTickerLink(item.link),
+          source: item.source || 'RSS Feed',
+          sourceType: item.category === 'YouTube' ? 'youtube' : 'rss',
+          position: index,
+          generatedAt,
+          publishedAt: item.publishedAt,
+          ...(item.category ? { category: item.category } : {}),
+          ...(item.imageUrl ? { imageUrl: item.imageUrl } : {}),
+          syncRunId,
+          timestamp: FieldValue.serverTimestamp(),
+        }));
+
+        const batch = db.batch();
+        const snapshot = await db.collection('liveTicker').get();
+        snapshot.docs.forEach((doc) => batch.delete(doc.ref));
+
+        liveItems.forEach((item) => {
+          const docRef = db.collection('liveTicker').doc(item.id);
+          batch.set(docRef, item);
+        });
+
+        await batch.commit();
+        console.log(`[Sync Ticker] Successfully synced ${liveItems.length} items in background. Run ID: ${syncRunId}`);
+      } catch (error) {
+        await writeServerErrorLog({
+          context: 'ticker.sync.background_fatal',
+          message: 'Failed to complete background ticker sync.',
+          error,
+          severity: 'error',
+          request: req,
+        });
+      }
+    });
+
+    // Return an immediate 202 response so the UI / Cron doesn't block
+    return NextResponse.json({
+      success: true,
+      message: 'RSS Ticker sync started in the background.',
+      mode: 'rss-local-only',
       syncRunId,
-      timestamp: FieldValue.serverTimestamp(),
-    }));
+    }, { status: 202 });
 
-    try {
-      const batch = db.batch();
-      const snapshot = await db.collection('liveTicker').get();
-      snapshot.docs.forEach((doc) => batch.delete(doc.ref));
-
-      liveItems.forEach((item) => {
-        const docRef = db.collection('liveTicker').doc(item.id);
-        batch.set(docRef, item);
-      });
-
-      await batch.commit();
-
-      return NextResponse.json({
-        success: true,
-        mode: 'rss-local-only',
-        count: liveItems.length,
-        syncRunId,
-        firstItemId: liveItems[0]?.id || null,
-        rssCount: rssTicker.items.length,
-        rssFailedFeedCount: rssTicker.failedFeedCount,
-        aiStatus: 'disabled',
-        aiError: null,
-        maxAgeHours: 24,
-        metadata: {
-          generated_at: generatedAt,
-          target_location: TARGET_LOCATION,
-          rss_feed_count: rssTicker.feedCount,
-          rss_failed_feed_count: rssTicker.failedFeedCount,
-          rss_failed_feeds: rssTicker.failedFeeds.slice(0, 12),
-          ai_status: 'disabled',
-          max_age_hours: 24,
-        },
-        items: liveItems.map(tickerResponseItem),
-      });
-    } catch (error) {
-      await writeServerErrorLog({
-        context: 'ticker.sync.firestore_write',
-        message: 'Failed to write liveTicker items to Firestore.',
-        error,
-        request: req,
-        metadata: { syncRunId, itemCount: liveItems.length },
-      });
-      return NextResponse.json({
-        success: true,
-        mode: 'rss-local-only',
-        count: liveItems.length,
-        syncRunId,
-        firstItemId: liveItems[0]?.id || null,
-        rssCount: rssTicker.items.length,
-        rssFailedFeedCount: rssTicker.failedFeedCount,
-        aiStatus: 'disabled',
-        aiError: null,
-        maxAgeHours: 24,
-        warning: 'Failed to write to DB',
-        items: liveItems.map(tickerResponseItem),
-      });
-    }
   } catch (error) {
     await writeServerErrorLog({
       context: 'ticker.sync.fatal',

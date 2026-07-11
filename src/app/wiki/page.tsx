@@ -113,10 +113,10 @@ export default function WikiIndexPage() {
 
   return (
     <div className={styles.container}>
-      <header className={styles.header}>
-        <div>
+      <header className={styles.hero}>
+        <div className={styles.heroContent}>
           <h1>Camp Lawton Wiki</h1>
-          <p className={styles.subtitle}>The central repository for all staff knowledge and procedures.</p>
+          <p className={styles.subtitle}>The central repository for all staff knowledge, forms, and operating procedures.</p>
         </div>
         {canCreate && (
           <Link href="/wiki/edit" className={styles.newBtn}>

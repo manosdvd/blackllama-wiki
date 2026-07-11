@@ -106,7 +106,7 @@ export default function AlertsHUD() {
     const initialFetch = window.setTimeout(() => {
       void fetchFireData();
     }, 0);
-    const interval = setInterval(fetchFireData, 5 * 60 * 1000);
+    const interval = setInterval(fetchFireData, 15 * 60 * 1000);
     return () => {
       window.clearTimeout(initialFetch);
       clearInterval(interval);
@@ -342,54 +342,117 @@ export default function AlertsHUD() {
         )}
       </div>
 
-      {/* Collapsible Station Details Drawer (Move coordinate/elevation clutter here) */}
+      {/* Spectacular Full-Screen / Large Modal Weather & Forecast */}
       {isDetailsExpanded && (
-        <div id="hud-details-panel" className={styles.detailsPanel} aria-label="Detailed Weather and Station Info">
-          <div className={styles.detailsGrid}>
-            <div className={styles.detailsColumn}>
-              <h4>Station & Coordinates</h4>
-              <div className={styles.detailsItem}>
-                <MapPin size={14} />
-                <span><strong>Location:</strong> Mount Lemmon (7,950 ft elevation)</span>
-              </div>
-              <div className={styles.detailsItem}>
-                <MapPin size={14} />
-                <span><strong>Coordinates:</strong> 32.398° N, 110.725° W</span>
-              </div>
-              {currentTime && (
-                <div className={styles.detailsItem}>
-                  <Clock size={14} />
-                  <span><strong>Station Time:</strong> {currentTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'America/Phoenix' })} MST</span>
-                </div>
-              )}
+        <div className={styles.weatherModalOverlay} onClick={() => setIsDetailsExpanded(false)}>
+          <div 
+            id="hud-details-panel" 
+            className={styles.weatherModal} 
+            aria-label="Detailed Weather and Forecast"
+            onClick={(e) => e.stopPropagation()} // prevent closing when clicking inside
+          >
+            {/* Background Image Container */}
+            <div className={styles.weatherModalBg} style={{ backgroundImage: 'url(/images/weather-bg.png)' }}>
+              <div className={styles.weatherModalGradient} />
             </div>
 
-            <div className={styles.detailsColumn}>
-              <h4>Detailed Weather Conditions</h4>
-              <div className={styles.detailsItem}>
-                <Wind size={14} />
-                <span><strong>Wind Speed:</strong> {weather?.wind || '--'}</span>
+            {/* Modal Content */}
+            <div className={styles.weatherModalContent}>
+              <div className={styles.weatherModalHeader}>
+                <h2>Camp Lawton Weather Intelligence</h2>
+                <button 
+                  className={styles.weatherModalClose} 
+                  onClick={() => setIsDetailsExpanded(false)}
+                  aria-label="Close"
+                >
+                  &times;
+                </button>
               </div>
-              <div className={styles.detailsItem}>
-                <Droplets size={14} />
-                <span><strong>Humidity:</strong> {weather?.humidity || '--'}</span>
+
+              <div className={styles.forecastContainer}>
+                {/* Current Conditions Block */}
+                <div className={styles.currentWeatherSection}>
+                  <div className={styles.currentTempLarge}>
+                    {weather?.periods?.[0]?.icon ? (
+                      <img src={weather.periods[0].icon} alt="Weather Icon" className={styles.currentIcon} />
+                    ) : (
+                      <ThermometerSun size={64} className={styles.currentIcon} />
+                    )}
+                    <div className={styles.currentTempGroup}>
+                      <span className={styles.currentTempText}>{weather?.temp || '--'}</span>
+                      <span className={styles.currentConditionText}>{weather?.detailedForecast || 'Detailed forecast unavailable.'}</span>
+                    </div>
+                  </div>
+                  
+                  <div className={styles.currentConditionsList}>
+                    <div className={styles.currentConditionItem}>
+                      <div className={styles.condIcon}><Wind size={20} /></div>
+                      <div className={styles.condData}>
+                        <span className={styles.condLabel}>Wind</span>
+                        <span className={styles.condValue}>{weather?.wind || '--'}</span>
+                      </div>
+                    </div>
+                    <div className={styles.currentConditionItem}>
+                      <div className={styles.condIcon}><Droplets size={20} /></div>
+                      <div className={styles.condData}>
+                        <span className={styles.condLabel}>Humidity</span>
+                        <span className={styles.condValue}>{weather?.humidity || '--'}</span>
+                      </div>
+                    </div>
+                    <div className={styles.currentConditionItem}>
+                      <div className={styles.condIcon}><CloudLightning size={20} /></div>
+                      <div className={styles.condData}>
+                        <span className={styles.condLabel}>Precip Chance</span>
+                        <span className={styles.condValue}>{weather?.precipChance || '--'}</span>
+                      </div>
+                    </div>
+                    <div className={styles.currentConditionItem}>
+                      <div className={styles.condIcon}><MapPin size={20} /></div>
+                      <div className={styles.condData}>
+                        <span className={styles.condLabel}>Location</span>
+                        <span className={styles.condValue}>Mt Lemmon (32.398°N)</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Extended Forecast Grid */}
+                {weather?.periods && weather.periods.length > 0 && (
+                  <div className={styles.forecastScrollWrapper}>
+                    <h3 className={styles.forecastSectionTitle}>Extended Forecast</h3>
+                    <div className={styles.forecastGrid}>
+                      {weather.periods.slice(1, 14).map((period, idx) => (
+                        <div key={idx} className={styles.forecastCard}>
+                          <span className={styles.forecastDayName}>{period.name}</span>
+                          {period.icon ? (
+                            <img src={period.icon} alt={period.shortForecast} className={styles.forecastIcon} />
+                          ) : (
+                            <ThermometerSun size={32} className={styles.forecastIcon} />
+                          )}
+                          <span className={styles.forecastTemp}>{period.temperature}&deg;{period.temperatureUnit}</span>
+                          <span className={styles.forecastShort}>{period.shortForecast}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                <div className={styles.weatherModalFooter}>
+                  {currentTime && (
+                    <span className={styles.obsTime}>
+                      <Clock size={14} /> Observed: {currentTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Phoenix' })} MST
+                    </span>
+                  )}
+                  <a
+                    href="https://forecast.weather.gov/MapClick.php?lat=32.39806&lon=-110.725"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={styles.nwsExternalLink}
+                  >
+                    Open Official NWS Forecast ↗
+                  </a>
+                </div>
               </div>
-              <div className={styles.detailsItem}>
-                <CloudLightning size={14} />
-                <span><strong>Precipitation:</strong> {weather?.precipChance || '--'}</span>
-              </div>
-              <div className={styles.detailsItem}>
-                <ThermometerSun size={14} />
-                <span><strong>Condition:</strong> {weather?.detailedForecast || 'Detailed forecast unavailable.'}</span>
-              </div>
-              <a
-                href="https://forecast.weather.gov/MapClick.php?lat=32.39806&amp;lon=-110.725"
-                target="_blank"
-                rel="noopener noreferrer"
-                className={styles.nwsExternalLink}
-              >
-                Open Official NWS Forecast Page ↗
-              </a>
             </div>
           </div>
         </div>

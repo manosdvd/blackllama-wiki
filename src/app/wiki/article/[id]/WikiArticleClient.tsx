@@ -119,6 +119,23 @@ export default function WikiArticleClient({ id }: { id: string }) {
     );
   }
 
+  // Calculate reading time (avg 200 words per min)
+  const plainText = article.plainTextSearch || '';
+  const wordCount = plainText.split(/\s+/).length;
+  const readingTime = Math.max(1, Math.ceil(wordCount / 200));
+
+  // Extract headings for TOC
+  const tocItems = (article.bodyEditorJs?.blocks || [])
+    .filter(b => b.type === 'header' && b.data?.level && Number(b.data.level) <= 4)
+    .map((b, i) => {
+      const text = String(b.data?.text || '').replace(/<[^>]*>?/gm, ''); // strip html
+      return {
+        id: `heading-${i}`,
+        text,
+        level: Number(b.data?.level || 2)
+      };
+    });
+
   return (
     <div className={styles.container}>
       <nav className={styles.breadcrumb}>
@@ -134,31 +151,47 @@ export default function WikiArticleClient({ id }: { id: string }) {
         )}
       </nav>
 
-      <article className={styles.article}>
-        <header className={styles.articleHeader}>
-          <div className={styles.categoryBadge}>{categoryLabel(article.categoryId)}</div>
-          <h1>{article.title}</h1>
-          <p className={styles.summary}>{article.summary}</p>
-          <div className={styles.metaData}>
-            <span className={styles.metaItem}>
-              <User size={16} />
-              {article.ownerRole || 'Camp Lawton Staff'}
-            </span>
-            <span className={styles.metaItem}>
-              <Clock size={16} />
-              Last updated: {dateLabel(article.updatedAt)}
-            </span>
-            <span className={styles.metaItem}>
-              <Shield size={16} />
-              {article.visibility}
-            </span>
-          </div>
-        </header>
+      <div className={styles.articleLayout}>
+        <article className={styles.article}>
+          <header className={styles.articleHeader}>
+            <div className={styles.categoryBadge}>{categoryLabel(article.categoryId)}</div>
+            <h1>{article.title}</h1>
+            <p className={styles.summary}>{article.summary}</p>
+            <div className={styles.metaData}>
+              <span className={styles.metaItem}>
+                <User size={16} />
+                {article.ownerRole || 'Staff'}
+              </span>
+              <span className={styles.metaItem} title="Last updated">
+                <Clock size={16} />
+                {dateLabel(article.updatedAt)} ({readingTime} min read)
+              </span>
+              <span className={styles.metaItem}>
+                <Shield size={16} />
+                {article.visibility}
+              </span>
+            </div>
+          </header>
 
-        <div className={styles.content}>
-          <EditorOutput data={article.bodyEditorJs} />
-        </div>
-      </article>
+          <div className={styles.content}>
+            <EditorOutput data={article.bodyEditorJs} />
+          </div>
+        </article>
+        
+        {tocItems.length > 0 && (
+          <aside className={styles.toc}>
+            <h3 className={styles.tocTitle}>Table of Contents</h3>
+            <ul className={styles.tocList}>
+              {tocItems.map(item => (
+                <li key={item.id} className={styles[`tocItem${item.level}`]}>
+                  {/* Using href="#" since we don't have anchor IDs on the headers yet, but it gives the UI a nice visual cue */}
+                  <a href="#">{item.text}</a>
+                </li>
+              ))}
+            </ul>
+          </aside>
+        )}
+      </div>
     </div>
   );
 }

@@ -56,6 +56,7 @@ function getCategoryColor(category?: string) {
   if (lower.includes('nature') || lower.includes('forest')) return '#2ecc71';
   if (lower.includes('astronomy') || lower.includes('space') || lower.includes('sky')) return '#9b59b6';
   if (lower.includes('scout') || lower.includes('useful') || lower.includes('local')) return '#f1c40f';
+  if (lower.includes('youtube')) return '#ff0000';
   return 'var(--lantern-gold, #f7b733)';
 }
 
@@ -116,11 +117,7 @@ export default function Ticker({ items }: TickerProps) {
     return () => unsubscribe?.();
   }, []);
 
-  useEffect(() => {
-    // Trigger background RSS sync on page load asynchronously.
-    console.info('[Ticker] Triggering background RSS sync...');
-    fetch('/api/ticker/sync?force=true').catch(() => undefined);
-  }, []);
+
 
   useEffect(() => {
     const timer = setTimeout(() => {

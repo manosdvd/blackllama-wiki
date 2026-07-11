@@ -25,6 +25,16 @@ export interface FireAlertItem {
   url?: string;
 }
 
+export interface ForecastPeriod {
+  name: string;
+  isDaytime: boolean;
+  temperature: number;
+  temperatureUnit: string;
+  icon: string;
+  shortForecast: string;
+  detailedForecast: string;
+}
+
 export interface WeatherSnapshot {
   temp: string;
   condition: string;
@@ -34,6 +44,7 @@ export interface WeatherSnapshot {
   forecastStrip: string;
   detailedForecast: string;
   fetchedAt: string;
+  periods?: ForecastPeriod[];
 }
 
 export interface FireAggregatorResponse {
@@ -167,12 +178,14 @@ function classifyNWSAlert(event: string, severity: string): FireAlertLevel {
 interface NWSForecastPeriod {
   name?: string;
   startTime?: string;
+  isDaytime?: boolean;
   temperature: number;
   temperatureUnit: string;
   shortForecast?: string;
   detailedForecast?: string;
   windSpeed?: string;
   windDirection?: string;
+  icon?: string;
   relativeHumidity?: {
     value?: number | null;
   };
@@ -350,6 +363,16 @@ async function fetchNWSWeather(): Promise<{ weather: WeatherSnapshot | null; hea
       || hourlyCurrent?.shortForecast
       || currentCondition;
 
+    const mappedPeriods: ForecastPeriod[] = dailyPeriods.map(p => ({
+      name: p.name || 'Period',
+      isDaytime: p.isDaytime ?? true,
+      temperature: p.temperature,
+      temperatureUnit: p.temperatureUnit,
+      icon: p.icon || '',
+      shortForecast: p.shortForecast || '',
+      detailedForecast: p.detailedForecast || ''
+    }));
+
     return {
       weather: {
         temp: currentTemp,
@@ -360,6 +383,7 @@ async function fetchNWSWeather(): Promise<{ weather: WeatherSnapshot | null; hea
         forecastStrip,
         detailedForecast,
         fetchedAt: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Phoenix' }),
+        periods: mappedPeriods,
       },
       health: useObservation ? 'ok' : 'degraded',
     };

@@ -12,6 +12,17 @@ const withPWA = withPWAInit({
 
 const nextConfig: NextConfig = {
   turbopack: {},
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'firebasestorage.googleapis.com',
+      }
+    ],
+  },
+  experimental: {
+    optimizePackageImports: ['lucide-react']
+  },
   logging: {
     browserToTerminal: 'warn',
     fetches: {

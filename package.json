@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --webpack",
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
@@ -15,11 +15,14 @@
   "dependencies": {
     "@ducanh2912/next-pwa": "^10.2.9",
     "@opentelemetry/api": "^1.9.1",
+    "browser-image-compression": "^2.0.2",
     "cheerio": "^1.2.0",
-    "firebase": "^12.15.0",
+    "firebase": "^12.16.0",
     "firebase-admin": "^14.1.0",
     "lucide-react": "^1.22.0",
     "next": "16.2.9",
+    "pdf-parse": "^2.4.5",
+    "pdf2json": "^4.0.3",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "rss-parser": "^3.13.0"

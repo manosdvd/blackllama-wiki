@@ -69,7 +69,7 @@ export default function TickerSyncButton() {
       const data = await parseSyncResponse(res);
       const debugId = data.syncRunId || data.firstItemId || data.latestId;
       if (res.ok && data.success !== false) {
-        const countText = typeof data.count === 'number' ? `Synced ${data.count} items successfully!` : data.message || 'Sync checked.';
+        const countText = data.message || (typeof data.count === 'number' ? `Synced ${data.count} items successfully!` : 'Sync checked.');
         setResult(`${countText}${debugId ? ` ID: ${debugId}` : ''}`);
       } else {
         setResult(`Error: ${data.error || data.warning || 'Unknown error'}${debugId ? ` ID: ${debugId}` : ''}`);

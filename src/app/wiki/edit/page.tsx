@@ -59,6 +59,8 @@ function WikiEditPageContent() {
   const [loadingRevisions, setLoadingRevisions] = useState(false);
   const [revisionKey, setRevisionKey] = useState(0);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
+  const [lastEdited, setLastEdited] = useState(0);
+  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
   const canDraft = hasPermission('canDraftWiki') || hasPermission('canEditWiki') || hasPermission('canPublishWiki');
   const canPublish = hasPermission('canPublishWiki');
@@ -152,21 +154,27 @@ function WikiEditPageContent() {
 
   const handleEditorChange = useCallback((data: EditorData) => {
     editorDataRef.current = data;
+    setLastEdited(Date.now());
+    setAutoSaveStatus('idle');
   }, []);
 
-  const saveArticle = async (nextStatus: ContentStatus) => {
+  const saveArticle = async (nextStatus: ContentStatus, isAutoSave = false) => {
     if (!user) {
-      setError('Sign in before saving wiki content.');
+      if (!isAutoSave) setError('Sign in before saving wiki content.');
       return;
     }
     if (nextStatus === 'published' && !canPublish) {
-      setError('Publishing requires publisher access.');
+      if (!isAutoSave) setError('Publishing requires publisher access.');
       return;
     }
 
-    setSaving(true);
-    setError(null);
-    setMessage(null);
+    if (isAutoSave) {
+      setAutoSaveStatus('saving');
+    } else {
+      setSaving(true);
+      setError(null);
+      setMessage(null);
+    }
 
     try {
       const token = await user.getIdToken();
@@ -194,13 +202,17 @@ function WikiEditPageContent() {
       const data = (await response.json()) as { article?: ContentItem; error?: string };
       if (!response.ok || !data.article) throw new Error(data.error || 'Unable to save article.');
 
-      setExistingArticle(data.article);
-      setStatus(data.article.status);
-      setChangeSummary('');
-      setMessage(nextStatus === 'published' ? 'Article published.' : nextStatus === 'in_review' ? 'Draft submitted for review.' : 'Draft saved.');
+      if (!isAutoSave) {
+        setExistingArticle(data.article);
+        setStatus(data.article.status);
+        setChangeSummary('');
+        setMessage(nextStatus === 'published' ? 'Article published.' : nextStatus === 'in_review' ? 'Draft submitted for review.' : 'Draft saved.');
+      } else {
+        setAutoSaveStatus('saved');
+      }
       
       // Update local revision list to include the newly saved version
-      if (articleId) {
+      if (articleId && !isAutoSave) {
         const { db } = await import('@/lib/firebase/client');
         const { collection, getDocs, query: fsQuery, orderBy } = await import('firebase/firestore');
         const colRef = collection(db, 'contentItems', articleId, 'revisions');
@@ -213,15 +225,31 @@ function WikiEditPageContent() {
         setRevisions(list);
       }
 
-      if (!articleId) {
+      if (!articleId && !isAutoSave) {
         window.history.replaceState(null, '', `/wiki/edit?id=${data.article.id}`);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      if (isAutoSave) {
+        setAutoSaveStatus('error');
+      } else {
+        setError(err instanceof Error ? err.message : String(err));
+      }
     } finally {
-      setSaving(false);
+      if (!isAutoSave) setSaving(false);
     }
   };
+
+  // Auto-save logic
+  useEffect(() => {
+    if (!articleId || !lastEdited || !canDraft || saving) return;
+    const timeout = setTimeout(() => {
+      // Only auto-save if status is currently a draft (or we're just updating the body and staying in draft)
+      if (status === 'draft' || status === 'in_review') {
+         saveArticle(status, true);
+      }
+    }, 5000);
+    return () => clearTimeout(timeout);
+  }, [lastEdited]);
 
   const handleDelete = async () => {
     if (!articleId) return;
@@ -291,6 +319,10 @@ function WikiEditPageContent() {
           {existingArticle && <p className={styles.subtleMeta}>Current status: {status}</p>}
         </div>
         <div className={styles.actions}>
+          {autoSaveStatus === 'saving' && <span className={styles.saveIndicator}>Saving...</span>}
+          {autoSaveStatus === 'saved' && <span className={styles.saveIndicator}>Saved ✓</span>}
+          {autoSaveStatus === 'error' && <span className={styles.saveIndicator} style={{color: 'var(--red-ember)'}}>Auto-save failed</span>}
+          
           {existingArticle && (
             <button className={styles.deleteBtn} onClick={handleDelete} disabled={saving}>
               Delete

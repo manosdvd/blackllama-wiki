@@ -266,7 +266,7 @@ async function fetchINaturalistSightings(location: WildlifeCoordinates, radiusKm
 
     const res = await fetch(`https://api.inaturalist.org/v1/observations?${params.toString()}`, {
       headers: JSON_HEADERS,
-      cache: 'no-store',
+      next: { revalidate: 900 },
     });
 
     if (!res.ok) return { items: [], health: 'degraded' };
@@ -326,7 +326,7 @@ async function fetchEBirdSightings(location: WildlifeCoordinates, radiusKm: numb
         ...JSON_HEADERS,
         'X-eBirdApiToken': token,
       },
-      cache: 'no-store',
+      next: { revalidate: 900 },
     });
 
     if (res.status === 401 || res.status === 403) return { items: [], health: 'error' };
@@ -419,8 +419,8 @@ async function queryHabiMapLayer(rawLayerUrl: string, location: WildlifeCoordina
   queryUrl.searchParams.set('resultRecordCount', '8');
 
   const [metadataResponse, queryResponse] = await Promise.all([
-    fetch(metadataUrl, { headers: JSON_HEADERS, cache: 'no-store' }),
-    fetch(queryUrl, { headers: JSON_HEADERS, cache: 'no-store' }),
+    fetch(metadataUrl, { headers: JSON_HEADERS, next: { revalidate: 900 } }),
+    fetch(queryUrl, { headers: JSON_HEADERS, next: { revalidate: 900 } }),
   ]);
 
   const metadata = metadataResponse.ok ? await metadataResponse.json() as ArcGisLayerMetadata : null;

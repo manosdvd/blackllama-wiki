@@ -150,7 +150,7 @@ export default function AuthModal() {
         <form onSubmit={handleSubmit} className={styles.form}>
           {mode === 'signup' && (
             <div className={styles.inputGroup}>
-              <label htmlFor="auth-name">VISIBLE NAME / RANGER CALLSIGN</label>
+              <label htmlFor="auth-name">NAME</label>
               <div className={styles.inputWrapper}>
                 <Sparkles size={16} className={styles.inputIcon} />
                 <input

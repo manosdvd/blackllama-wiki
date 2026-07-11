@@ -1,21 +1,14 @@
 'use client';
 
-import React, { Fragment } from 'react';
-import Link from 'next/link';
+import React from 'react';
 import type { EditorBlock, EditorData } from '@/types/content';
 import { slugify } from '@/lib/content/editorText';
 
-// Formats / cleans text of basic html tags while leaving brackets intact
-function text(value: unknown, preserveBreaks = false) {
+// Keeps basic html intact while cleaning up spacing
+function cleanText(value: unknown, preserveBreaks = false) {
   if (typeof value !== 'string') return '';
-  const withBreaks = value.replace(/<br\s*\/?>/gi, '\n');
-  const stripped = withBreaks.replace(/<[^>]*>/g, ' ');
-  if (!preserveBreaks) return stripped.replace(/\s+/g, ' ').trim();
-  return stripped
-    .split('\n')
-    .map((line) => line.replace(/\s+/g, ' ').trim())
-    .join('\n')
-    .trim();
+  if (!preserveBreaks) return value.replace(/\s+/g, ' ').trim();
+  return value.trim();
 }
 
 function blockKey(block: EditorBlock, index: number) {
@@ -42,12 +35,23 @@ function parseMarkdownWikiLinks(markdown: string): string {
 }
 
 function parseHtmlWikiLinks(html: string): string {
-  return html.replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (match, target, display) => {
+  let processed = html.replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (match, target, display) => {
     const t = target.trim();
     const d = display ? display.trim() : t;
     const slug = slugify(t);
     return `<a href="/wiki/article/${encodeURIComponent(slug)}" class="wiki-link">${d}</a>`;
   });
+
+  // Rewrite firebase images to use Next.js optimization
+  processed = processed.replace(/<img([^>]*)src="([^"]+)"([^>]*)>/gi, (match, before, src, after) => {
+    if (src.includes('firebasestorage.googleapis.com')) {
+      const optimizedSrc = `/_next/image?url=${encodeURIComponent(src)}&w=1200&q=75`;
+      return `<img${before}src="${optimizedSrc}"${after}>`;
+    }
+    return match;
+  });
+
+  return processed;
 }
 
 export function convertMarkdownToHtml(markdown: string): string {
@@ -78,6 +82,14 @@ export function convertMarkdownToHtml(markdown: string): string {
   // Inline code
   html = html.replace(/`(.*?)`/g, '<code>$1</code>');
 
+  // Markdown images: ![alt](url) -> optimized images
+  html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, url) => {
+    const optimizedSrc = url.includes('firebasestorage.googleapis.com') 
+      ? `/_next/image?url=${encodeURIComponent(url)}&w=1200&q=75`
+      : url;
+    return `<img src="${optimizedSrc}" alt="${alt}" style="max-width: 100%; height: auto; border-radius: 6px; margin: 12px 0; display: block;" />`;
+  });
+
   // Markdown links: [text](url) -> standard links
   html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="wiki-link">$1</a>');
 
@@ -92,68 +104,11 @@ export function convertMarkdownToHtml(markdown: string): string {
   return html;
 }
 
-function WikiText({ value, preserveBreaks = false }: { value: string; preserveBreaks?: boolean }) {
-  if (!value) return null;
-
-  const normalized = preserveBreaks ? value.replace(/<br\s*\/?>/gi, '\n') : value;
-  const regex = /\[\[([^\]]+)\]\]/g;
-  const parts: React.ReactNode[] = [];
-  let lastIndex = 0;
-  let match;
-
-  while ((match = regex.exec(normalized)) !== null) {
-    const matchIndex = match.index;
-    const content = match[1];
-
-    if (matchIndex > lastIndex) {
-      parts.push(normalized.substring(lastIndex, matchIndex));
-    }
-
-    const pipeIndex = content.indexOf('|');
-    const target = pipeIndex !== -1 ? content.substring(0, pipeIndex).trim() : content.trim();
-    const displayText = pipeIndex !== -1 ? content.substring(pipeIndex + 1).trim() : target;
-    const targetSlug = slugify(target);
-
-    parts.push(
-      <Link
-        key={`${targetSlug}-${matchIndex}`}
-        href={`/wiki/article/${encodeURIComponent(targetSlug)}`}
-        className="wiki-link"
-      >
-        {displayText}
-      </Link>
-    );
-
-    lastIndex = regex.lastIndex;
-  }
-
-  if (lastIndex < normalized.length) {
-    parts.push(normalized.substring(lastIndex));
-  }
-
-  if (preserveBreaks) {
-    return (
-      <>
-        {parts.map((part, index) => {
-          if (typeof part === 'string') {
-            return (
-              <span key={index}>
-                {part.split('\n').map((line, lineIdx) => (
-                  <React.Fragment key={lineIdx}>
-                    {lineIdx > 0 && <br />}
-                    {line}
-                  </React.Fragment>
-                ))}
-              </span>
-            );
-          }
-          return part;
-        })}
-      </>
-    );
-  }
-
-  return <>{parts}</>;
+function renderHtml(htmlContent: string) {
+  // Editor.js provides formatted HTML with <b>, <i>, <a href>, etc.
+  // We just need to parse our custom [[WikiLinks]] and inject them as standard anchors.
+  const processed = parseHtmlWikiLinks(htmlContent);
+  return { __html: processed };
 }
 
 export default function EditorOutput({ data }: { data: EditorData }) {
@@ -191,10 +146,10 @@ export default function EditorOutput({ data }: { data: EditorData }) {
 
         if (block.type === 'header') {
           const level = Number(blockData.level ?? 2);
-          const val = text(blockData.text);
-          if (level <= 2) return <h2 key={key}><WikiText value={val} /></h2>;
-          if (level === 3) return <h3 key={key}><WikiText value={val} /></h3>;
-          return <h4 key={key}><WikiText value={val} /></h4>;
+          const val = cleanText(blockData.text);
+          if (level <= 2) return <h2 key={key} dangerouslySetInnerHTML={renderHtml(val)} />;
+          if (level === 3) return <h3 key={key} dangerouslySetInnerHTML={renderHtml(val)} />;
+          return <h4 key={key} dangerouslySetInnerHTML={renderHtml(val)} />;
         }
 
         if (block.type === 'list') {
@@ -202,7 +157,7 @@ export default function EditorOutput({ data }: { data: EditorData }) {
           const items = Array.isArray(blockData.items) ? blockData.items : [];
           const listItems = items.map((item, idx) => {
             const raw = typeof item === 'string' ? item : item && typeof item === 'object' && 'content' in item ? String(item.content) : '';
-            return <li key={idx}><WikiText value={text(raw)} /></li>;
+            return <li key={idx} dangerouslySetInnerHTML={renderHtml(cleanText(raw))} />;
           });
           return style === 'ordered' ? (
             <ol key={key}>{listItems}</ol>
@@ -212,21 +167,23 @@ export default function EditorOutput({ data }: { data: EditorData }) {
         }
 
         if (block.type === 'quote') {
-          const quoteText = text(blockData.text, true);
+          const quoteText = cleanText(blockData.text, true);
+          const captionText = cleanText(blockData.caption);
           return (
             <blockquote key={key}>
-              <p><WikiText value={quoteText} preserveBreaks={true} /></p>
-              {text(blockData.caption) && <cite>{text(blockData.caption)}</cite>}
+              <p dangerouslySetInnerHTML={renderHtml(quoteText)} />
+              {captionText && <cite dangerouslySetInnerHTML={renderHtml(captionText)} />}
             </blockquote>
           );
         }
 
         if (block.type === 'warning') {
-          const warnMsg = text(blockData.message, true);
+          const warnMsg = cleanText(blockData.message, true);
+          const title = cleanText(blockData.title);
           return (
             <aside key={key} className="wikiWarning">
-              {text(blockData.title) && <strong>{text(blockData.title)}</strong>}
-              <p><WikiText value={warnMsg} preserveBreaks={true} /></p>
+              {title && <strong dangerouslySetInnerHTML={renderHtml(title)} />}
+              <p dangerouslySetInnerHTML={renderHtml(warnMsg)} />
             </aside>
           );
         }
@@ -240,9 +197,7 @@ export default function EditorOutput({ data }: { data: EditorData }) {
                     <tr key={rowIndex}>
                       {tableCells(row)
                         .map((cell, cellIndex) => (
-                          <td key={cellIndex}>
-                            <WikiText value={text(cell)} />
-                          </td>
+                          <td key={cellIndex} dangerouslySetInnerHTML={renderHtml(cleanText(cell))} />
                         ))}
                     </tr>
                   ))}
@@ -267,18 +222,25 @@ export default function EditorOutput({ data }: { data: EditorData }) {
         if (block.type === 'image') {
           const file = blockData.file && typeof blockData.file === 'object' && 'url' in blockData.file ? blockData.file.url : '';
           const url = typeof file === 'string' ? file : '';
+          const captionText = cleanText(blockData.caption);
           if (!url) return null;
+          
+          let optimizedUrl = url;
+          if (url.includes('firebasestorage.googleapis.com')) {
+             optimizedUrl = `/_next/image?url=${encodeURIComponent(url)}&w=1200&q=75`;
+          }
+
           return (
             <figure key={key}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={url} alt={text(blockData.caption) || 'Wiki image'} />
-              {text(blockData.caption) && <figcaption>{text(blockData.caption)}</figcaption>}
+              <img src={optimizedUrl} alt={captionText.replace(/<[^>]*>?/gm, '') || 'Wiki image'} />
+              {captionText && <figcaption dangerouslySetInnerHTML={renderHtml(captionText)} />}
             </figure>
           );
         }
 
-        const pText = text(blockData.text, true);
-        return <p key={key}><WikiText value={pText} preserveBreaks={true} /></p>;
+        const pText = cleanText(blockData.text, true);
+        return <p key={key} dangerouslySetInnerHTML={renderHtml(pText)} />;
       })}
     </>
   );

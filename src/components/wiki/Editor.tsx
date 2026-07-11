@@ -18,52 +18,124 @@ interface EditorProps {
 
 type EditorMode = 'wysiwyg' | 'markdown' | 'html';
 
-const MAX_EMBEDDED_IMAGE_DIMENSION = 1400;
-const MAX_EMBEDDED_IMAGE_BYTES = 600_000;
+function ImageResizerOverlay({
+  imgNode,
+  onUpdate,
+  onClose
+}: {
+  imgNode: HTMLImageElement;
+  onUpdate: () => void;
+  onClose: () => void;
+}) {
+  const [rect, setRect] = useState({ top: 0, left: 0, width: 0, height: 0 });
+  const startPos = useRef({ x: 0, width: 0, height: 0 });
 
-function dataUrlByteSize(dataUrl: string) {
-  return Math.ceil(dataUrl.length * 0.75);
-}
+  useEffect(() => {
+    const updateRect = () => {
+      if (!imgNode) return;
+      setRect({
+        top: imgNode.offsetTop,
+        left: imgNode.offsetLeft,
+        width: imgNode.offsetWidth,
+        height: imgNode.offsetHeight
+      });
+    };
+    updateRect();
+    const ro = new ResizeObserver(updateRect);
+    ro.observe(imgNode);
+    return () => ro.disconnect();
+  }, [imgNode]);
 
-function readFileAsDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result || ''));
-    reader.onerror = () => reject(reader.error ?? new Error('Could not read image file.'));
-    reader.readAsDataURL(file);
-  });
-}
+  const handlePointerDown = (e: React.PointerEvent, corner: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    startPos.current = { x: e.clientX, width: imgNode.offsetWidth, height: imgNode.offsetHeight };
+    
+    const handlePointerMove = (ev: PointerEvent) => {
+      const dx = ev.clientX - startPos.current.x;
+      const newWidth = corner.includes('right') ? startPos.current.width + dx : startPos.current.width - dx;
+      imgNode.style.width = `${Math.max(50, newWidth)}px`;
+      imgNode.style.height = 'auto';
+    };
 
-function loadImage(src: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const image = new Image();
-    image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error('Could not load image file.'));
-    image.src = src;
-  });
-}
+    const handlePointerUp = () => {
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', handlePointerUp);
+      onUpdate();
+    };
 
-async function imageFileToCompressedDataUrl(file: File) {
-  const originalDataUrl = await readFileAsDataUrl(file);
-  const image = await loadImage(originalDataUrl);
-  const scale = Math.min(1, MAX_EMBEDDED_IMAGE_DIMENSION / Math.max(image.width, image.height));
-  const width = Math.max(1, Math.round(image.width * scale));
-  const height = Math.max(1, Math.round(image.height * scale));
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', handlePointerUp);
+  };
 
-  const canvas = document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return originalDataUrl;
+  const setAlign = (alignment: string) => {
+    if (alignment === 'left') {
+      imgNode.style.display = 'block';
+      imgNode.style.margin = '12px auto 12px 0';
+      imgNode.style.float = 'none';
+    } else if (alignment === 'center') {
+      imgNode.style.display = 'block';
+      imgNode.style.margin = '12px auto';
+      imgNode.style.float = 'none';
+    } else if (alignment === 'right') {
+      imgNode.style.display = 'block';
+      imgNode.style.margin = '12px 0 12px auto';
+      imgNode.style.float = 'none';
+    } else if (alignment === 'float-left') {
+      imgNode.style.display = 'inline';
+      imgNode.style.margin = '12px 16px 12px 0';
+      imgNode.style.float = 'left';
+    } else if (alignment === 'float-right') {
+      imgNode.style.display = 'inline';
+      imgNode.style.margin = '12px 0 12px 16px';
+      imgNode.style.float = 'right';
+    }
+    onUpdate();
+  };
 
-  ctx.drawImage(image, 0, 0, width, height);
-
-  for (const quality of [0.78, 0.68, 0.58, 0.48]) {
-    const compressed = canvas.toDataURL('image/jpeg', quality);
-    if (dataUrlByteSize(compressed) <= MAX_EMBEDDED_IMAGE_BYTES) return compressed;
-  }
-
-  return canvas.toDataURL('image/jpeg', 0.42);
+  return (
+    <>
+      <div 
+        style={{
+          position: 'absolute',
+          top: rect.top,
+          left: rect.left,
+          width: rect.width,
+          height: rect.height,
+          border: '2px solid var(--primary-accent)',
+          pointerEvents: 'none',
+          zIndex: 10
+        }}
+      >
+        <div style={{ pointerEvents: 'auto', position: 'absolute', top: -5, left: -5, width: 10, height: 10, background: 'var(--primary-accent)', cursor: 'nwse-resize' }} onPointerDown={e => handlePointerDown(e, 'top-left')} />
+        <div style={{ pointerEvents: 'auto', position: 'absolute', top: -5, right: -5, width: 10, height: 10, background: 'var(--primary-accent)', cursor: 'nesw-resize' }} onPointerDown={e => handlePointerDown(e, 'top-right')} />
+        <div style={{ pointerEvents: 'auto', position: 'absolute', bottom: -5, left: -5, width: 10, height: 10, background: 'var(--primary-accent)', cursor: 'nesw-resize' }} onPointerDown={e => handlePointerDown(e, 'bottom-left')} />
+        <div style={{ pointerEvents: 'auto', position: 'absolute', bottom: -5, right: -5, width: 10, height: 10, background: 'var(--primary-accent)', cursor: 'nwse-resize' }} onPointerDown={e => handlePointerDown(e, 'bottom-right')} />
+      </div>
+      
+      <div style={{
+        position: 'absolute',
+        top: Math.max(0, rect.top - 40),
+        left: rect.left + rect.width / 2 - 100,
+        background: 'var(--bg-layer-2)',
+        border: '1px solid var(--border-light)',
+        borderRadius: '6px',
+        display: 'flex',
+        padding: '4px',
+        gap: '4px',
+        zIndex: 11,
+        boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
+      }}>
+        <button onClick={() => setAlign('float-left')} title="Float Left" style={{background:'none',border:'none',cursor:'pointer', color: 'var(--text-primary)'}}>◧</button>
+        <button onClick={() => setAlign('left')} title="Align Left" style={{background:'none',border:'none',cursor:'pointer', color: 'var(--text-primary)'}}>⇤</button>
+        <button onClick={() => setAlign('center')} title="Center" style={{background:'none',border:'none',cursor:'pointer', color: 'var(--text-primary)'}}>⇥⇤</button>
+        <button onClick={() => setAlign('right')} title="Align Right" style={{background:'none',border:'none',cursor:'pointer', color: 'var(--text-primary)'}}>⇥</button>
+        <button onClick={() => setAlign('float-right')} title="Float Right" style={{background:'none',border:'none',cursor:'pointer', color: 'var(--text-primary)'}}>◨</button>
+        <div style={{width:'1px', background:'var(--border-light)', margin:'0 4px'}}></div>
+        <button onClick={onClose} title="Close Menu" style={{background:'none',border:'none',cursor:'pointer', color:'var(--red-ember)'}}>✖</button>
+      </div>
+    </>
+  );
 }
 
 export function convertHtmlToMarkdown(html: string): string {
@@ -173,6 +245,8 @@ export default function Editor({ initialData, onChange }: EditorProps) {
   const imageInputRef = useRef<HTMLInputElement>(null);
   const markdownTextareaRef = useRef<HTMLTextAreaElement>(null);
   const htmlTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const [selectedImage, setSelectedImage] = useState<HTMLImageElement | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   // Load content into WYSIWYG editor area when entering wysiwyg mode
   useEffect(() => {
@@ -199,6 +273,14 @@ export default function Editor({ initialData, onChange }: EditorProps) {
         blocks: [{ type: 'html', data: { html: newHtml } }],
         version: 'custom-wysiwyg'
       });
+    }
+  };
+
+  const handleWysiwygClick = (e: React.MouseEvent) => {
+    if (e.target instanceof HTMLImageElement) {
+      setSelectedImage(e.target);
+    } else {
+      setSelectedImage(null);
     }
   };
 
@@ -360,19 +442,46 @@ export default function Editor({ initialData, onChange }: EditorProps) {
     if (!file) return;
 
     try {
-      const base64 = await imageFileToCompressedDataUrl(file);
-      if (dataUrlByteSize(base64) > MAX_EMBEDDED_IMAGE_BYTES) {
-        alert('That image is still too large to embed. Please crop or resize it before adding it to the wiki.');
-        return;
-      }
+      setIsUploading(true);
+      const { default: imageCompression } = await import('browser-image-compression');
+      const { storage, db } = await import('@/lib/firebase/client');
+      const { ref, uploadBytesResumable, getDownloadURL } = await import('firebase/storage');
+      const { doc, setDoc, collection, serverTimestamp } = await import('firebase/firestore');
+
+      const options = {
+        maxSizeMB: 0.6,
+        maxWidthOrHeight: 1400,
+        useWebWorker: true,
+      };
+      
+      // Compress image
+      const compressedFile = await imageCompression(file, options);
+      
+      // Upload to Firebase Storage
+      const fileName = `${Date.now()}-${compressedFile.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+      const storageRef = ref(storage, `wiki-images/${fileName}`);
+      
+      await uploadBytesResumable(storageRef, compressedFile);
+      const downloadURL = await getDownloadURL(storageRef);
+
+      // Save to Firestore image gallery
+      const imageDocRef = doc(collection(db, 'imageGallery'));
+      await setDoc(imageDocRef, {
+        url: downloadURL,
+        filename: fileName,
+        originalName: file.name,
+        uploadedAt: serverTimestamp(),
+        size: compressedFile.size,
+      });
 
       const safeName = file.name.replace(/"/g, '&quot;');
-      const imgHtml = `<img src="${base64}" alt="${safeName}" style="max-width: 100%; border-radius: 6px; margin: 12px 0; display: block;" />`;
-      const imgMd = `![${file.name.replace(/]/g, '\\]')}](${base64})`;
+      const imgHtml = `<img src="${downloadURL}" alt="${safeName}" style="width: 100%; height: auto; max-width: 600px; border-radius: 6px; margin: 12px auto; display: block;" />`;
+      const imgMd = `![${file.name.replace(/]/g, '\\]')}](${downloadURL})`;
       insertMediaAtCursor(imgHtml, imgMd);
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Could not embed that image.');
     } finally {
+      setIsUploading(false);
       e.target.value = '';
     }
   };
@@ -485,7 +594,7 @@ export default function Editor({ initialData, onChange }: EditorProps) {
           <button type="button" className={styles.toolbarBtn} onClick={insertWikiLink} title="Insert Wiki Link [Tagging]">
             <Link2 size={16} />
           </button>
-          <button type="button" className={styles.toolbarBtn} onClick={handleImageClick} title="Insert Image Upload">
+          <button type="button" className={styles.toolbarBtn} onClick={handleImageClick} title="Insert Image Upload" disabled={isUploading}>
             <ImageIcon size={16} />
           </button>
           <button type="button" className={styles.toolbarBtn} onClick={handleYoutubeEmbed} title="Embed YouTube Video">
@@ -515,7 +624,16 @@ export default function Editor({ initialData, onChange }: EditorProps) {
             className={`${styles.viewport} ${styles.wysiwygArea}`}
             onInput={handleWysiwygInput}
             onBlur={handleWysiwygInput}
+            onClick={handleWysiwygClick}
           />
+        )}
+        
+        {activeMode === 'wysiwyg' && selectedImage && (
+           <ImageResizerOverlay 
+             imgNode={selectedImage}
+             onUpdate={handleWysiwygInput}
+             onClose={() => setSelectedImage(null)}
+           />
         )}
         
         {activeMode === 'markdown' && (

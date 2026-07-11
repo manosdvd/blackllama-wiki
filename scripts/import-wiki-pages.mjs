@@ -216,7 +216,7 @@ function markdownToBlocks(markdown) {
     if (/^\s*\|.*\|\s*$/.test(line) && index + 1 < lines.length && /^\s*\|?\s*:?-{3,}:?/.test(lines[index + 1])) {
       flushParagraph(blocks, paragraphLines);
       const table = parseTable(lines, index);
-      if (table.rows.length) blocks.push(block('table', { withHeadings: true, content: table.rows }));
+      if (table.rows.length) blocks.push(block('table', { withHeadings: true, content: table.rows.map(row => ({ values: row })) }));
       index = table.nextIndex;
       continue;
     }

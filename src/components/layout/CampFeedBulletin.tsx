@@ -27,6 +27,7 @@ function getCategoryColor(category?: string) {
   if (lower.includes('nature') || lower.includes('forest')) return '#2ecc71';
   if (lower.includes('astronomy') || lower.includes('space') || lower.includes('sky')) return '#9b59b6';
   if (lower.includes('scout') || lower.includes('useful') || lower.includes('local')) return '#f1c40f';
+  if (lower.includes('youtube')) return '#ff0000';
   return 'var(--lantern-gold, #f7b733)';
 }
 

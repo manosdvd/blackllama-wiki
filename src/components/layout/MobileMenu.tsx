@@ -3,12 +3,20 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { Menu, X } from 'lucide-react';
+import { useAuth } from '@/components/auth/AuthContext';
 import styles from './MobileMenu.module.css';
 
 export default function MobileMenu() {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const { user, profile } = useAuth();
+
+  const roleName = profile?.portalMode ?? 'guest';
+  const isAdmin = roleName === 'admin';
+  const isRegisteredUser = user && (roleName === 'candidate' || roleName === 'onboarding' || roleName === 'staff' || roleName === 'admin');
+  const actionLink = isRegisteredUser ? '/onboarding' : '/apply';
+  const actionLabel = isRegisteredUser ? 'Onboarding' : 'Apply';
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -87,15 +95,14 @@ export default function MobileMenu() {
               <Link href="/wiki" className={styles.navItem} onClick={() => setIsOpen(false)}>
                 Wiki &amp; Procedures
               </Link>
-              <Link href="/apply" className={styles.navItem} onClick={() => setIsOpen(false)}>
-                Apply
+              <Link href={actionLink} className={styles.navItem} onClick={() => setIsOpen(false)}>
+                {actionLabel}
               </Link>
-              <Link href="/onboarding" className={styles.navItem} onClick={() => setIsOpen(false)}>
-                Onboarding
-              </Link>
-              <Link href="/admin/review" className={styles.navItem} onClick={() => setIsOpen(false)}>
-                Admin
-              </Link>
+              {isAdmin && (
+                <Link href="/admin/review" className={styles.navItem} onClick={() => setIsOpen(false)}>
+                  Admin
+                </Link>
+              )}
             </nav>
           </div>
         </div>

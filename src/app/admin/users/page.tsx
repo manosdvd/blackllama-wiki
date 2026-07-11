@@ -149,6 +149,142 @@ function UserRow({
   );
 }
 
+function CreateUserForm({ onSuccess, canManageUsers }: { onSuccess: () => void, canManageUsers: boolean }) {
+  const { user } = useAuth();
+  const [isOpen, setIsOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
+  const [formData, setFormData] = useState({
+    email: '',
+    displayName: '',
+    password: '',
+    portalMode: 'staff' as PortalMode,
+    adminPreset: '' as AdminPresetKey | ''
+  });
+
+  if (!canManageUsers) return null;
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch('/api/users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(formData)
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to create user');
+      
+      setFormData({ email: '', displayName: '', password: '', portalMode: 'staff', adminPreset: '' });
+      setIsOpen(false);
+      onSuccess();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (!isOpen) {
+    return (
+      <button onClick={() => setIsOpen(true)} className={styles.createUserBtn}>
+        + Create New User
+      </button>
+    );
+  }
+
+  return (
+    <div className={styles.createUserCard}>
+      <div className={styles.createUserHeader}>
+        <h3>Create New User</h3>
+        <button onClick={() => setIsOpen(false)} className={styles.closeBtn}><XCircle size={20} /></button>
+      </div>
+      {error && <div className={styles.errorMessage}>{error}</div>}
+      <form onSubmit={handleSubmit} className={styles.createUserForm}>
+        <div className={styles.controlGroup}>
+          <label>Email</label>
+          <input 
+            type="email" 
+            required 
+            value={formData.email} 
+            onChange={e => setFormData({ ...formData, email: e.target.value })}
+            placeholder="user@example.com"
+          />
+        </div>
+        <div className={styles.controlGroup}>
+          <label>Display Name</label>
+          <input 
+            type="text" 
+            required 
+            value={formData.displayName} 
+            onChange={e => setFormData({ ...formData, displayName: e.target.value })}
+            placeholder="e.g. John Doe"
+          />
+        </div>
+        <div className={styles.controlGroup}>
+          <label>Temporary Password</label>
+          <input 
+            type="text" 
+            required 
+            value={formData.password} 
+            onChange={e => setFormData({ ...formData, password: e.target.value })}
+            placeholder="At least 6 characters"
+            minLength={6}
+          />
+        </div>
+        <div className={styles.controlGroup}>
+          <label>Portal Mode</label>
+          <select 
+            value={formData.portalMode} 
+            onChange={e => {
+              const mode = e.target.value as PortalMode;
+              setFormData({ 
+                ...formData, 
+                portalMode: mode,
+                adminPreset: mode === 'admin' ? 'owner' : formData.adminPreset
+              });
+            }}
+          >
+            {PORTAL_MODES.map(mode => <option key={mode} value={mode}>{mode}</option>)}
+          </select>
+        </div>
+        <div className={styles.controlGroup}>
+          <label>Admin Preset (Optional)</label>
+          <select
+            value={formData.adminPreset}
+            onChange={e => {
+              const preset = e.target.value as AdminPresetKey | '';
+              setFormData({
+                ...formData,
+                adminPreset: preset,
+                portalMode: preset ? 'admin' : formData.portalMode
+              });
+            }}
+          >
+            <option value="">No admin preset</option>
+            {Object.values(ADMIN_PRESETS).map((preset) => (
+              <option key={preset.key} value={preset.key}>{preset.name}</option>
+            ))}
+          </select>
+        </div>
+        <div className={styles.createUserActions}>
+          <button type="submit" disabled={submitting} className={styles.submitCreateBtn}>
+            {submitting ? 'Creating...' : 'Create User'}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
 export default function AdminUsersPage() {
   const { user, loading, hasPermission } = useAuth();
   const [users, setUsers] = useState<UserProfile[]>([]);
@@ -230,6 +366,14 @@ export default function AdminUsersPage() {
 
       {message && <div className={styles.successMessage}>{message}</div>}
       {error && <div className={styles.errorMessage}>{error}</div>}
+
+      <div className={styles.actionRow}>
+        <CreateUserForm onSuccess={() => {
+          setMessage('User successfully created.');
+          setTimeout(() => setMessage(null), 5000);
+          loadUsers();
+        }} canManageUsers={canManageUsers} />
+      </div>
 
       <div className={styles.tableContainer}>
         <table className={styles.usersTable}>

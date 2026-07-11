@@ -260,7 +260,7 @@ async function fetchSpecies(
 
     const response = await fetch(`https://api.inaturalist.org/v1/observations?${params.toString()}`, {
       headers: JSON_HEADERS,
-      cache: 'no-store',
+      next: { revalidate: 900 },
     });
 
     if (!response.ok) return { sightings: [], ok: false };

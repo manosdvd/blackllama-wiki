@@ -8,6 +8,7 @@ import ThemeToggle from './ThemeToggle';
 import AccessibilitySettings from './AccessibilitySettings';
 import AuthButton from './AuthButton';
 import MobileMenu from './MobileMenu';
+import DesktopNav from './DesktopNav';
 import { getOfflineTickerItems } from '@/lib/tickerUtils';
 import styles from './Header.module.css';
 
@@ -55,13 +56,7 @@ export default async function Header() {
       {/* Distinct Main Menu Bar below the ticker */}
       <div className={styles.menuBar}>
         <div className={styles.menuContainer}>
-          <nav className={styles.menuLinks}>
-            <Link href="/" className={styles.menuItem}>Dashboard</Link>
-            <Link href="/wiki" className={styles.menuItem}>Wiki & Procedures</Link>
-            <Link href="/apply" className={styles.menuItem}>Apply</Link>
-            <Link href="/onboarding" className={styles.menuItem}>Onboarding</Link>
-            <Link href="/admin/review" className={styles.menuItem}>Admin</Link>
-          </nav>
+          <DesktopNav />
         </div>
       </div>
     </header>

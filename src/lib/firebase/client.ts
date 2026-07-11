@@ -7,6 +7,7 @@ import {
   persistentMultipleTabManager,
   type Firestore,
 } from "firebase/firestore";
+import { getStorage, type FirebaseStorage } from "firebase/storage";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -20,8 +21,8 @@ const firebaseConfig = {
 const isConfigValid = typeof firebaseConfig.apiKey === 'string' && firebaseConfig.apiKey.trim().length > 0;
 
 let app: FirebaseApp;
-
 let db: Firestore;
+let storage: FirebaseStorage;
 
 function createFirestore(firebaseApp: FirebaseApp): Firestore {
   if (typeof window === "undefined") return getFirestore(firebaseApp);
@@ -42,13 +43,13 @@ function createFirestore(firebaseApp: FirebaseApp): Firestore {
 
 if (isConfigValid) {
   app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-
   db = createFirestore(app);
+  storage = getStorage(app);
 } else {
   // Mock fallback to allow Next.js static build to succeed without API keys in CI envs
   app = { name: "[MockApp]" } as unknown as FirebaseApp;
-
   db = {} as unknown as Firestore;
+  storage = {} as unknown as FirebaseStorage;
 }
 
-export { app, db };
+export { app, db, storage };

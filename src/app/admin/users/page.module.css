@@ -285,3 +285,102 @@
     padding: 1.5rem 1rem;
   }
 }
+
+/* Create User Form */
+.actionRow {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 1rem;
+}
+
+.createUserBtn {
+  background: var(--campfire-amber);
+  color: #1e1b18;
+  border: none;
+  padding: 0.75rem 1.25rem;
+  border-radius: 6px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.createUserBtn:hover {
+  background: #f59e0b; /* Slightly brighter */
+  transform: translateY(-1px);
+}
+
+.createUserCard {
+  background: rgba(30, 27, 24, 0.95);
+  border: 1px solid var(--campfire-amber);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+  width: 100%;
+}
+
+.createUserHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  padding-bottom: 1rem;
+}
+
+.createUserHeader h3 {
+  color: var(--campfire-amber);
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.closeBtn {
+  background: transparent;
+  border: none;
+  color: rgba(255,255,255,0.5);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s ease;
+}
+
+.closeBtn:hover {
+  color: white;
+}
+
+.createUserForm {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+.createUserActions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+.submitCreateBtn {
+  background: var(--campfire-amber);
+  color: #1e1b18;
+  border: none;
+  padding: 0.75rem 2rem;
+  border-radius: 6px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.submitCreateBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+  .createUserForm {
+    grid-template-columns: 1fr;
+  }
+}
+
