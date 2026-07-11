@@ -50,8 +50,8 @@ Output your response in exactly this JSON format (no markdown code blocks, just 
 
       if (!res.ok) {
         if (res.status === 429) {
-          console.warn(`Rate limited for ${page.title}. Retrying in 12s...`);
-          await new Promise(r => setTimeout(r, 12000));
+          console.warn(`Rate limited for ${page.title}. Retrying in 60s...`);
+          await new Promise(r => setTimeout(r, 60000));
           retries--;
           continue;
         }
@@ -82,12 +82,21 @@ async function run() {
   for (let i = 0; i < pages.length; i++) {
     console.log(`Processing page ${i + 1} of ${pages.length}: ${pages[i].title}`);
     
-    const result = await improveArticle(pages[i]);
-    improvedPages.push(result);
+    let retries = 10;
+    let success = false;
+    while(retries > 0 && !success) {
+      const result = await improveArticle(pages[i]);
+      if (result) {
+        improvedPages.push(result);
+        success = true;
+      } else {
+        retries--;
+      }
+    }
     
-    // Sleep 4.5 seconds to respect the 15 RPM free tier limit
+    // Sleep 15.5 seconds to strictly enforce < 4 RPM (Free tier limit is 5 RPM)
     if (i < pages.length - 1) {
-      await new Promise(r => setTimeout(r, 4500));
+      await new Promise(r => setTimeout(r, 15500));
     }
   }
 

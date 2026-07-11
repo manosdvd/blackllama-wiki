@@ -29,6 +29,7 @@ function ImageResizerOverlay({
 }) {
   const [rect, setRect] = useState({ top: 0, left: 0, width: 0, height: 0 });
   const startPos = useRef({ x: 0, width: 0, height: 0 });
+  const [alignment, setAlignment] = useState<string>('left');
 
   useEffect(() => {
     const updateRect = () => {
@@ -68,28 +69,29 @@ function ImageResizerOverlay({
     window.addEventListener('pointerup', handlePointerUp);
   };
 
-  const setAlign = (alignment: string) => {
-    if (alignment === 'left') {
+  const applyAlignment = (newAlignment: string) => {
+    if (newAlignment === 'left') {
       imgNode.style.display = 'block';
       imgNode.style.margin = '12px auto 12px 0';
       imgNode.style.float = 'none';
-    } else if (alignment === 'center') {
+    } else if (newAlignment === 'center') {
       imgNode.style.display = 'block';
       imgNode.style.margin = '12px auto';
       imgNode.style.float = 'none';
-    } else if (alignment === 'right') {
+    } else if (newAlignment === 'right') {
       imgNode.style.display = 'block';
       imgNode.style.margin = '12px 0 12px auto';
       imgNode.style.float = 'none';
-    } else if (alignment === 'float-left') {
+    } else if (newAlignment === 'float-left') {
       imgNode.style.display = 'inline';
       imgNode.style.margin = '12px 16px 12px 0';
       imgNode.style.float = 'left';
-    } else if (alignment === 'float-right') {
+    } else if (newAlignment === 'float-right') {
       imgNode.style.display = 'inline';
       imgNode.style.margin = '12px 0 12px 16px';
       imgNode.style.float = 'right';
     }
+    setAlignment(newAlignment);
     onUpdate();
   };
 
@@ -126,11 +128,11 @@ function ImageResizerOverlay({
         zIndex: 11,
         boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
       }}>
-        <button onClick={() => setAlign('float-left')} title="Float Left" style={{background:'none',border:'none',cursor:'pointer', color: 'var(--text-primary)'}}>◧</button>
-        <button onClick={() => setAlign('left')} title="Align Left" style={{background:'none',border:'none',cursor:'pointer', color: 'var(--text-primary)'}}>⇤</button>
-        <button onClick={() => setAlign('center')} title="Center" style={{background:'none',border:'none',cursor:'pointer', color: 'var(--text-primary)'}}>⇥⇤</button>
-        <button onClick={() => setAlign('right')} title="Align Right" style={{background:'none',border:'none',cursor:'pointer', color: 'var(--text-primary)'}}>⇥</button>
-        <button onClick={() => setAlign('float-right')} title="Float Right" style={{background:'none',border:'none',cursor:'pointer', color: 'var(--text-primary)'}}>◨</button>
+        <button onClick={() => applyAlignment('float-left')} title="Float Left" style={{background:'none',border:'none',cursor:'pointer', color: 'var(--text-primary)'}}>◧</button>
+        <button onClick={() => applyAlignment('left')} title="Align Left" style={{background:'none',border:'none',cursor:'pointer', color: 'var(--text-primary)'}}>⇤</button>
+        <button onClick={() => applyAlignment('center')} title="Center" style={{background:'none',border:'none',cursor:'pointer', color: 'var(--text-primary)'}}>⇥⇤</button>
+        <button onClick={() => applyAlignment('right')} title="Align Right" style={{background:'none',border:'none',cursor:'pointer', color: 'var(--text-primary)'}}>⇥</button>
+        <button onClick={() => applyAlignment('float-right')} title="Float Right" style={{background:'none',border:'none',cursor:'pointer', color: 'var(--text-primary)'}}>◨</button>
         <div style={{width:'1px', background:'var(--border-light)', margin:'0 4px'}}></div>
         <button onClick={onClose} title="Close Menu" style={{background:'none',border:'none',cursor:'pointer', color:'var(--red-ember)'}}>✖</button>
       </div>
