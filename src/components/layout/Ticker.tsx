@@ -1,14 +1,14 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import {
   shouldReduceMotion,
   subscribeMotionPreference,
 } from '@/lib/accessibilityPreferences';
-
-import { ExternalLink, X, Play, Pause, Eye, EyeOff } from 'lucide-react';
+import { Play, Pause, Eye, EyeOff } from 'lucide-react';
+import CampFeedBulletin from './CampFeedBulletin';
 import styles from './Ticker.module.css';
 
 interface TickerItem {
@@ -20,6 +20,8 @@ interface TickerItem {
   sourceType?: string;
   position?: number;
   generatedAt?: string;
+  publishedAt?: string;
+  imageUrl?: string;
   syncRunId?: string;
 }
 
@@ -53,7 +55,6 @@ function getCategoryColor(category?: string) {
 }
 
 export default function Ticker({ items }: TickerProps) {
-
   const [dbItems, setDbItems] = useState<TickerItem[]>([]);
   const [apiItems] = useState<TickerItem[]>([]);
   const [shuffledLocalItems, setShuffledLocalItems] = useState<TickerItem[]>(items);
@@ -62,7 +63,6 @@ export default function Ticker({ items }: TickerProps) {
   const [isFeedOpen, setIsFeedOpen] = useState(false);
   const [mobileScrollAmount, setMobileScrollAmount] = useState(0);
   const [mobileShouldScroll, setMobileShouldScroll] = useState(false);
-
   const [isPaused, setIsPaused] = useState(false);
   const lowMotion = useSyncExternalStore(
     subscribeMotionPreference,
@@ -76,21 +76,22 @@ export default function Ticker({ items }: TickerProps) {
     return false;
   });
 
-  const toggleHidden = (val: boolean) => {
-    setIsHidden(val);
-    localStorage.setItem('ticker_hidden', String(val));
-  };
-
   const scrollRef = useRef<HTMLDivElement>(null);
   const feedButtonRef = useRef<HTMLButtonElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const mobileContainerRef = useRef<HTMLDivElement>(null);
   const mobileTextRef = useRef<HTMLDivElement>(null);
 
-  // Sync is performed automatically by the Netlify cron function (6am, 12pm, 5pm MST).
-  // Manual admin sync has been removed from the UI.
+  const toggleHidden = (value: boolean) => {
+    setIsHidden(value);
+    localStorage.setItem('ticker_hidden', String(value));
+  };
 
-  // Subscribe to Firestore liveTicker collection
+  const closeFeed = useCallback(() => {
+    setIsFeedOpen(false);
+    feedButtonRef.current?.focus();
+  }, []);
+
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
 
@@ -106,42 +107,31 @@ export default function Ticker({ items }: TickerProps) {
       });
     }
 
-    return () => {
-      unsubscribe?.();
-    };
+    return () => unsubscribe?.();
   }, []);
 
-  // On page load, trigger a background RSS sync if liveTicker is empty or stale
   useEffect(() => {
-    const STALE_THRESHOLD_MS = 6 * 60 * 60 * 1000; // 6 hours
+    const STALE_THRESHOLD_MS = 6 * 60 * 60 * 1000;
 
     async function triggerSyncIfNeeded() {
       try {
-        // Check if we already have fresh items in Firestore
         const { collection: col, getDocs, query: fsQuery, orderBy: fsOrderBy, limit } = await import('firebase/firestore');
         const snap = await getDocs(fsQuery(col(db, 'liveTicker'), fsOrderBy('position', 'asc'), limit(1)));
 
         if (!snap.empty) {
           const firstItem = snap.docs[0].data() as TickerItem;
           const generatedAt = firstItem.generatedAt ? new Date(firstItem.generatedAt).getTime() : 0;
-          const age = Date.now() - generatedAt;
-          if (age < STALE_THRESHOLD_MS) {
-            // Data is fresh enough, no sync needed
-            return;
-          }
+          if (Date.now() - generatedAt < STALE_THRESHOLD_MS) return;
         }
 
-        // Data is empty or stale — trigger a background sync (fire-and-forget)
         console.info('[Ticker] Triggering background RSS sync...');
-        fetch('/api/ticker/sync').catch(() => {
-          // Silently ignore if sync fails — offline or slow network
-        });
+        fetch('/api/ticker/sync').catch(() => undefined);
       } catch {
-        // Ignore errors — just skip the sync attempt silently
+        // The offline ticker remains available when Firestore or the sync endpoint is unavailable.
       }
     }
 
-    triggerSyncIfNeeded();
+    void triggerSyncIfNeeded();
   }, []);
 
   useEffect(() => {
@@ -153,11 +143,9 @@ export default function Ticker({ items }: TickerProps) {
 
   const combinedItems = useMemo(() => {
     const activeLiveItems = dbItems.length > 0 ? dbItems : apiItems;
-    const hasLiveFeedContent = activeLiveItems.length > 0;
-    const localItems = hasLiveFeedContent
+    const localItems = activeLiveItems.length > 0
       ? shuffledLocalItems.slice(0, OFFLINE_ITEM_LIMIT_WHEN_LIVE)
       : shuffledLocalItems;
-
     return [...activeLiveItems, ...localItems];
   }, [apiItems, dbItems, shuffledLocalItems]);
 
@@ -167,16 +155,15 @@ export default function Ticker({ items }: TickerProps) {
   }, [combinedItems]);
 
   useEffect(() => {
-    if (combinedItems.length <= 1) return;
-    if (lowMotion) return;
-    
+    if (combinedItems.length <= 1 || lowMotion) return;
+
     let intervalId: NodeJS.Timeout;
     let isActive = true;
 
     const startInterval = () => {
       intervalId = setInterval(() => {
         if (isActive && !isPaused) {
-          setMobileIndex((prev) => (prev + 1) % combinedItems.length);
+          setMobileIndex((previous) => (previous + 1) % combinedItems.length);
         }
       }, 7000);
     };
@@ -185,11 +172,9 @@ export default function Ticker({ items }: TickerProps) {
       if (document.hidden) {
         isActive = false;
         clearInterval(intervalId);
-      } else {
-        if (!isActive) {
-          isActive = true;
-          startInterval();
-        }
+      } else if (!isActive) {
+        isActive = true;
+        startInterval();
       }
     };
 
@@ -203,8 +188,7 @@ export default function Ticker({ items }: TickerProps) {
   }, [combinedItems, isPaused, lowMotion]);
 
   useEffect(() => {
-    if (!scrollRef.current || displayItems.length === 0) return;
-    if (lowMotion) return;
+    if (!scrollRef.current || displayItems.length === 0 || lowMotion) return;
 
     let animationId: number;
     let isActive = true;
@@ -224,11 +208,9 @@ export default function Ticker({ items }: TickerProps) {
       if (document.hidden) {
         isActive = false;
         cancelAnimationFrame(animationId);
-      } else {
-        if (!isActive) {
-          isActive = true;
-          animationId = requestAnimationFrame(scroll);
-        }
+      } else if (!isActive) {
+        isActive = true;
+        animationId = requestAnimationFrame(scroll);
       }
     };
 
@@ -246,11 +228,7 @@ export default function Ticker({ items }: TickerProps) {
 
     const timer = setTimeout(() => {
       if (!mobileContainerRef.current || !mobileTextRef.current) return;
-
-      const containerWidth = mobileContainerRef.current.clientWidth;
-      const textWidth = mobileTextRef.current.scrollWidth;
-      const overflow = textWidth - containerWidth;
-
+      const overflow = mobileTextRef.current.scrollWidth - mobileContainerRef.current.clientWidth;
       if (overflow > 0) {
         setMobileScrollAmount(overflow + 30);
         setMobileShouldScroll(true);
@@ -266,23 +244,14 @@ export default function Ticker({ items }: TickerProps) {
   useEffect(() => {
     if (!isFeedOpen) return;
 
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setIsFeedOpen(false);
-        feedButtonRef.current?.focus();
-      }
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') closeFeed();
     };
 
     window.addEventListener('keydown', handleKeyDown);
     closeButtonRef.current?.focus();
-
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [isFeedOpen]);
-
-  const nextMobile = () => setMobileIndex((p) => (p + 1) % combinedItems.length);
-  const prevMobile = () => setMobileIndex((p) => (p - 1 + combinedItems.length) % combinedItems.length);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [closeFeed, isFeedOpen]);
 
   if (combinedItems.length === 0) return null;
 
@@ -304,6 +273,8 @@ export default function Ticker({ items }: TickerProps) {
 
   const safeMobileIndex = Math.min(mobileIndex, combinedItems.length - 1);
   const mobileItem = combinedItems[safeMobileIndex];
+  const nextMobile = () => setMobileIndex((previous) => (previous + 1) % combinedItems.length);
+  const prevMobile = () => setMobileIndex((previous) => (previous - 1 + combinedItems.length) % combinedItems.length);
 
   return (
     <div className={styles.tickerContainer}>
@@ -324,6 +295,7 @@ export default function Ticker({ items }: TickerProps) {
             setTimeout(() => setIsHovered(false), 2000);
           }}
           className={styles.desktopArrowBtn}
+          aria-label="Scroll ticker backward"
         >◀</button>
       </div>
 
@@ -341,9 +313,7 @@ export default function Ticker({ items }: TickerProps) {
               [{item.source || 'Camp Lawton'}]
             </span>
             {item.url ? (
-              <TickerLink url={item.url} className={styles.tickerLink}>
-                {item.title}
-              </TickerLink>
+              <TickerLink url={item.url} className={styles.tickerLink}>{item.title}</TickerLink>
             ) : (
               <span className={styles.tickerText}>{item.title}</span>
             )}
@@ -359,6 +329,7 @@ export default function Ticker({ items }: TickerProps) {
             setTimeout(() => setIsHovered(false), 2000);
           }}
           className={styles.desktopArrowBtn}
+          aria-label="Scroll ticker forward"
         >▶</button>
       </div>
 
@@ -367,8 +338,8 @@ export default function Ticker({ items }: TickerProps) {
           type="button"
           onClick={() => setIsPaused(!isPaused)}
           className={styles.controlBtn}
-          title={isPaused ? "Play news ticker" : "Pause news ticker"}
-          aria-label={isPaused ? "Play news ticker" : "Pause news ticker"}
+          title={isPaused ? 'Play news ticker' : 'Pause news ticker'}
+          aria-label={isPaused ? 'Play news ticker' : 'Pause news ticker'}
         >
           {isPaused ? <Play size={14} /> : <Pause size={14} />}
         </button>
@@ -384,8 +355,12 @@ export default function Ticker({ items }: TickerProps) {
       </div>
 
       <div className={styles.tickerMobileContent}>
-        <button onClick={prevMobile} className={styles.arrowBtn}>◀</button>
-        <div className={`${styles.tickerItem} ${styles.mobileItem}`} ref={mobileContainerRef} title={mobileItem.id ? `Ticker ID: ${mobileItem.id}` : undefined}>
+        <button onClick={prevMobile} className={styles.arrowBtn} aria-label="Previous ticker item">◀</button>
+        <div
+          className={`${styles.tickerItem} ${styles.mobileItem}`}
+          ref={mobileContainerRef}
+          title={mobileItem.id ? `Ticker ID: ${mobileItem.id}` : undefined}
+        >
           <div
             key={safeMobileIndex}
             ref={mobileTextRef}
@@ -396,88 +371,21 @@ export default function Ticker({ items }: TickerProps) {
               [{mobileItem.source || 'Camp Lawton'}]
             </span>
             {mobileItem.url ? (
-              <TickerLink url={mobileItem.url} className={styles.tickerLink}>
-                {mobileItem.title}
-              </TickerLink>
+              <TickerLink url={mobileItem.url} className={styles.tickerLink}>{mobileItem.title}</TickerLink>
             ) : (
               <span className={styles.tickerText}>{mobileItem.title}</span>
             )}
           </div>
         </div>
-        <button onClick={nextMobile} className={styles.arrowBtn}>▶</button>
+        <button onClick={nextMobile} className={styles.arrowBtn} aria-label="Next ticker item">▶</button>
       </div>
 
       {isFeedOpen && (
-        <div
-          className={styles.modalOverlay}
-          onClick={() => {
-            setIsFeedOpen(false);
-            feedButtonRef.current?.focus();
-          }}
-          role="presentation"
-        >
-          <div
-            className={styles.modalContainer}
-            onClick={(e) => e.stopPropagation()}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="feed-modal-title"
-          >
-            <div className={styles.modalHeader}>
-              <h2 id="feed-modal-title" className={styles.modalTitle}>CAMP FEED BULLETIN</h2>
-              <button
-                ref={closeButtonRef}
-                onClick={() => {
-                  setIsFeedOpen(false);
-                  feedButtonRef.current?.focus();
-                }}
-                className={styles.modalCloseBtn}
-                aria-label="Close Camp Feed List"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            <div className={styles.modalBody}>
-              <div className={styles.modalList}>
-                {combinedItems.map((item) => (
-                  <div key={item.id} className={styles.modalItem} title={item.id ? `Ticker ID: ${item.id}` : undefined}>
-                    <div className={styles.modalItemMeta}>
-                      <span
-                        className={styles.modalCategoryBadge}
-                        style={{ backgroundColor: getCategoryColor(item.category), color: '#000' }}
-                      >
-                        {(item.category || item.sourceType || 'LIVE').replace('_', ' ')}
-                      </span>
-                      <span className={styles.modalSource}>
-                        {item.source || 'Camp Lawton'}
-                      </span>
-                      {item.id && (
-                        <span className={styles.modalSource}>
-                          ID: {item.id}
-                        </span>
-                      )}
-                    </div>
-                    <div className={styles.modalItemContent}>
-                      {item.url ? (
-                        <a
-                          href={item.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className={styles.modalItemLink}
-                        >
-                          <span className={styles.modalItemText}>{item.title}</span>
-                          <ExternalLink size={14} className={styles.modalLinkIcon} />
-                        </a>
-                      ) : (
-                        <span className={styles.modalItemText}>{item.title}</span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
+        <CampFeedBulletin
+          items={combinedItems}
+          onClose={closeFeed}
+          closeButtonRef={closeButtonRef}
+        />
       )}
     </div>
   );

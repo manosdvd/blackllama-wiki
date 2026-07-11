@@ -119,15 +119,11 @@ function readCache(): BearAlertCache | null {
 }
 
 export default function BearAlertHUD() {
-  const [sightings, setSightings] = useState<PredatorSighting[]>([]);
-  const [sourceHealth, setSourceHealth] = useState<PredatorSourceHealth>('degraded');
-
-  useEffect(() => {
-    const cached = readCache();
-    if (!cached) return;
-    setSightings(cached.sightings);
-    setSourceHealth(cached.sourceHealth);
-  }, []);
+  const [initialCache] = useState<BearAlertCache | null>(() => (
+    typeof window === 'undefined' ? null : readCache()
+  ));
+  const [sightings, setSightings] = useState<PredatorSighting[]>(initialCache?.sightings ?? []);
+  const [sourceHealth, setSourceHealth] = useState<PredatorSourceHealth>(initialCache?.sourceHealth ?? 'degraded');
 
   const fetchBearAlerts = useCallback(async () => {
     try {
@@ -155,9 +151,14 @@ export default function BearAlertHUD() {
   }, []);
 
   useEffect(() => {
-    void fetchBearAlerts();
+    const initialFetch = window.setTimeout(() => {
+      void fetchBearAlerts();
+    }, 0);
     const interval = window.setInterval(fetchBearAlerts, REFRESH_INTERVAL_MS);
-    return () => window.clearInterval(interval);
+    return () => {
+      window.clearTimeout(initialFetch);
+      window.clearInterval(interval);
+    };
   }, [fetchBearAlerts]);
 
   const strongestSighting = useMemo(
