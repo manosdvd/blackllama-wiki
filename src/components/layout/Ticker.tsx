@@ -30,6 +30,11 @@ interface TickerProps {
 }
 
 const OFFLINE_ITEM_LIMIT_WHEN_LIVE = 10;
+const STATEWIDE_ARIZONA_ALERT_TITLE = 'current watches, warnings, and advisories for arizona';
+
+function isRelevantTickerItem(item: TickerItem) {
+  return item.title.trim().toLowerCase() !== STATEWIDE_ARIZONA_ALERT_TITLE;
+}
 
 function TickerLink({ url, className, children }: { url: string; className: string; children: React.ReactNode }) {
   const isExternal = /^https?:\/\//i.test(url);
@@ -101,7 +106,8 @@ export default function Ticker({ items }: TickerProps) {
         const live: TickerItem[] = [];
         snapshot.forEach((doc) => {
           const data = doc.data() as TickerItem;
-          live.push({ ...data, id: data.id || doc.id });
+          const item = { ...data, id: data.id || doc.id };
+          if (isRelevantTickerItem(item)) live.push(item);
         });
         setDbItems(live);
       });
@@ -121,11 +127,14 @@ export default function Ticker({ items }: TickerProps) {
         if (!snap.empty) {
           const firstItem = snap.docs[0].data() as TickerItem;
           const generatedAt = firstItem.generatedAt ? new Date(firstItem.generatedAt).getTime() : 0;
-          if (Date.now() - generatedAt < STALE_THRESHOLD_MS) return;
+          const isFresh = Date.now() - generatedAt < STALE_THRESHOLD_MS;
+          const hasPostMetadata = firstItem.sourceType !== 'rss' || Boolean(firstItem.publishedAt);
+
+          if (isFresh && hasPostMetadata) return;
         }
 
         console.info('[Ticker] Triggering background RSS sync...');
-        fetch('/api/ticker/sync').catch(() => undefined);
+        fetch('/api/ticker/sync?force=true').catch(() => undefined);
       } catch {
         // The offline ticker remains available when Firestore or the sync endpoint is unavailable.
       }
@@ -142,11 +151,11 @@ export default function Ticker({ items }: TickerProps) {
   }, [items]);
 
   const combinedItems = useMemo(() => {
-    const activeLiveItems = dbItems.length > 0 ? dbItems : apiItems;
+    const activeLiveItems = (dbItems.length > 0 ? dbItems : apiItems).filter(isRelevantTickerItem);
     const localItems = activeLiveItems.length > 0
       ? shuffledLocalItems.slice(0, OFFLINE_ITEM_LIMIT_WHEN_LIVE)
       : shuffledLocalItems;
-    return [...activeLiveItems, ...localItems];
+    return [...activeLiveItems, ...localItems].filter(isRelevantTickerItem);
   }, [apiItems, dbItems, shuffledLocalItems]);
 
   const displayItems = useMemo(() => {
