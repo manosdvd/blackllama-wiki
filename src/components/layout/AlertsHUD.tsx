@@ -412,7 +412,10 @@ export default function AlertsHUD() {
                       <div className={styles.condIcon}><MapPin size={20} /></div>
                       <div className={styles.condData}>
                         <span className={styles.condLabel}>Location</span>
-                        <span className={styles.condValue}>Mt Lemmon (32.398°N)</span>
+                        <span className={styles.condValue}>
+                          <strong>SCOUT CAMP (QSLA3)</strong><br />
+                          Lat: 32.39806°N · Lon: 110.725°W · Elev: 7554.0 ft
+                        </span>
                       </div>
                     </div>
                   </div>
