@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
-  BookOpen, FileText, MessageSquare, Phone, ArrowRight, Clock, ShieldCheck, Flame, Music
+  BookOpen, FileText, MessageSquare, Phone, ArrowRight, Clock, Flame, Music
 } from 'lucide-react';
 import { useAuth } from '@/components/auth/AuthContext';
 import PredatorWatch from '@/components/wildlife/PredatorWatch';
