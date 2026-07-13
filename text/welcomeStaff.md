@@ -1,0 +1,8 @@
+#WELCOME TO CAMP LAWTON STAFF
+Congratulations on joining the Camp Lawton team! For over a century, Camp Lawton has helped shape the lives of generations of Scouts. As Camp Staff, you are now part of that legacy.
+
+Since the first Scouts arrived in 1921, our purpose has remained consistent: to transform lives through the power of the outdoor experience. You are how we fulfill that promise to the youth of Catalina Council and beyond. As a staff member, your daily actions and personal conduct serve as the living embodiment of the Scouting brand. You are the role models who make a simple camping trip into a life-altering experience. Your role is so much more than teaching merit badges and singing silly songs - you are shaping the future.
+
+Just as important is the impact this experience will have on you. Few experiences in life provide the leadership experience and personal development that being on camp staff provides. If you embrace what is asked of you this summer, you will leave a different person. I can’t say for certain who that person will be, but it will be more than you are now. That may sound like hyperbole now, but read this again in August and tell me I’m wrong.
+
+This handbook is designed to help you make the best of your summer. We want you to be the very best you can be as an employee, as a role model to the scouts, and for yourself. There’s a lot to know, so keep it handy in case you need to reference it again. I’ll try to keep it enjoyable to read while still giving you the critical information you will need. It’s split into four parts to help compartmentalize the content- Training, Policies and Procedures, Campfire Master Class and Songbook, and Onboarding.
