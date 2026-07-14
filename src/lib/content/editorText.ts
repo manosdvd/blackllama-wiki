@@ -6,6 +6,17 @@ function stripHtml(value: string) {
   return value.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
+function stripMarkdown(value: string) {
+  return stripHtml(value
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/!\[([^\]]*)\]\([^)]+\)/g, '$1')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/^\s*(?:[-+*]|\d+[.)])\s+/gm, '')
+    .replace(/^\s*>\s?/gm, '')
+    .replace(/[*_~`]/g, ' '));
+}
+
 function rowCells(row: unknown): unknown[] {
   if (Array.isArray(row)) return row;
   if (row && typeof row === 'object') {
@@ -23,16 +34,25 @@ function blockToText(block: EditorBlock): string {
   if (typeof data.caption === 'string') return stripHtml(data.caption);
   if (typeof data.message === 'string') return stripHtml(data.message);
   if (typeof data.code === 'string') return data.code.trim();
+  if (typeof data.html === 'string') return stripHtml(data.html);
+  if (typeof data.markdown === 'string') return stripMarkdown(data.markdown);
 
   if (Array.isArray(data.items)) {
+    const listItemToText = (item: unknown): string => {
+      if (typeof item === 'string') return stripHtml(item);
+      if (!item || typeof item !== 'object') return '';
+
+      const content = 'content' in item && typeof item.content === 'string'
+        ? stripHtml(item.content)
+        : '';
+      const children = 'items' in item && Array.isArray(item.items)
+        ? item.items.map(listItemToText).filter(Boolean).join(' ')
+        : '';
+      return [content, children].filter(Boolean).join(' ');
+    };
+
     return data.items
-      .map((item) => {
-        if (typeof item === 'string') return stripHtml(item);
-        if (item && typeof item === 'object' && 'content' in item && typeof item.content === 'string') {
-          return stripHtml(item.content);
-        }
-        return '';
-      })
+      .map(listItemToText)
       .filter(Boolean)
       .join(' ');
   }

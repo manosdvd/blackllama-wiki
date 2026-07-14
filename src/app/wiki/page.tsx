@@ -1,20 +1,32 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import styles from './page.module.css';
 import { BookOpen, ShieldAlert, Utensils, Tent, FileText, Plus, Search } from 'lucide-react';
 import { useAuth } from '@/components/auth/AuthContext';
 import { DEFAULT_WIKI_CATEGORIES, type ContentItem } from '@/types/content';
 
-export default function WikiIndexPage() {
+function WikiIndexContent() {
   const { user, profile, loading, hasPermission } = useAuth();
+  const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [articles, setArticles] = useState<ContentItem[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [loadingArticles, setLoadingArticles] = useState(true);
   const categoryById = useMemo(() => new Map(DEFAULT_WIKI_CATEGORIES.map((category) => [category.id, category])), []);
+  const requestedCategory = searchParams.get('category');
+  const categoryFilter = requestedCategory && categoryById.has(requestedCategory) ? requestedCategory : 'all';
+  const setCategoryFilter = useCallback((categoryId: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (categoryId === 'all') params.delete('category');
+    else params.set('category', categoryId);
+    const queryString = params.toString();
+    router.replace(queryString ? `${pathname}?${queryString}` : pathname, { scroll: false });
+  }, [pathname, router, searchParams]);
 
   const categoryLabel = (id: string) => categoryById.get(id)?.name ?? id;
 
@@ -198,5 +210,13 @@ export default function WikiIndexPage() {
         </section>
       </div>
     </div>
+  );
+}
+
+export default function WikiIndexPage() {
+  return (
+    <React.Suspense fallback={<div className={styles.container}>Loading wiki...</div>}>
+      <WikiIndexContent />
+    </React.Suspense>
   );
 }

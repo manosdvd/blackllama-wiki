@@ -53,11 +53,13 @@ export async function GET(request: Request) {
     const limit = Math.min(Number(url.searchParams.get('limit') ?? 80), 150);
     const currentUser = await verifyRequestUser(request).catch(() => null);
 
-    const snapshot = await getAdminDb()
+    const wikiQuery = getAdminDb()
       .collection('contentItems')
-      .where('type', '==', 'wiki')
-      .limit(limit)
-      .get();
+      .where('type', '==', 'wiki');
+    const filteredQuery = status === 'all'
+      ? wikiQuery
+      : wikiQuery.where('status', '==', status);
+    const snapshot = await filteredQuery.limit(limit).get();
     const articles = snapshot.docs
       .map((doc) => ({ id: doc.id, ...doc.data() }) as ContentItem)
       .filter((article) => status === 'all' || article.status === status)

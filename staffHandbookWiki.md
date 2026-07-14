@@ -1403,6 +1403,7 @@ To ensure a smooth onboarding process, all required paperwork must be submitted 
 * Tot'n Chip & Firem'n Chit Cards  
 * Staff Handbook  
 * Spending money
+* Rain Gear
 
 **Optional Gear**
 

@@ -8,18 +8,12 @@ import {
 import { useAuth } from '@/components/auth/AuthContext';
 import PredatorWatch from '@/components/wildlife/PredatorWatch';
 import WildlifeWatch from '@/components/wildlife/WildlifeWatch';
-import type { ContentItem } from '@/types/content';
+import { DEFAULT_WIKI_CATEGORIES, type ContentItem } from '@/types/content';
 import styles from './page.module.css';
 
-const categoryMap: Record<string, string> = {
-  'camp-staff-culture-training': 'Culture & Training',
-  'policies-procedures': 'Policies & Procedures',
-  'songbook': 'Campfire Songbook',
-  'forms-paperwork': 'Onboarding & Forms',
-  'camp-culture-history': 'Camp Culture & History',
-  'resources': 'Staff Resources',
-  'emergency-procedures': 'Emergency Procedures',
-};
+const categoryMap: Record<string, string> = Object.fromEntries(
+  DEFAULT_WIKI_CATEGORIES.map((category) => [category.id, category.name]),
+);
 
 function getFriendlyCategory(catId: string) {
   return categoryMap[catId] || catId;
@@ -87,7 +81,7 @@ export default function Home() {
             const pool = data.articles.filter(
               (a) =>
                 a.status === 'published' &&
-                (a.categoryId === 'camp-staff-culture-training' || a.categoryId === 'songbook')
+                (a.categoryId === 'camp-culture-and-training' || a.categoryId === 'songbook')
             );
             if (pool.length > 0) {
               const randomIndex = Math.floor(Math.random() * pool.length);
@@ -183,7 +177,7 @@ export default function Home() {
                     return (
                       <Link
                         key={article.id}
-                        href={`/wiki/article/${article.slug || article.id}`}
+                        href={`/wiki/article/${article.id}`}
                         className={styles.articleItem}
                       >
                         <div className={styles.articleLeft}>
@@ -238,7 +232,7 @@ export default function Home() {
                     {randomArticle.summary || 'Explore camp culture, traditions, and essential training information.'}
                   </p>
                   <Link
-                    href={`/wiki/article/${randomArticle.slug || randomArticle.id}`}
+                    href={`/wiki/article/${randomArticle.id}`}
                     className={styles.featuredReadBtn}
                   >
                     <span>{randomArticle.categoryId === 'songbook' ? 'Sing Song / View Lyrics' : 'Read Article'}</span>

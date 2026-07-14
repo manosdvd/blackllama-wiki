@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ChevronLeft, Clock, Edit3, Shield, User } from 'lucide-react';
 import { useAuth } from '@/components/auth/AuthContext';
-import EditorOutput from '@/components/wiki/EditorOutput';
+import EditorOutput, { extractEditorTocItems } from '@/components/wiki/EditorOutput';
 import { DEFAULT_WIKI_CATEGORIES, type ContentItem } from '@/types/content';
 import styles from './page.module.css';
 
@@ -124,17 +124,7 @@ export default function WikiArticleClient({ id }: { id: string }) {
   const wordCount = plainText.split(/\s+/).length;
   const readingTime = Math.max(1, Math.ceil(wordCount / 200));
 
-  // Extract headings for TOC
-  const tocItems = (article.bodyEditorJs?.blocks || [])
-    .filter(b => b.type === 'header' && b.data?.level && Number(b.data.level) <= 4)
-    .map((b, i) => {
-      const text = String(b.data?.text || '').replace(/<[^>]*>?/gm, ''); // strip html
-      return {
-        id: `heading-${i}`,
-        text,
-        level: Number(b.data?.level || 2)
-      };
-    });
+  const tocItems = extractEditorTocItems(article.bodyEditorJs);
 
   return (
     <div className={styles.container}>
@@ -184,8 +174,7 @@ export default function WikiArticleClient({ id }: { id: string }) {
             <ul className={styles.tocList}>
               {tocItems.map(item => (
                 <li key={item.id} className={styles[`tocItem${item.level}`]}>
-                  {/* Using href="#" since we don't have anchor IDs on the headers yet, but it gives the UI a nice visual cue */}
-                  <a href="#">{item.text}</a>
+                  <a href={`#${item.id}`}>{item.text}</a>
                 </li>
               ))}
             </ul>

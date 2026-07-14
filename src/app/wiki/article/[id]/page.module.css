@@ -111,7 +111,7 @@
 
 .toc {
   position: sticky;
-  top: 2rem;
+  top: 16rem;
   background: rgba(30, 41, 59, 0.4);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
@@ -171,6 +171,7 @@
   margin-top: 3rem;
   margin-bottom: 1.25rem;
   font-weight: 700;
+  scroll-margin-top: 16rem;
 }
 
 .content :global(h2) { font-size: 2rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem; }

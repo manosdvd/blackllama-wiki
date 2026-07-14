@@ -7,7 +7,11 @@ import {
   Quote, Image as ImageIcon, Video,
   AlignLeft, AlignCenter, AlignRight, Indent, Outdent
 } from 'lucide-react';
-import { convertMarkdownToHtml } from './EditorOutput';
+import {
+  countHtmlTocHeadings,
+  convertMarkdownToHtml,
+  withStableHeadingIds,
+} from './EditorOutput';
 import type { EditorData } from '@/types/content';
 import styles from './Editor.module.css';
 
@@ -17,6 +21,217 @@ interface EditorProps {
 }
 
 type EditorMode = 'wysiwyg' | 'markdown' | 'html';
+
+function editorTableCells(row: unknown): unknown[] {
+  if (Array.isArray(row)) return row;
+  if (row && typeof row === 'object') {
+    const candidate = row as { cells?: unknown; values?: unknown };
+    if (Array.isArray(candidate.cells)) return candidate.cells;
+    if (Array.isArray(candidate.values)) return candidate.values;
+  }
+  return [];
+}
+
+interface ParsedHtmlNode {
+  type: 'root' | 'element' | 'text';
+  tag?: string;
+  attributes?: Record<string, string>;
+  value?: string;
+  children: ParsedHtmlNode[];
+}
+
+const VOID_HTML_TAGS = new Set([
+  'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input',
+  'link', 'meta', 'param', 'source', 'track', 'wbr',
+]);
+
+function decodeHtmlEntities(value: string): string {
+  const namedEntities: Record<string, string> = {
+    amp: '&', apos: "'", gt: '>', lt: '<', nbsp: ' ', quot: '"',
+  };
+
+  return value.replace(/&(#x[\da-f]+|#\d+|[a-z]+);/gi, (entity, key: string) => {
+    if (key[0] === '#') {
+      const isHex = key[1]?.toLowerCase() === 'x';
+      const point = Number.parseInt(key.slice(isHex ? 2 : 1), isHex ? 16 : 10);
+      if (Number.isFinite(point)) {
+        try {
+          return String.fromCodePoint(point);
+        } catch {
+          return entity;
+        }
+      }
+    }
+    return namedEntities[key.toLowerCase()] ?? entity;
+  });
+}
+
+function parseHtmlAttributes(source: string): Record<string, string> {
+  const attributes: Record<string, string> = {};
+  const attributePattern = /([^\s=/>]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g;
+  let match: RegExpExecArray | null;
+
+  while ((match = attributePattern.exec(source))) {
+    const [, name, doubleQuoted, singleQuoted, unquoted] = match;
+    attributes[name.toLowerCase()] = decodeHtmlEntities(doubleQuoted ?? singleQuoted ?? unquoted ?? '');
+  }
+  return attributes;
+}
+
+function parseHtmlFragment(html: string): ParsedHtmlNode {
+  const root: ParsedHtmlNode = { type: 'root', children: [] };
+  const stack = [root];
+  const tokens = html.match(/<!--[\s\S]*?-->|<![^>]*>|<\/?[a-z][^>]*>|[^<]+|</gi) ?? [];
+
+  for (const token of tokens) {
+    if (token.startsWith('<!--') || token.startsWith('<!')) continue;
+
+    if (!token.startsWith('<')) {
+      stack.at(-1)?.children.push({ type: 'text', value: token, children: [] });
+      continue;
+    }
+
+    const closing = token.match(/^<\s*\/\s*([a-z\d-]+)/i);
+    if (closing) {
+      const closingTag = closing[1].toLowerCase();
+      for (let index = stack.length - 1; index > 0; index -= 1) {
+        if (stack[index].tag === closingTag) {
+          stack.length = index;
+          break;
+        }
+      }
+      continue;
+    }
+
+    const opening = token.match(/^<\s*([a-z\d-]+)([\s\S]*?)\/?\s*>$/i);
+    if (!opening) {
+      stack.at(-1)?.children.push({ type: 'text', value: token, children: [] });
+      continue;
+    }
+
+    const tag = opening[1].toLowerCase();
+    const node: ParsedHtmlNode = {
+      type: 'element',
+      tag,
+      attributes: parseHtmlAttributes(opening[2]),
+      children: [],
+    };
+    stack.at(-1)?.children.push(node);
+
+    if (!VOID_HTML_TAGS.has(tag) && !token.endsWith('/>')) {
+      stack.push(node);
+    }
+  }
+
+  return root;
+}
+
+function htmlNodeText(node: ParsedHtmlNode): string {
+  if (node.type === 'text') return decodeHtmlEntities(node.value ?? '');
+  if (node.tag === 'br') return '\n';
+  return node.children.map(htmlNodeText).join('');
+}
+
+function markdownTable(node: ParsedHtmlNode): string {
+  const rowNodes: ParsedHtmlNode[] = [];
+  const collectRows = (candidate: ParsedHtmlNode) => {
+    if (candidate.tag === 'tr') {
+      rowNodes.push(candidate);
+      return;
+    }
+    candidate.children.forEach(collectRows);
+  };
+  collectRows(node);
+
+  const rows = rowNodes
+    .map((row) => row.children
+      .filter((cell) => cell.tag === 'td' || cell.tag === 'th')
+      .map((cell) => htmlNodesToMarkdown(cell.children, true)
+        .replace(/\s*\n\s*/g, ' ')
+        .replace(/\|/g, '\\|')
+        .trim()))
+    .filter((row) => row.length > 0);
+
+  if (rows.length === 0) return '';
+
+  const columnCount = Math.max(...rows.map((row) => row.length));
+  const normalizedRows = rows.map((row) => [
+    ...row,
+    ...Array.from({ length: columnCount - row.length }, () => ''),
+  ]);
+  const tableLine = (row: string[]) => `| ${row.join(' | ')} |`;
+
+  return [
+    tableLine(normalizedRows[0]),
+    tableLine(Array.from({ length: columnCount }, () => '---')),
+    ...normalizedRows.slice(1).map(tableLine),
+  ].join('\n');
+}
+
+function markdownList(node: ParsedHtmlNode, depth = 0): string {
+  const ordered = node.tag === 'ol';
+  const items = node.children.filter((child) => child.tag === 'li');
+
+  return items.map((item, itemIndex) => {
+    const nestedLists = item.children.filter((child) => child.tag === 'ul' || child.tag === 'ol');
+    const contentNodes = item.children.filter((child) => child.tag !== 'ul' && child.tag !== 'ol');
+    const content = htmlNodesToMarkdown(contentNodes, true)
+      .replace(/\s*\n\s*/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    const indent = '  '.repeat(depth);
+    const marker = ordered ? `${itemIndex + 1}.` : '-';
+    const line = `${indent}${marker} ${content}`.trimEnd();
+    const children = nestedLists.map((list) => markdownList(list, depth + 1)).filter(Boolean);
+    return [line, ...children].join('\n');
+  }).join('\n');
+}
+
+function htmlNodeToMarkdown(node: ParsedHtmlNode, inline = false): string {
+  if (node.type === 'text') return decodeHtmlEntities(node.value ?? '');
+  if (node.type === 'root') return htmlNodesToMarkdown(node.children, inline);
+
+  const tag = node.tag ?? '';
+  const contents = htmlNodesToMarkdown(node.children, true);
+
+  if (tag === 'script' || tag === 'style') return '';
+  if (tag === 'strong' || tag === 'b') return `**${contents}**`;
+  if (tag === 'em' || tag === 'i') return `*${contents}*`;
+  if (tag === 'code' && node.children.length > 0) return `\`${contents}\``;
+  if (tag === 'br') return '\n';
+  if (tag === 'hr') return '\n---\n';
+  if (tag === 'a') {
+    const href = node.attributes?.href;
+    return href ? `[${contents}](${href.replace(/\)/g, '\\)')})` : contents;
+  }
+  if (tag === 'img') {
+    const src = node.attributes?.src;
+    if (!src) return '';
+    const alt = (node.attributes?.alt ?? '').replace(/]/g, '\\]');
+    return `![${alt}](${src.replace(/\)/g, '\\)')})`;
+  }
+  if (tag === 'ul' || tag === 'ol') return `\n${markdownList(node)}\n`;
+  if (tag === 'table') return `\n${markdownTable(node)}\n`;
+  if (/^h[1-6]$/.test(tag)) {
+    return `\n${'#'.repeat(Number(tag.slice(1)))} ${contents.trim()}\n`;
+  }
+  if (tag === 'blockquote') {
+    const quoted = contents.trim().split('\n').map((line) => `> ${line}`).join('\n');
+    return `\n${quoted}\n`;
+  }
+  if (tag === 'pre') return `\n\`\`\`\n${htmlNodeText(node).trim()}\n\`\`\`\n`;
+  if (tag === 'p') return inline ? contents : `\n${contents.trim()}\n`;
+  if (tag === 'div' || tag === 'section' || tag === 'article') {
+    return inline ? contents : `\n${contents}\n`;
+  }
+  if (tag === 'cite') return contents ? ` — ${contents}` : '';
+
+  return contents;
+}
+
+function htmlNodesToMarkdown(nodes: ParsedHtmlNode[], inline = false): string {
+  return nodes.map((node) => htmlNodeToMarkdown(node, inline)).join('');
+}
 
 function ImageResizerOverlay({
   imgNode,
@@ -149,65 +364,77 @@ function ImageResizerOverlay({
 }
 
 export function convertHtmlToMarkdown(html: string): string {
-  let md = html;
-  // Replace headers
-  md = md.replace(/<h1>(.*?)<\/h1>/gi, '# $1\n');
-  md = md.replace(/<h2>(.*?)<\/h2>/gi, '## $1\n');
-  md = md.replace(/<h3>(.*?)<\/h3>/gi, '### $1\n');
-  md = md.replace(/<h4>(.*?)<\/h4>/gi, '#### $1\n');
-  // Replace strong/bold
-  md = md.replace(/<strong>(.*?)<\/strong>/gi, '**$1**');
-  md = md.replace(/<b>(.*?)<\/b>/gi, '**$1**');
-  // Replace em/italics
-  md = md.replace(/<em>(.*?)<\/em>/gi, '*$1*');
-  md = md.replace(/<i>(.*?)<\/i>/gi, '*$1*');
-  // Replace links
-  md = md.replace(/<a\s+href="([^"]+)"[^>]*>(.*?)<\/a>/gi, '[$2]($1)');
-  // Replace lists
-  md = md.replace(/<li>(.*?)<\/li>/gi, '- $1\n');
-  md = md.replace(/<ul>/gi, '');
-  md = md.replace(/<\/ul>/gi, '\n');
-  md = md.replace(/<ol>/gi, '');
-  md = md.replace(/<\/ol>/gi, '\n');
-  // Clean up br tags
-  md = md.replace(/<br\s*\/?>/gi, '\n');
-  // Strip remaining tags
-  md = md.replace(/<[^>]*>/g, '');
-  
-  // Normalize spacing
-  return md.trim();
+  return htmlNodesToMarkdown(parseHtmlFragment(html).children)
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
 }
 
 export function convertEditorJsToHtml(data?: EditorData): string {
   if (!data?.blocks?.length) return '';
+
+  let headingIndex = 0;
+
+  const listToHtml = (items: unknown[], tag: 'ol' | 'ul'): string => {
+    const itemHtml = items.map((item) => {
+      const content = typeof item === 'string'
+        ? item
+        : item && typeof item === 'object' && 'content' in item
+          ? String(item.content ?? '')
+          : '';
+      const childItems = item && typeof item === 'object' && 'items' in item && Array.isArray(item.items)
+        ? item.items
+        : [];
+      const nestedStyle = item && typeof item === 'object' && 'style' in item
+        ? item.style
+        : item && typeof item === 'object' && 'meta' in item && item.meta && typeof item.meta === 'object' && 'style' in item.meta
+          ? item.meta.style
+          : null;
+      const nestedTag = nestedStyle === 'ordered' ? 'ol' : nestedStyle === 'unordered' ? 'ul' : tag;
+      const nestedHtml = childItems.length ? listToHtml(childItems, nestedTag) : '';
+      return `<li>${content}${nestedHtml}</li>`;
+    }).join('');
+    return `<${tag}>${itemHtml}</${tag}>`;
+  };
+
   return data.blocks.map(block => {
     const blockData = block.data ?? {};
     if (block.type === 'header') {
       const level = blockData.level || 2;
-      return `<h${level}>${blockData.text}</h${level}>`;
+      const numericLevel = Number(level);
+      const id = numericLevel >= 2 && numericLevel <= 4 ? ` id="heading-${headingIndex++}"` : '';
+      return `<h${level}${id}>${blockData.text}</h${level}>`;
     }
     if (block.type === 'list') {
       const tag = blockData.style === 'ordered' ? 'ol' : 'ul';
-      const items = Array.isArray(blockData.items)
-        ? blockData.items.map((item: unknown) => {
-            if (typeof item === 'string') return `<li>${item}</li>`;
-            if (item && typeof item === 'object' && 'content' in item) {
-              return `<li>${String((item as { content?: unknown }).content || '')}</li>`;
-            }
-            return '<li></li>';
-          }).join('')
-        : '';
-      return `<${tag}>${items}</${tag}>`;
+      const items = Array.isArray(blockData.items) ? blockData.items : [];
+      return listToHtml(items, tag);
+    }
+    if (block.type === 'table' && Array.isArray(blockData.content)) {
+      const rows = blockData.content.map(editorTableCells);
+      const rowToHtml = (row: unknown[], cellTag: 'td' | 'th') => (
+        `<tr>${row.map((cell) => `<${cellTag}>${String(cell ?? '')}</${cellTag}>`).join('')}</tr>`
+      );
+      const withHeadings = blockData.withHeadings === true && rows.length > 0;
+      const head = withHeadings ? `<thead>${rowToHtml(rows[0], 'th')}</thead>` : '';
+      const bodyRows = withHeadings ? rows.slice(1) : rows;
+      return `<div class="wikiTableWrap"><table>${head}<tbody>${bodyRows.map((row) => rowToHtml(row, 'td')).join('')}</tbody></table></div>`;
     }
     if (block.type === 'quote') {
       return `<blockquote><p>${blockData.text}</p>${blockData.caption ? `<cite>${blockData.caption}</cite>` : ''}</blockquote>`;
     }
     if (block.type === 'html') {
-      return blockData.html || '';
+      const rawHtml = typeof blockData.html === 'string' ? blockData.html : '';
+      const html = withStableHeadingIds(rawHtml, headingIndex);
+      headingIndex += countHtmlTocHeadings(rawHtml);
+      return html;
     }
     if (block.type === 'markdown') {
       const mdVal = typeof blockData.markdown === 'string' ? blockData.markdown : '';
-      return convertMarkdownToHtml(mdVal);
+      const rawHtml = convertMarkdownToHtml(mdVal);
+      const html = withStableHeadingIds(rawHtml, headingIndex);
+      headingIndex += countHtmlTocHeadings(rawHtml);
+      return html;
     }
     // Default to paragraph
     return `<p>${blockData.text || ''}</p>`;
@@ -272,6 +499,8 @@ export default function Editor({ initialData, onChange }: EditorProps) {
   const handleWysiwygInput = () => {
     if (wysiwygRef.current) {
       const newHtml = wysiwygRef.current.innerHTML;
+      // Opening or blurring an untouched structured article should not flatten it into one HTML block.
+      if (newHtml === htmlContent) return;
       setHtmlContent(newHtml);
       
       // Automatically keep markdown content synced in background

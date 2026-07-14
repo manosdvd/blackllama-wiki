@@ -9,7 +9,7 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "seed:handbook": "node scripts/seed-handbook.mjs",
-    "import:wiki:full": "node scripts/import-wiki-pages.mjs",
+    "import:wiki:full": "node scripts/seed-handbook.mjs",
     "set:admin": "node scripts/set-admin.mjs"
   },
   "dependencies": {

@@ -1,131 +1,111 @@
 import { createHash } from 'crypto';
-import { existsSync, readFileSync, readdirSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import path from 'path';
+import { pathToFileURL } from 'url';
 import { applicationDefault, cert, getApps, initializeApp } from 'firebase-admin/app';
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 
-const HANDBOOK_PATH = path.join(process.cwd(), 'Camp_Lawton_Staff_Handbook.json');
-const SONGS_DIR = path.join(process.cwd(), 'songs');
+const SOURCE_PATH = path.join(process.cwd(), 'staffHandbookWiki.md');
+const SOURCE_FILE = 'staffHandbookWiki.md';
 const LOCAL_SERVICE_ACCOUNT = path.join(process.cwd(), 'camp-lawton-staff-hub-firebase-adminsdk-fbsvc-439f443121.json');
-const writeMode = process.argv.includes('--write');
-const publicMode = process.argv.includes('--public');
-const HANDBOOK_SOURCE_FILE = 'Camp_Lawton_Staff_Handbook.json';
 const EDITOR_VERSION = '2.31.6';
+const EDITOR_TIME = 0;
+const EXPECTED_ARTICLE_COUNT = 68;
+const MAX_BATCH_WRITES = 400;
 
-const LEGACY_PARENT_ARTICLE_IDS = [
-  'handbook-camp-staff-training-and-culture',
-  'handbook-policies-procedures-guidelines-and-laws',
-  'handbook-campfire-master-class-and-songbook',
-  'handbook-staff-onboarding-handbook',
-];
-
-let blockCounter = 0;
-
-const TITLE_OVERRIDES = {
-  aims_of_scouting: 'The Aims of Scouting',
-  methods_of_scouting: 'The Methods of Scouting',
-  ncs_certification_roles: 'NCS Certification Roles',
-  this_is_your_life_schedule: 'This Is Your Life Schedule',
-  severe_weather_preparedness: 'Severe Weather Preparedness',
-  safeguarding_youth: 'Safeguarding Youth',
-  the_camp_lawton_guidelines: 'The Camp Lawton Guidelines',
-  health_and_safety: 'Health and Safety',
-  legal_policies: 'Legal Policies',
-  camp_opening_procedures: 'Camp Opening Procedures',
-  how_to_write_funny: 'How to Write Funny',
-  writing_songs: 'Writing Songs',
-  songbook: 'Songbook Index',
-  necessary_paperwork: 'Necessary Paperwork',
-  packing_list: 'Packing List',
-  code_of_conduct: 'Code of Conduct',
-};
-
-const standaloneSections = [
+const CATEGORY_DEFINITIONS = [
   {
-    key: 'leadership_directory',
-    title: 'Leadership Directory',
-    categoryId: 'camp-culture-history',
-    summary: 'Camp and council leadership reference from the staff handbook.',
-    visibility: 'staff',
+    title: 'Camp Culture and Training',
+    id: 'camp-culture-and-training',
+    expectedArticles: 28,
   },
   {
-    key: 'camp_address',
-    title: 'Camp Address and Mail',
-    categoryId: 'resources',
-    summary: 'Camp Lawton mailing address and contact reference.',
-    visibility: 'candidate',
+    title: 'Policies',
+    id: 'policies',
+    expectedArticles: 22,
+  },
+  {
+    title: 'Procedures',
+    id: 'procedures',
+    expectedArticles: 15,
+  },
+  {
+    title: 'Onboarding',
+    id: 'onboarding',
+    expectedArticles: 3,
   },
 ];
 
-const handbookPartSections = [
-  {
-    key: 'part_1_camp_staff_training_and_culture',
-    title: 'Camp Staff Culture and Training',
-    categoryId: 'camp-staff-culture-training',
-    summary: 'Mission, culture, chain of command, staff duties, and training expectations.',
-    visibility: 'staff',
-    tagIds: ['handbook', 'training', 'camp-staff-culture-training'],
-    pages: [
-      { title: 'Our Mission & Vision', keys: ['mission_and_vision'] },
-      { title: 'The Core Pillars of Summer Camp', keys: ['core_pillars_of_summer_camp'] },
-      { title: 'The Aims and Methods of Scouting', keys: ['aims_of_scouting', 'methods_of_scouting'] },
-      { title: 'WHAT MAKES A STAFF?', keys: ['what_makes_a_staff'] },
-      {
-        title: 'The Chain of Command',
-        keys: ['chain_of_command', 'age_requirements_for_staff_leadership', 'ncs_certification_roles'],
-      },
-      { title: 'Staff Expectations', keys: ['duties', 'the_rules'] },
-      { title: 'Stress Management and Mental Stability', keys: ['stress_management'] },
-      { title: 'Glossary', keys: ['glossary'] },
-      { title: 'This Is Your Life', keys: ['this_is_your_life_schedule'] },
-      { title: 'Customer Service', keys: ['customer_service'] },
-      { title: 'How To Do Your Job', keys: ['program_areas', 'teaching_methods'] },
-      { title: 'BSA Ceremonies and Campfire Guidance', keys: ['campfires_and_ceremonies'] },
-    ],
-  },
-  {
-    key: 'part_2_policies_procedures_guidelines_and_laws',
-    title: 'Policies, Procedures, Guidelines, and Laws',
-    categoryId: 'policies-procedures',
-    summary: 'Operational policies and staff conduct guidance from the handbook.',
-    visibility: 'staff',
-    tagIds: ['handbook', 'policies-procedures'],
-    pages: [
-      { title: 'Severe Weather Preparedness', keys: ['severe_weather_preparedness'] },
-      { title: 'Safeguarding Youth', keys: ['safeguarding_youth'] },
-      { title: 'Policies and Procedures', keys: ['the_camp_lawton_guidelines'] },
-      { title: 'HEALTH AND SAFETY', keys: ['health_and_safety'] },
-      { title: 'LEGAL POLICIES AND INFORMATION', keys: ['legal_policies'] },
-      { title: 'CAMP OPENING PROCEDURES', keys: ['camp_opening_procedures'] },
-    ],
-  },
-  {
-    key: 'part_3_campfire_master_class_and_songbook',
-    title: 'Campfire Master Class and Songbook',
-    categoryId: 'songbook',
-    summary: 'Campfire program guidance, songs, and camp culture material.',
-    visibility: 'staff',
-    tagIds: ['handbook', 'campfire', 'songbook'],
-    pages: [
-      { title: 'How To Write Funny', keys: ['how_to_write_funny'] },
-      { title: 'Writing Songs', keys: ['writing_songs'] },
-      { title: 'Songbook', keys: ['songbook'] },
-    ],
-  },
-  {
-    key: 'part_4_onboarding',
-    title: 'Staff Onboarding Handbook',
-    categoryId: 'forms-paperwork',
-    summary: 'Onboarding requirements and official paperwork guidance.',
-    visibility: 'candidate',
-    tagIds: ['handbook', 'onboarding'],
-    pages: [
-      { title: 'Required Paperwork', keys: ['necessary_paperwork'] },
-      { title: 'Packing List', keys: ['packing_list'] },
-      { title: 'CAMP LAWTON SUMMER CAMP STAFF COMMITMENT & CODE OF CONDUCT', keys: ['code_of_conduct'] },
-    ],
-  },
-];
+const CATEGORY_BY_TITLE = new Map(CATEGORY_DEFINITIONS.map((category) => [category.title, category]));
+const ARTICLE_ALIASES = new Map([
+  ['aims and methods of scouting', 'The Aims and Methods of Scouting'],
+  ['code of conduct', 'Camp Lawton Staff Code of Conduct'],
+  ['comedy master class', 'Campfire Master Class And Songbook'],
+  ['the art of arbitrary absurdity', 'Campfire Master Class And Songbook'],
+]);
+const SONGBOOK_REFERENCE = 'songbook';
+const RADIO_PLACEHOLDERS = new Set([
+  'you',
+  'area you’re calling',
+  "area you're calling",
+  'your area',
+]);
+
+const STOP_WORD_TAGS = new Set([
+  'a', 'an', 'and', 'at', 'for', 'from', 'in', 'of', 'on', 'the', 'to', 'with',
+]);
+
+const SUMMARY_OVERRIDES = new Map([
+  [
+    'Catalina Council/Camp Lawton Leadership',
+    'Camp and council leadership roles, names, and contact information for Camp Lawton staff.',
+  ],
+  [
+    'Packing List',
+    'What staff should pack for camp, including required clothing and gear, optional comforts, and prohibited items.',
+  ],
+]);
+
+function hash(value, length = 64) {
+  return createHash('sha256').update(value).digest('hex').slice(0, length);
+}
+
+function slugify(value) {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/['’"]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 90);
+}
+
+function normalizeReference(value) {
+  return value
+    .trim()
+    .replace(/\\([^\w\s])/g, '$1')
+    .replace(/\s+/g, ' ')
+    .toLowerCase();
+}
+
+function unescapeMarkdown(value) {
+  return value.replace(/\\([^\w\s])/g, '$1');
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function safeHref(value) {
+  const href = unescapeMarkdown(String(value).trim()).replace(/^<|>$/g, '');
+  if (/^(?:https?:|mailto:)/i.test(href) || href.startsWith('/')) return href;
+  return '#';
+}
 
 function serviceAccountFromJson(json) {
   const parsed = JSON.parse(json);
@@ -153,391 +133,877 @@ function initAdmin() {
     return;
   }
 
-  initializeApp({
-    credential: applicationDefault(),
-    projectId,
+  initializeApp({ credential: applicationDefault(), projectId });
+}
+
+function trimBlankLines(lines) {
+  let start = 0;
+  let end = lines.length;
+  while (start < end && !lines[start].trim()) start += 1;
+  while (end > start && !lines[end - 1].trim()) end -= 1;
+  return lines.slice(start, end);
+}
+
+export function parseHandbook(markdown) {
+  const lines = String(markdown).replace(/\r\n?/g, '\n').split('\n');
+  const categoryMarkers = [];
+  const articles = [];
+  let currentCategory = null;
+  let currentArticle = null;
+
+  const finishArticle = (endLine) => {
+    if (!currentArticle) return;
+    const bodyLines = trimBlankLines(currentArticle.bodyLines);
+    articles.push({
+      ...currentArticle,
+      bodyLines,
+      bodyMarkdown: bodyLines.join('\n'),
+      contentStartLine: currentArticle.headingLine + 1,
+      contentEndLine: Math.max(currentArticle.headingLine, endLine),
+    });
+    currentArticle = null;
+  };
+
+  lines.forEach((line, index) => {
+    const lineNumber = index + 1;
+    const h1Match = line.match(/^#[ \t]+(.*)$/);
+
+    if (!h1Match) {
+      if (currentArticle) currentArticle.bodyLines.push(line);
+      else if (line.trim()) {
+        throw new Error(`Content appears outside an article at ${SOURCE_FILE}:${lineNumber}.`);
+      }
+      return;
+    }
+
+    const title = h1Match[1].trim();
+    if (!title) {
+      // Empty Markdown headings in the source are formatting artifacts, not articles.
+      if (currentArticle) currentArticle.bodyLines.push('');
+      return;
+    }
+
+    const category = CATEGORY_BY_TITLE.get(title);
+    if (category) {
+      finishArticle(lineNumber - 1);
+      currentCategory = category;
+      categoryMarkers.push({ ...category, line: lineNumber });
+      return;
+    }
+
+    finishArticle(lineNumber - 1);
+    if (!currentCategory) {
+      throw new Error(`Article “${title}” appears before the first category at ${SOURCE_FILE}:${lineNumber}.`);
+    }
+
+    currentArticle = {
+      title,
+      category: currentCategory,
+      headingLine: lineNumber,
+      bodyLines: [],
+    };
   });
+
+  finishArticle(lines.length);
+
+  const markerTitles = categoryMarkers.map((marker) => marker.title);
+  const expectedTitles = CATEGORY_DEFINITIONS.map((category) => category.title);
+  if (JSON.stringify(markerTitles) !== JSON.stringify(expectedTitles)) {
+    throw new Error(
+      `Expected exactly these category markers in order: ${expectedTitles.join(', ')}; found: ${markerTitles.join(', ') || 'none'}.`,
+    );
+  }
+
+  if (articles.length !== EXPECTED_ARTICLE_COUNT) {
+    throw new Error(`Expected ${EXPECTED_ARTICLE_COUNT} nonblank article H1 headings; found ${articles.length}.`);
+  }
+
+  const duplicateTitles = articles
+    .map((article) => article.title)
+    .filter((title, index, titles) => titles.indexOf(title) !== index);
+  if (duplicateTitles.length) throw new Error(`Duplicate article titles: ${[...new Set(duplicateTitles)].join(', ')}.`);
+
+  const emptyArticles = articles.filter((article) => !article.bodyMarkdown.trim());
+  if (emptyArticles.length) throw new Error(`Articles without content: ${emptyArticles.map((article) => article.title).join(', ')}.`);
+
+  return { articles, categoryMarkers, sourceLineCount: lines.length };
 }
 
-function slugify(value) {
-  return value
-    .toLowerCase()
-    .trim()
-    .replace(/['"]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 90);
+function buildReferenceResolver(parsedArticles) {
+  const titleLookup = new Map();
+  parsedArticles.forEach((article) => titleLookup.set(normalizeReference(article.title), article));
+
+  return (displayLabel) => {
+    const normalized = normalizeReference(displayLabel);
+    if (normalized === SONGBOOK_REFERENCE) {
+      return { kind: 'category', categoryId: 'songbook', href: '/wiki?category=songbook' };
+    }
+    if (RADIO_PLACEHOLDERS.has(normalized)) return { kind: 'placeholder' };
+
+    const targetTitle = ARTICLE_ALIASES.get(normalized);
+    const target = targetTitle
+      ? titleLookup.get(normalizeReference(targetTitle))
+      : titleLookup.get(normalized);
+    if (!target) return { kind: 'unresolved' };
+
+    const targetSlug = slugify(target.title);
+    return {
+      kind: 'article',
+      id: `handbook-${targetSlug}`,
+      title: target.title,
+      href: `/wiki/article/handbook-${targetSlug}`,
+    };
+  };
 }
 
-function unescapeMarkdown(value) {
-  return value.replace(/\\([\\`*_{}\[\]()#+\-.!>])/g, '$1');
+function renderEmphasis(value) {
+  let html = value;
+  // Handles the source's “***bold lead** italic continuation*” construction.
+  html = html.replace(/\*\*\*([^*\n]+?)\*\*([^*\n]+?)\*/g, '<em><strong>$1</strong>$2</em>');
+  html = html.replace(/\*\*\*([^*\n]+?)\*\*\*/g, '<strong><em>$1</em></strong>');
+  html = html.replace(/___([^_\n]+?)___/g, '<strong><em>$1</em></strong>');
+  html = html.replace(/\*\*([^*\n]+?)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/__([^_\n]+?)__/g, '<strong>$1</strong>');
+  html = html.replace(/(?<!\*)\*([^*\n]+?)\*(?!\*)/g, '<em>$1</em>');
+  html = html.replace(/(?<![\w_])_([^_\n]+?)_(?![\w_])/g, '<em>$1</em>');
+  html = html.replace(/~~([^~\n]+?)~~/g, '<s>$1</s>');
+  return html;
 }
 
-function stripInlineMarkdown(value) {
-  return unescapeMarkdown(value)
-    .replace(/\*\*(.*?)\*\*/g, '$1')
-    .replace(/__(.*?)__/g, '$1')
-    .replace(/\*(.*?)\*/g, '$1')
-    .replace(/_(.*?)_/g, '$1')
+function inlineToHtml(value, resolveReference) {
+  const tokens = [];
+  const token = (html) => {
+    const placeholder = `\uE000${tokens.length}\uE001`;
+    tokens.push(html);
+    return placeholder;
+  };
+
+  let text = String(value).trim().replace(/[ \t]{2,}$/, '');
+
+  text = text.replace(/`([^`\n]+)`/g, (_match, code) => token(`<code>${escapeHtml(unescapeMarkdown(code))}</code>`));
+
+  text = text.replace(/\[([^\]\n]+)\]\(([^)\n]+)\)/g, (_match, label, rawHref) => {
+    const href = safeHref(rawHref);
+    const rel = /^https?:/i.test(href) ? ' rel="noopener noreferrer"' : '';
+    const labelHtml = renderEmphasis(escapeHtml(unescapeMarkdown(label)));
+    return token(`<a href="${escapeHtml(href)}" class="wiki-link"${rel}>${labelHtml}</a>`);
+  });
+
+  const replaceBracketReference = (match, label) => {
+    const cleanLabel = unescapeMarkdown(label).trim();
+    const resolution = resolveReference(cleanLabel);
+    if (resolution.kind === 'article' || resolution.kind === 'category') {
+      return token(`<a href="${escapeHtml(resolution.href)}" class="wiki-link">${escapeHtml(cleanLabel)}</a>`);
+    }
+    return token(escapeHtml(`[${cleanLabel}]`));
+  };
+
+  text = text.replace(/\\\[([^\]\n]+?)\\\]/g, replaceBracketReference);
+  text = text.replace(/\[([^\]\n]+?)\]/g, replaceBracketReference);
+  text = unescapeMarkdown(text);
+  text = renderEmphasis(escapeHtml(text));
+
+  return text.replace(/\uE000(\d+)\uE001/g, (_match, index) => tokens[Number(index)] ?? '');
+}
+
+function createBlock(type, data) {
+  return { type, data };
+}
+
+function withDeterministicBlockIds(articleId, blocks) {
+  return blocks.map((item, index) => ({
+    id: hash(`${articleId}\0${index}\0${item.type}\0${JSON.stringify(item.data)}`, 12),
+    ...item,
+  }));
+}
+
+function listLine(line) {
+  const match = line.match(/^([ \t]*)([-+*]|\d+[.)])[ \t]+(.+)$/);
+  if (!match) return null;
+  const indent = match[1].replace(/\t/g, '    ').length;
+  return {
+    indent,
+    style: /^\d/.test(match[2]) ? 'ordered' : 'unordered',
+    content: match[3],
+  };
+}
+
+function nextNonblankIndex(lines, start) {
+  let index = start;
+  while (index < lines.length && !lines[index].trim()) index += 1;
+  return index;
+}
+
+function parseList(lines, startIndex, resolveReference) {
+  const first = listLine(lines[startIndex]);
+  if (!first) return null;
+
+  const roots = [];
+  const stack = [];
+  const baseIndent = first.indent;
+  const rootStyle = first.style;
+  let index = startIndex;
+  let mostRecentItem = null;
+
+  while (index < lines.length) {
+    const rawLine = lines[index];
+    if (!rawLine.trim()) {
+      const lookahead = nextNonblankIndex(lines, index + 1);
+      const nextListLine = lookahead < lines.length ? listLine(lines[lookahead]) : null;
+      const nextIndent = lookahead < lines.length
+        ? (lines[lookahead].match(/^([ \t]*)/)?.[1].replace(/\t/g, '    ').length ?? 0)
+        : 0;
+      if (nextListLine && nextListLine.indent >= baseIndent) {
+        index = lookahead;
+        continue;
+      }
+      if (mostRecentItem && lookahead < lines.length && nextIndent > baseIndent) {
+        index = lookahead;
+        continue;
+      }
+      break;
+    }
+
+    const parsed = listLine(rawLine);
+    if (!parsed) {
+      const indentation = rawLine.match(/^([ \t]*)/)?.[1].replace(/\t/g, '    ').length ?? 0;
+      if (!mostRecentItem || indentation <= baseIndent) break;
+      mostRecentItem.content += `<br>${inlineToHtml(rawLine.trim(), resolveReference)}`;
+      index += 1;
+      continue;
+    }
+
+    if (parsed.indent < baseIndent) break;
+    if (parsed.indent === baseIndent && parsed.style !== rootStyle) break;
+
+    while (stack.length && parsed.indent <= stack[stack.length - 1].indent) stack.pop();
+    const item = {
+      content: inlineToHtml(parsed.content, resolveReference),
+      meta: { style: parsed.style },
+      items: [],
+    };
+    if (stack.length) stack[stack.length - 1].item.items.push(item);
+    else roots.push(item);
+    stack.push({ indent: parsed.indent, item });
+    mostRecentItem = item;
+    index += 1;
+  }
+
+  return {
+    nextIndex: index,
+    block: createBlock('list', { style: rootStyle, meta: {}, items: roots }),
+  };
+}
+
+function splitTableRow(line) {
+  const source = line.trim().replace(/^\|/, '').replace(/\|$/, '');
+  const cells = [];
+  let current = '';
+  let escaped = false;
+
+  for (const character of source) {
+    if (escaped) {
+      current += character;
+      escaped = false;
+    } else if (character === '\\') {
+      current += character;
+      escaped = true;
+    } else if (character === '|') {
+      cells.push(current.trim());
+      current = '';
+    } else {
+      current += character;
+    }
+  }
+  cells.push(current.trim());
+  return cells;
+}
+
+function isTableSeparator(cells) {
+  return cells.length > 0 && cells.every((cell) => /^:?-{3,}:?$/.test(cell.trim()));
+}
+
+function isTableLine(line) {
+  const trimmed = line.trim();
+  return trimmed.startsWith('|') && trimmed.endsWith('|') && trimmed.split('|').length >= 3;
+}
+
+export function markdownToBlocks(markdown, articleId, resolveReference) {
+  const lines = String(markdown).replace(/\r\n?/g, '\n').split('\n');
+  const blocks = [];
+  let index = 0;
+
+  while (index < lines.length) {
+    const line = lines[index];
+    const trimmed = line.trim();
+    if (!trimmed) {
+      index += 1;
+      continue;
+    }
+
+    if (/^#{2,6}[ \t]*$/.test(trimmed)) {
+      index += 1;
+      continue;
+    }
+
+    const heading = trimmed.match(/^(#{2,6})[ \t]+(.+)$/);
+    if (heading) {
+      blocks.push(createBlock('header', {
+        text: inlineToHtml(heading[2].trim(), resolveReference),
+        level: Math.min(heading[1].length, 4),
+      }));
+      index += 1;
+      continue;
+    }
+
+    if (/^(```|~~~)/.test(trimmed)) {
+      const fence = trimmed.slice(0, 3);
+      const code = [];
+      index += 1;
+      while (index < lines.length && !lines[index].trim().startsWith(fence)) {
+        code.push(lines[index]);
+        index += 1;
+      }
+      if (index < lines.length) index += 1;
+      blocks.push(createBlock('code', { code: code.join('\n') }));
+      continue;
+    }
+
+    if (isTableLine(line)) {
+      const rawRows = [];
+      while (index < lines.length && isTableLine(lines[index])) {
+        rawRows.push(splitTableRow(lines[index]));
+        index += 1;
+      }
+      const withHeadings = rawRows.length > 1 && isTableSeparator(rawRows[1]);
+      const rows = withHeadings ? [rawRows[0], ...rawRows.slice(2)] : rawRows;
+      blocks.push(createBlock('table', {
+        withHeadings,
+        // Firestore rejects arrays nested directly in arrays; row objects retain the table shape safely.
+        content: rows.map((row) => ({ values: row.map((cell) => inlineToHtml(cell, resolveReference)) })),
+      }));
+      continue;
+    }
+
+    const parsedList = parseList(lines, index, resolveReference);
+    if (parsedList) {
+      blocks.push(parsedList.block);
+      index = parsedList.nextIndex;
+      continue;
+    }
+
+    if (/^>[ \t]?/.test(trimmed)) {
+      const quoteLines = [];
+      while (index < lines.length && /^>[ \t]?/.test(lines[index].trim())) {
+        quoteLines.push(inlineToHtml(lines[index].trim().replace(/^>[ \t]?/, ''), resolveReference));
+        index += 1;
+      }
+      blocks.push(createBlock('quote', { text: quoteLines.join('<br>'), caption: '' }));
+      continue;
+    }
+
+    if (/^(?:-{3,}|\*{3,}|_{3,})$/.test(trimmed)) {
+      blocks.push(createBlock('delimiter', {}));
+      index += 1;
+      continue;
+    }
+
+    const paragraphLines = [];
+    while (index < lines.length) {
+      const candidate = lines[index];
+      const candidateTrimmed = candidate.trim();
+      if (!candidateTrimmed) break;
+      if (paragraphLines.length && (
+        /^(?:#{2,6})[ \t]+/.test(candidateTrimmed)
+        || /^(```|~~~)/.test(candidateTrimmed)
+        || isTableLine(candidate)
+        || listLine(candidate)
+        || /^>[ \t]?/.test(candidateTrimmed)
+        || /^(?:-{3,}|\*{3,}|_{3,})$/.test(candidateTrimmed)
+      )) break;
+      paragraphLines.push(inlineToHtml(candidateTrimmed, resolveReference));
+      index += 1;
+    }
+    blocks.push(createBlock('paragraph', { text: paragraphLines.join('<br>') }));
+  }
+
+  return withDeterministicBlockIds(articleId, blocks);
+}
+
+function markdownToPlainText(markdown) {
+  return unescapeMarkdown(String(markdown))
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/^#{1,6}[ \t]*/gm, '')
+    .replace(/^[ \t]*(?:[-+*]|\d+[.)])[ \t]+/gm, '')
+    .replace(/^>[ \t]?/gm, '')
+    .replace(/^\|?[ :\-]+(?:\|[ :\-]+)+\|?$/gm, '')
+    .replace(/\|/g, ' ')
+    .replace(/[*_~`]/g, '')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n[ \t]+/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
     .trim();
 }
 
-function titleFromKey(key) {
-  if (TITLE_OVERRIDES[key]) return TITLE_OVERRIDES[key];
-  return key
-    .replace(/^part_\d+_/, '')
-    .replace(/_/g, ' ')
-    .replace(/\b\w/g, (char) => char.toUpperCase())
-    .replace(/\bNcs\b/g, 'NCS')
-    .replace(/\bCit\b/g, 'CIT')
-    .replace(/\bEap\b/g, 'EAP');
+function summaryFromMarkdown(title, markdown) {
+  if (SUMMARY_OVERRIDES.has(title)) return SUMMARY_OVERRIDES.get(title);
+
+  const paragraphs = markdownToPlainText(markdown)
+    .split(/\n+/)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean);
+  const narrativeParagraphs = paragraphs.filter((paragraph) => (
+    !/^\(?placeholder\b/i.test(paragraph)
+    && !/^[“”"‘’']/.test(paragraph)
+    && !/^[-–—]\s/.test(paragraph)
+  ));
+  const candidate = narrativeParagraphs.find((paragraph) => paragraph.length >= 60)
+    ?? narrativeParagraphs.find((paragraph) => paragraph.length >= 24)
+    ?? paragraphs.find((paragraph) => paragraph.length >= 24)
+    ?? paragraphs[0]
+    ?? `${title} from the staff handbook.`;
+  if (candidate.length <= 180) return candidate;
+  const cutAt = candidate.lastIndexOf(' ', 176);
+  return `${candidate.slice(0, cutAt > 80 ? cutAt : 176).trimEnd()}…`;
 }
 
-function block(type, data) {
-  blockCounter += 1;
-  const hash = createHash('sha1')
-    .update(`${blockCounter}:${type}:${JSON.stringify(data)}`)
-    .digest('hex')
-    .slice(0, 10);
-  return { id: hash, type, data };
+function articleTags(articleSlug, categoryId, title) {
+  const topical = slugify(title)
+    .split('-')
+    .filter((part) => part.length > 2 && !STOP_WORD_TAGS.has(part))
+    .slice(0, 3);
+  return [...new Set(['handbook', 'staff-handbook', categoryId, articleSlug, ...topical])];
 }
 
-function stringifyForSearch(value) {
-  if (typeof value === 'string') return stripInlineMarkdown(value);
-  if (Array.isArray(value)) return value.map(stringifyForSearch).join(' ');
-  if (value && typeof value === 'object') {
-    return Object.entries(value)
-      .map(([key, child]) => `${titleFromKey(key)} ${stringifyForSearch(child)}`)
-      .join(' ');
-  }
-  return '';
+function escapedBracketReferences(markdown) {
+  return [...String(markdown).matchAll(/\\\[([^\]\n]+?)\\\]/g)].map((match) => unescapeMarkdown(match[1]).trim());
 }
 
-function valueToBlocks(key, value, level = 2) {
-  const blocks = [];
-  const label = titleFromKey(key);
-
-  if (typeof value === 'string') {
-    blocks.push(block('header', { text: label, level: Math.min(level, 4) }));
-    blocks.push(block('paragraph', { text: stripInlineMarkdown(value) }));
-    return blocks;
-  }
-
-  if (Array.isArray(value)) {
-    blocks.push(block('header', { text: label, level: Math.min(level, 4) }));
-    blocks.push(block('list', { style: 'unordered', items: value.map((item) => stringifyForSearch(item)) }));
-    return blocks;
-  }
-
-  if (value && typeof value === 'object') {
-    blocks.push(block('header', { text: label, level: Math.min(level, 4) }));
-    for (const [childKey, childValue] of Object.entries(value)) {
-      blocks.push(...valueToBlocks(childKey, childValue, level + 1));
-    }
-  }
-
-  return blocks;
+function emergencyPriority(article) {
+  if (article.category.id === 'procedures') return 10;
+  if (['Severe Weather Preparedness', 'Safeguarding Youth'].includes(article.title)) return 10;
+  return 0;
 }
 
-function entryToBlocks(key, value) {
-  if (typeof value === 'string') {
-    return [block('paragraph', { text: stripInlineMarkdown(value) })];
+function createArticle(parsedArticle, resolveReference) {
+  const slug = slugify(parsedArticle.title);
+  const id = `handbook-${slug}`;
+  const bodyPlainText = markdownToPlainText(parsedArticle.bodyMarkdown);
+  const summary = summaryFromMarkdown(parsedArticle.title, parsedArticle.bodyMarkdown);
+  const tagIds = articleTags(slug, parsedArticle.category.id, parsedArticle.title);
+  const linkedContentIds = [];
+  const unresolvedWikiLinks = [];
+
+  for (const label of escapedBracketReferences(parsedArticle.bodyMarkdown)) {
+    const resolution = resolveReference(label);
+    if (resolution.kind === 'article' && !linkedContentIds.includes(resolution.id)) linkedContentIds.push(resolution.id);
+    if (resolution.kind === 'unresolved' && !unresolvedWikiLinks.includes(label)) unresolvedWikiLinks.push(label);
   }
 
-  if (Array.isArray(value)) {
-    return [block('list', { style: 'unordered', items: value.map((item) => stringifyForSearch(item)) })];
-  }
-
-  if (value && typeof value === 'object') {
-    return Object.entries(value).flatMap(([childKey, childValue]) => valueToBlocks(childKey, childValue));
-  }
-
-  return [];
-}
-
-function pageSourceEntries(page, source) {
-  const keys = page.keys ?? (page.key ? [page.key] : []);
-  return keys
-    .filter((key) => Object.prototype.hasOwnProperty.call(source, key))
-    .map((key) => [key, source[key]]);
-}
-
-function blocksFromPage(page, source) {
-  const entries = pageSourceEntries(page, source);
-  if (entries.length === 1) {
-    const [key, value] = entries[0];
-    return entryToBlocks(key, value);
-  }
-
-  return entries.flatMap(([key, value]) => valueToBlocks(key, value));
-}
-
-function summaryFromSource(title, categoryTitle, sourceText) {
-  const compact = sourceText.replace(/\s+/g, ' ').trim();
-  if (!compact) return `${title} from ${categoryTitle}.`;
-
-  const prefix = `${categoryTitle}: `;
-  const maxLength = 180 - prefix.length;
-  const excerpt = compact.length > maxLength ? `${compact.slice(0, maxLength).trimEnd()}...` : compact;
-  return `${prefix}${excerpt}`;
-}
-
-function handbookArticleFromPage(page, part, source) {
-  blockCounter = 0;
-  const pageTitle = page.title ?? titleFromKey(page.key);
-  const entries = pageSourceEntries(page, source);
-  const sourceText = entries.map(([, value]) => stringifyForSearch(value)).join('\n');
-  const categorySlug = slugify(part.title);
-  const pageSlug = slugify(pageTitle);
   const bodyEditorJs = {
-    time: Date.now(),
+    time: EDITOR_TIME,
     version: EDITOR_VERSION,
-    blocks: blocksFromPage(page, source),
+    blocks: markdownToBlocks(parsedArticle.bodyMarkdown, id, resolveReference),
   };
-  const slug = page.standalone ? pageSlug : `${categorySlug}-${pageSlug}`;
-  const summary = page.summary ?? summaryFromSource(pageTitle, part.title, sourceText);
-  const plainTextSearch = [pageTitle, part.title, summary, sourceText].join('\n');
+  const sourceHash = hash(parsedArticle.bodyMarkdown);
 
   return {
-    id: page.standalone ? `handbook-${pageSlug}` : `handbook-${part.categoryId}-${pageSlug}`,
+    id,
     type: 'wiki',
-    title: pageTitle,
+    title: parsedArticle.title,
     slug,
     summary,
     bodyEditorJs,
-    plainTextSearch,
-    categoryId: part.categoryId,
-    tagIds: page.tagIds ?? part.tagIds ?? ['handbook'],
-    linkedContentIds: [],
-    unresolvedWikiLinks: [],
+    bodyMarkdown: parsedArticle.bodyMarkdown,
+    plainTextSearch: [parsedArticle.title, parsedArticle.category.title, summary, bodyPlainText, tagIds.join(' ')]
+      .filter(Boolean)
+      .join('\n'),
+    categoryId: parsedArticle.category.id,
+    tagIds,
+    linkedContentIds,
+    unresolvedWikiLinks,
     backlinks: [],
-    visibility: publicMode ? 'public' : part.visibility,
+    visibility: 'public',
     status: 'published',
     deliveryMode: 'wiki_page',
     ownerUid: 'system',
     ownerRole: 'Camp Lawton Staff Handbook',
     createdByUid: 'system',
     updatedByUid: 'system',
-    reviewedByUid: null,
+    reviewedByUid: 'system',
     publishedByUid: 'system',
     archivedAt: null,
-    emergencyPriority: page.emergencyPriority ?? 0,
-    isPinned: page.isPinned ?? false,
+    reviewDueAt: null,
+    emergencyPriority: emergencyPriority(parsedArticle),
+    isPinned: false,
     versionNumber: 1,
-    sourceFile: `${HANDBOOK_SOURCE_FILE}#${part.key}.${entries.map(([key]) => key).join('+')}`,
+    sourceFile: `${SOURCE_FILE}#L${parsedArticle.headingLine}`,
+    sourceHash,
+    sourceMetadata: {
+      file: SOURCE_FILE,
+      category: parsedArticle.category.title,
+      heading: parsedArticle.title,
+      headingLine: parsedArticle.headingLine,
+      contentStartLine: parsedArticle.contentStartLine,
+      contentEndLine: parsedArticle.contentEndLine,
+      sha256: sourceHash,
+    },
   };
 }
 
-function pagesForPart(part, source) {
-  if (part.pages) return part.pages;
-  return Object.keys(source).map((key) => ({ key }));
+function nestedItemCount(items) {
+  if (!Array.isArray(items)) return 0;
+  return items.reduce((count, item) => count + (item.items?.length ? item.items.length + nestedItemCount(item.items) : 0), 0);
 }
 
-function articlesFromHandbook(handbook) {
-  const standaloneArticles = standaloneSections.map((section) =>
-    handbookArticleFromPage(
-      {
-        key: section.key,
-        title: section.title,
-        summary: section.summary,
-        tagIds: ['handbook'],
-        standalone: true,
-      },
-      {
-        key: section.key,
-        title: section.title,
-        categoryId: section.categoryId,
-        visibility: section.visibility,
-        tagIds: ['handbook'],
-      },
-      { [section.key]: handbook[section.key] },
-    ),
-  );
+function planStats(articles, sourceMarkdown) {
+  const serializedBlocks = articles.map((article) => JSON.stringify(article.bodyEditorJs.blocks)).join('\n');
+  const blockTypes = {};
+  let nestedListItems = 0;
+  articles.forEach((article) => article.bodyEditorJs.blocks.forEach((item) => {
+    blockTypes[item.type] = (blockTypes[item.type] ?? 0) + 1;
+    if (item.type === 'list') nestedListItems += nestedItemCount(item.data.items);
+  }));
 
-  const partArticles = handbookPartSections.flatMap((part) => {
-    const source = handbook[part.key] ?? {};
-    return pagesForPart(part, source).map((page) => handbookArticleFromPage(page, part, source));
-  });
-
-  return [...standaloneArticles, ...partArticles];
+  return {
+    blockTypes,
+    nestedListItems,
+    orderedLists: articles.flatMap((article) => article.bodyEditorJs.blocks)
+      .filter((item) => item.type === 'list' && item.data.style === 'ordered').length,
+    tables: blockTypes.table ?? 0,
+    boldFragments: (serializedBlocks.match(/<strong>/g) ?? []).length,
+    italicFragments: (serializedBlocks.match(/<em>/g) ?? []).length,
+    mailtoLinks: (serializedBlocks.match(/href=\\?"mailto:/g) ?? []).length,
+    articleLinks: (serializedBlocks.match(/href=\\?"\/wiki\/article\/handbook-/g) ?? []).length,
+    songbookCategoryLinks: (serializedBlocks.match(/href=\\?"\/wiki\?category=songbook/g) ?? []).length,
+    escapedBracketReferences: escapedBracketReferences(sourceMarkdown).length,
+    radioPlaceholders: [...sourceMarkdown.matchAll(/\\\[([^\]\n]+?)\\\]/g)]
+      .filter((match) => RADIO_PLACEHOLDERS.has(normalizeReference(match[1]))).length,
+  };
 }
 
-function titleFromSongFile(filename, markdown) {
-  const firstNonEmpty = markdown.split(/\r?\n/).find((line) => line.trim());
-  const titleMatch = firstNonEmpty?.trim().match(/^\*\*(.+?)\*\*\s*$/);
-  if (titleMatch) return stripInlineMarkdown(titleMatch[1]);
-  return filename.replace(/\.md$/i, '').replace(/_/g, "'");
+function validatePlan(parsed, articles, sourceMarkdown) {
+  const countByCategory = Object.fromEntries(CATEGORY_DEFINITIONS.map((category) => [category.id, 0]));
+  articles.forEach((article) => { countByCategory[article.categoryId] += 1; });
+  const ids = articles.map((article) => article.id);
+  const slugs = articles.map((article) => article.slug);
+  const idSet = new Set(ids);
+  const blockIds = articles.flatMap((article) => article.bodyEditorJs.blocks.map((item) => item.id));
+  const requiredFields = [
+    'id', 'type', 'title', 'slug', 'summary', 'bodyEditorJs', 'bodyMarkdown', 'plainTextSearch',
+    'categoryId', 'tagIds', 'linkedContentIds', 'unresolvedWikiLinks', 'backlinks', 'visibility',
+    'status', 'deliveryMode', 'ownerUid', 'ownerRole', 'createdByUid', 'updatedByUid',
+    'reviewedByUid', 'publishedByUid', 'archivedAt', 'reviewDueAt', 'emergencyPriority',
+    'isPinned', 'versionNumber', 'sourceFile', 'sourceHash', 'sourceMetadata',
+  ];
+  const completeArticles = articles.filter((article) => requiredFields.every((field) => field in article));
+  const validLinkGraph = articles.every((article) => (
+    article.linkedContentIds.every((targetId) => (
+      idSet.has(targetId)
+      && articles.find((candidate) => candidate.id === targetId)?.backlinks.includes(article.id)
+    ))
+    && article.backlinks.every((sourceId) => (
+      idSet.has(sourceId)
+      && articles.find((candidate) => candidate.id === sourceId)?.linkedContentIds.includes(article.id)
+    ))
+  ));
+  const unresolved = articles.flatMap((article) => article.unresolvedWikiLinks.map((label) => `${article.title}: ${label}`));
+  const stats = planStats(articles, sourceMarkdown);
+
+  const checks = [
+    {
+      name: 'category-markers',
+      ok: parsed.categoryMarkers.length === CATEGORY_DEFINITIONS.length,
+      detail: `${parsed.categoryMarkers.length}/${CATEGORY_DEFINITIONS.length} exact contentless H1 markers`,
+    },
+    {
+      name: 'article-count',
+      ok: articles.length === EXPECTED_ARTICLE_COUNT,
+      detail: `${articles.length}/${EXPECTED_ARTICLE_COUNT} articles`,
+    },
+    {
+      name: 'category-counts',
+      ok: CATEGORY_DEFINITIONS.every((category) => countByCategory[category.id] === category.expectedArticles),
+      detail: CATEGORY_DEFINITIONS.map((category) => `${category.title}: ${countByCategory[category.id]}`).join(', '),
+    },
+    {
+      name: 'unique-identifiers',
+      ok: new Set(ids).size === ids.length && new Set(slugs).size === slugs.length,
+      detail: `${new Set(ids).size} IDs and ${new Set(slugs).size} slugs`,
+    },
+    {
+      name: 'public-and-published',
+      ok: articles.every((article) => article.visibility === 'public' && article.status === 'published'),
+      detail: `${articles.filter((article) => article.visibility === 'public' && article.status === 'published').length}/${articles.length}`,
+    },
+    {
+      name: 'complete-fields',
+      ok: completeArticles.length === articles.length
+        && articles.every((article) => article.summary && article.bodyEditorJs.blocks.length && article.tagIds.length && article.sourceHash),
+      detail: `${completeArticles.length}/${articles.length} articles with summaries, blocks, tags, search text, ownership, and source metadata`,
+    },
+    {
+      name: 'deterministic-blocks',
+      ok: blockIds.every(Boolean)
+        && new Set(blockIds).size === blockIds.length
+        && articles.every((article) => article.bodyEditorJs.time === EDITOR_TIME),
+      detail: `${blockIds.length} stable, unique block IDs; Editor.js time ${EDITOR_TIME}`,
+    },
+    {
+      name: 'wiki-links',
+      ok: unresolved.length === 0
+        && stats.articleLinks === 7
+        && stats.songbookCategoryLinks === 1
+        && validLinkGraph,
+      detail: `${stats.articleLinks} article links, ${stats.songbookCategoryLinks} Songbook category link, ${unresolved.length} unresolved; backlinks ${validLinkGraph ? 'consistent' : 'inconsistent'}`,
+    },
+    {
+      name: 'radio-placeholders',
+      ok: stats.radioPlaceholders === 3,
+      detail: `${stats.radioPlaceholders}/3 placeholders left as text`,
+    },
+    {
+      name: 'rich-markdown',
+      ok: stats.boldFragments > 0
+        && stats.italicFragments > 0
+        && stats.orderedLists > 0
+        && stats.nestedListItems > 0
+        && stats.tables === 1
+        && stats.mailtoLinks > 0,
+      detail: `${stats.boldFragments} bold, ${stats.italicFragments} italic, ${stats.orderedLists} ordered lists, ${stats.nestedListItems} nested items, ${stats.tables} table, ${stats.mailtoLinks} mail links`,
+    },
+  ];
+
+  return {
+    ok: checks.every((check) => check.ok),
+    checks,
+    countByCategory,
+    unresolved,
+    stats,
+  };
 }
 
-function songMarkdownToBlocks(markdown, title) {
-  blockCounter = 0;
-  const lines = markdown.replace(/\r\n/g, '\n').split('\n');
-  const firstTitleIndex = lines.findIndex((line) => stripInlineMarkdown(line) === title);
-  const bodyLines = firstTitleIndex >= 0 ? lines.slice(firstTitleIndex + 1) : lines;
-  const paragraphs = [];
-  let current = [];
+export function buildImportPlan(sourceMarkdown) {
+  const parsed = parseHandbook(sourceMarkdown);
+  const resolveReference = buildReferenceResolver(parsed.articles);
+  const articles = parsed.articles.map((article) => createArticle(article, resolveReference));
+  const articleById = new Map(articles.map((article) => [article.id, article]));
 
-  for (const line of bodyLines) {
-    if (!line.trim()) {
-      if (current.length) {
-        paragraphs.push(current);
-        current = [];
-      }
-      continue;
-    }
-    current.push(line);
+  articles.forEach((article) => article.linkedContentIds.forEach((targetId) => {
+    const target = articleById.get(targetId);
+    if (target && !target.backlinks.includes(article.id)) target.backlinks.push(article.id);
+  }));
+
+  const validation = validatePlan(parsed, articles, sourceMarkdown);
+  if (!validation.ok) {
+    const failures = validation.checks.filter((check) => !check.ok).map((check) => `${check.name}: ${check.detail}`);
+    throw new Error(`Handbook import validation failed:\n- ${failures.join('\n- ')}`);
   }
 
-  if (current.length) paragraphs.push(current);
-
-  return paragraphs.flatMap((paragraph) => {
-    const cleanedLines = paragraph.map(stripInlineMarkdown).filter(Boolean);
-    if (!cleanedLines.length) return [];
-
-    const oneLine = cleanedLines.length === 1 ? cleanedLines[0] : null;
-    const lower = oneLine?.toLowerCase() ?? '';
-    if (
-      oneLine
-      && (
-        lower === 'chorus'
-        || lower.startsWith('chorus ')
-        || lower === 'refrain'
-        || lower.startsWith('refrain ')
-        || lower.startsWith('verse')
-      )
-    ) {
-      return [block('header', { text: oneLine, level: 3 })];
-    }
-
-    return [block('paragraph', { text: cleanedLines.join('\n') })];
-  });
+  return {
+    source: {
+      file: SOURCE_FILE,
+      sha256: hash(sourceMarkdown),
+      lines: parsed.sourceLineCount,
+    },
+    categories: CATEGORY_DEFINITIONS.map((category) => ({
+      ...category,
+      articles: validation.countByCategory[category.id],
+    })),
+    articles,
+    validation,
+  };
 }
 
-function articlesFromSongs() {
-  if (!existsSync(SONGS_DIR)) return [];
-
-  return readdirSync(SONGS_DIR)
-    .filter((filename) => filename.endsWith('.md'))
-    .sort((a, b) => a.localeCompare(b))
-    .map((filename) => {
-      const sourceFile = `songs/${filename}`;
-      const markdown = readFileSync(path.join(SONGS_DIR, filename), 'utf8');
-      const title = titleFromSongFile(filename, markdown);
-      const slug = slugify(title);
-      const bodyEditorJs = {
-        time: Date.now(),
-        version: EDITOR_VERSION,
-        blocks: songMarkdownToBlocks(markdown, title),
-      };
-      const plainTextSearch = [title, stripInlineMarkdown(markdown)].join('\n');
-
-      return {
-        id: `songbook-${slug}`,
-        type: 'wiki',
-        title,
-        slug,
-        summary: `Songbook entry for ${title}.`,
-        bodyEditorJs,
-        plainTextSearch,
-        categoryId: 'songbook',
-        tagIds: ['songbook', 'song'],
-        linkedContentIds: [],
-        unresolvedWikiLinks: [],
-        backlinks: [],
-        visibility: publicMode ? 'public' : 'staff',
-        status: 'published',
-        deliveryMode: 'wiki_page',
-        ownerUid: 'system',
-        ownerRole: 'Camp Lawton Songbook',
-        createdByUid: 'system',
-        updatedByUid: 'system',
-        reviewedByUid: null,
-        publishedByUid: 'system',
-        archivedAt: null,
-        emergencyPriority: 0,
-        isPinned: false,
-        versionNumber: 1,
-        sourceFile,
-      };
-    });
+async function commitWrites(db, writes, label) {
+  let committed = 0;
+  for (let offset = 0; offset < writes.length; offset += MAX_BATCH_WRITES) {
+    const chunk = writes.slice(offset, offset + MAX_BATCH_WRITES);
+    const batch = db.batch();
+    chunk.forEach((write) => write(batch));
+    await batch.commit();
+    committed += chunk.length;
+    console.log(`${label}: committed ${committed}/${writes.length} writes.`);
+  }
 }
 
-async function main() {
-  if (!existsSync(HANDBOOK_PATH)) {
-    throw new Error(`Missing ${HANDBOOK_PATH}`);
-  }
+function isProtectedSongbook(documentData) {
+  return String(documentData.categoryId ?? '').trim().toLowerCase() === 'songbook';
+}
 
-  const handbook = JSON.parse(readFileSync(HANDBOOK_PATH, 'utf8'));
-  const handbookArticles = articlesFromHandbook(handbook);
-  const songArticles = articlesFromSongs();
-  const articles = [...handbookArticles, ...songArticles];
-
-  console.log(`${writeMode ? 'Writing' : 'Dry run for'} ${articles.length} wiki articles:`);
-  console.log(`- ${handbookArticles.length} handbook section articles`);
-  console.log(`- ${songArticles.length} songbook articles`);
-  for (const article of articles) {
-    console.log(`- ${article.id}: ${article.title} (${article.categoryId}, ${article.visibility})`);
-  }
-
-  if (!writeMode) {
-    console.log('\nDry run only. Run `npm run seed:handbook -- --write` to write these to Firestore.');
-    return;
-  }
-
+async function writeImportPlan(plan) {
   initAdmin();
   const db = getFirestore();
-  const batch = db.batch();
-  let legacyArchivedCount = 0;
+  const targetRefs = plan.articles.map((article) => db.collection('contentItems').doc(article.id));
+  const targetSnapshots = await db.getAll(...targetRefs);
+  const existingTargets = targetSnapshots.filter((document) => document.exists);
+  const nonWikiCollisions = existingTargets.filter((document) => document.get('type') !== 'wiki');
+  if (nonWikiCollisions.length) {
+    throw new Error(
+      `Refusing to overwrite non-wiki documents at handbook target IDs: ${nonWikiCollisions.map((document) => document.id).join(', ')}.`,
+    );
+  }
 
-  for (const id of LEGACY_PARENT_ARTICLE_IDS) {
-    const legacyRef = db.collection('contentItems').doc(id);
-    const legacySnapshot = await legacyRef.get();
-    if (!legacySnapshot.exists) continue;
+  const directSongbookCollisions = existingTargets.filter((document) => isProtectedSongbook(document.data()));
+  if (directSongbookCollisions.length) {
+    throw new Error(
+      `Refusing to overwrite protected Songbook documents: ${directSongbookCollisions.map((document) => document.id).join(', ')}.`,
+    );
+  }
 
-    legacyArchivedCount += 1;
-    batch.set(legacyRef, {
+  const versionedTargets = existingTargets.filter((document) => Number(document.get('versionNumber') ?? 1) > 1);
+  if (versionedTargets.length) {
+    throw new Error(
+      `Refusing to reset versioned handbook targets to v1: ${versionedTargets.map((document) => document.id).join(', ')}.`,
+    );
+  }
+
+  const revisionPreflights = await Promise.all(targetSnapshots.map(async (document) => ({
+    id: document.id,
+    snapshot: await document.ref.collection('revisions').limit(2).get(),
+  })));
+  const targetsWithLaterRevisions = revisionPreflights.filter(({ snapshot }) => (
+    snapshot.docs.some((revision) => revision.id !== 'v1')
+  ));
+  if (targetsWithLaterRevisions.length) {
+    throw new Error(
+      `Refusing to leave later revisions behind while replacing handbook targets: ${targetsWithLaterRevisions.map(({ id }) => id).join(', ')}.`,
+    );
+  }
+
+  const existingSnapshot = await db.collection('contentItems').where('type', '==', 'wiki').get();
+  const importedIds = new Set(plan.articles.map((article) => article.id));
+  const existingById = new Map(existingSnapshot.docs.map((document) => [document.id, document]));
+  const songbookDocuments = existingSnapshot.docs.filter((document) => isProtectedSongbook(document.data()));
+  const protectedCollisions = songbookDocuments.filter((document) => importedIds.has(document.id));
+  if (protectedCollisions.length) {
+    throw new Error(`Refusing to overwrite protected Songbook documents: ${protectedCollisions.map((document) => document.id).join(', ')}.`);
+  }
+
+  const importWrites = [];
+  for (const article of plan.articles) {
+    const ref = db.collection('contentItems').doc(article.id);
+    const existing = existingById.get(article.id);
+    importWrites.push((batch) => batch.set(ref, {
+      ...article,
+      createdAt: existing?.data().createdAt ?? FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+      reviewedAt: FieldValue.serverTimestamp(),
+      publishedAt: FieldValue.serverTimestamp(),
+    }));
+    importWrites.push((batch) => batch.set(ref.collection('revisions').doc('v1'), {
+      id: 'v1',
+      versionNumber: 1,
+      status: 'published',
+      bodyEditorJs: article.bodyEditorJs,
+      bodyMarkdown: article.bodyMarkdown,
+      plainTextSearch: article.plainTextSearch,
+      changeSummary: `Imported from ${article.sourceFile}`,
+      sourceFile: article.sourceFile,
+      sourceHash: article.sourceHash,
+      createdByUid: 'system',
+      reviewedByUid: 'system',
+      approvedByUid: 'system',
+      publishedByUid: 'system',
+      createdAt: FieldValue.serverTimestamp(),
+      reviewedAt: FieldValue.serverTimestamp(),
+      publishedAt: FieldValue.serverTimestamp(),
+    }));
+  }
+
+  // Import first. If a later archive batch fails, the new handbook remains available.
+  await commitWrites(db, importWrites, 'Handbook import');
+
+  const archiveWrites = existingSnapshot.docs
+    .filter((document) => !isProtectedSongbook(document.data()))
+    .filter((document) => !importedIds.has(document.id))
+    .map((document) => (batch) => batch.set(document.ref, {
       status: 'archived',
       visibility: 'admin_only',
       archivedAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
       updatedByUid: 'system',
-    }, { merge: true });
-  }
+    }, { merge: true }));
 
-  for (const article of articles) {
-    const ref = db.collection('contentItems').doc(article.id);
-    batch.set(ref, {
-      ...article,
-      createdAt: FieldValue.serverTimestamp(),
-      updatedAt: FieldValue.serverTimestamp(),
-      publishedAt: FieldValue.serverTimestamp(),
-      reviewedAt: null,
-      reviewDueAt: null,
-    }, { merge: true });
-
-    batch.set(ref.collection('revisions').doc('v1'), {
-      id: 'v1',
-      versionNumber: 1,
-      status: 'published',
-      bodyEditorJs: article.bodyEditorJs,
-      plainTextSearch: article.plainTextSearch,
-      changeSummary: `Seeded from ${article.sourceFile}`,
-      createdByUid: 'system',
-      reviewedByUid: null,
-      approvedByUid: 'system',
-      publishedByUid: 'system',
-      createdAt: FieldValue.serverTimestamp(),
-      reviewedAt: null,
-      publishedAt: FieldValue.serverTimestamp(),
-    }, { merge: true });
-  }
-
-  await batch.commit();
-  if (legacyArchivedCount) console.log(`Archived ${legacyArchivedCount} legacy parent handbook articles.`);
-  console.log('\nSeed complete.');
+  await commitWrites(db, archiveWrites, 'Archive replaced wiki content');
+  return {
+    importedArticles: plan.articles.length,
+    importedWrites: importWrites.length,
+    archivedArticles: archiveWrites.length,
+    preservedSongbookArticles: songbookDocuments.length,
+  };
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exit(1);
-});
+function argumentValue(args, name) {
+  const inline = args.find((argument) => argument.startsWith(`${name}=`));
+  if (inline) return inline.slice(name.length + 1);
+  const index = args.indexOf(name);
+  if (index >= 0 && index + 1 < args.length && !args[index + 1].startsWith('--')) return args[index + 1];
+  return null;
+}
+
+function printHelp() {
+  console.log(`Usage: node scripts/seed-handbook.mjs [options]\n\nOptions:\n  --write                Write the validated replacement to Firestore\n  --json                 Print the complete deterministic dry-run plan as JSON\n  --preview <id|title>   Print one generated article as JSON\n  --help                 Show this help\n\nWithout --write, the script performs a read-only dry run.`);
+}
+
+function printDryRun(plan) {
+  console.log(`Validated ${plan.articles.length} public handbook articles from ${plan.source.file}:`);
+  plan.categories.forEach((category) => console.log(`- ${category.title} (${category.id}): ${category.articles} articles`));
+  console.log('\nValidation:');
+  plan.validation.checks.forEach((check) => console.log(`- ${check.ok ? 'PASS' : 'FAIL'} ${check.name}: ${check.detail}`));
+  console.log('\nArticles:');
+  plan.articles.forEach((article) => {
+    console.log(`- ${article.id}: ${article.title} (${article.categoryId}, ${article.bodyEditorJs.blocks.length} blocks)`);
+  });
+  console.log('\nDry run only. Add --write to import and archive all replaced non-Songbook wiki documents.');
+}
+
+export async function main(args = process.argv.slice(2)) {
+  if (args.includes('--help')) {
+    printHelp();
+    return;
+  }
+  if (!existsSync(SOURCE_PATH)) throw new Error(`Missing handbook source: ${SOURCE_PATH}`);
+
+  const writeMode = args.includes('--write');
+  const jsonMode = args.includes('--json');
+  const preview = argumentValue(args, '--preview');
+  if (writeMode && (jsonMode || preview)) throw new Error('--write cannot be combined with --json or --preview.');
+
+  const sourceMarkdown = readFileSync(SOURCE_PATH, 'utf8');
+  const plan = buildImportPlan(sourceMarkdown);
+
+  if (jsonMode) {
+    console.log(JSON.stringify(plan, null, 2));
+    return;
+  }
+
+  if (preview) {
+    const normalized = normalizeReference(preview);
+    const article = plan.articles.find((candidate) => (
+      normalizeReference(candidate.id) === normalized
+      || normalizeReference(candidate.slug) === normalized
+      || normalizeReference(candidate.title) === normalized
+    ));
+    if (!article) throw new Error(`No generated article matches “${preview}”.`);
+    console.log(JSON.stringify(article, null, 2));
+    return;
+  }
+
+  if (!writeMode) {
+    printDryRun(plan);
+    return;
+  }
+
+  console.log(`Writing ${plan.articles.length} validated public articles. Existing Songbook documents will not be changed.`);
+  const result = await writeImportPlan(plan);
+  console.log(`Import complete: ${result.importedArticles} articles, ${result.archivedArticles} old non-Songbook articles archived, ${result.preservedSongbookArticles} Songbook articles preserved exactly.`);
+}
+
+const entryUrl = process.argv[1] ? pathToFileURL(path.resolve(process.argv[1])).href : '';
+if (entryUrl === import.meta.url) {
+  main().catch((error) => {
+    console.error(error instanceof Error ? error.message : error);
+    process.exitCode = 1;
+  });
+}
