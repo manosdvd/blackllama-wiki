@@ -282,6 +282,10 @@ function inlineToHtml(value, resolveReference) {
 
   text = text.replace(/`([^`\n]+)`/g, (_match, code) => token(`<code>${escapeHtml(unescapeMarkdown(code))}</code>`));
 
+  text = text.replace(/!\[([^\]\n]*)\]\(([^)\n]+)\)/g, (_match, alt, url) => {
+    return token(`<img src="${escapeHtml(url)}" alt="${escapeHtml(alt)}" style="max-width: 100%; height: auto; border-radius: 6px; margin: 12px 0; display: block;" />`);
+  });
+
   text = text.replace(/\[([^\]\n]+)\]\(([^)\n]+)\)/g, (_match, label, rawHref) => {
     const href = safeHref(rawHref);
     const rel = /^https?:/i.test(href) ? ' rel="noopener noreferrer"' : '';
@@ -437,6 +441,16 @@ export function markdownToBlocks(markdown, articleId, resolveReference) {
     const line = lines[index];
     const trimmed = line.trim();
     if (!trimmed) {
+      index += 1;
+      continue;
+    }
+
+    const imageMatch = trimmed.match(/^!\[([^\]]*)\]\(([^)]+)\)$/);
+    if (imageMatch) {
+      blocks.push(createBlock('image', {
+        file: { url: imageMatch[2].trim() },
+        caption: imageMatch[1].trim(),
+      }));
       index += 1;
       continue;
     }

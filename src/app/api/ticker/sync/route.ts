@@ -120,6 +120,7 @@ const FEED_URLS = [
   'https://www.youtube.com/feeds/videos.xml?channel_id=UC6107grRI4m0o2-emgoDnAA',
   'https://www.youtube.com/feeds/videos.xml?channel_id=UCAL3JXZSzSm8AlZyD3nQdBA',
   'https://www.youtube.com/feeds/videos.xml?channel_id=UCMOqf8ab-42UUQIdVoKwjlQ',
+  'https://www.youtube.com/feeds/videos.xml?channel_id=UCmor-2SRB1E9dHMbcr397_Q',
 
   // Arizona wildlife, outdoor science, natural history, and Scout-friendly STEM.
   'https://www.youtube.com/feeds/videos.xml?channel_id=UCASn7tMQBJvzAnOQ3yHoBWw',
@@ -134,6 +135,10 @@ const FEED_URLS = [
   'https://www.youtube.com/feeds/videos.xml?channel_id=UCH4BNI0-FOK2dMXoFtViWHw',
   'https://www.youtube.com/feeds/videos.xml?channel_id=UCHsRtomD4twRf5WVHHk-cMw',
   'https://www.youtube.com/feeds/videos.xml?channel_id=UCZXZQxS3d6NpR-eH_gdDwYA',
+  'https://www.youtube.com/feeds/videos.xml?channel_id=UCwZcNfPpV9CXSVbpH1ckVmw',
+  'https://www.youtube.com/feeds/videos.xml?channel_id=UCQhqmV26773qZhzqJz4VFcw',
+  'https://www.youtube.com/feeds/videos.xml?channel_id=UCvu61kqsjMf9AiQKzNZB0iw',
+  'https://www.youtube.com/feeds/videos.xml?channel_id=UCgut0aj_YW9tJNKJ8Rd7EoA'
 ];
 
 const SCOUT_UNSUITABLE_PATTERNS = [
