@@ -77,6 +77,23 @@ function getYoutubeThumbnail(urlStr?: string) {
   }
 }
 
+function getCategoryFallbackImage(category?: string) {
+  const lower = (category || '').toLowerCase();
+  if (lower.includes('weather') || lower.includes('safety') || lower.includes('alert')) {
+    return '/images/weather_placeholder.jpg';
+  }
+  if (lower.includes('nature') || lower.includes('forest')) {
+    return '/images/nature_placeholder.jpg';
+  }
+  if (lower.includes('astronomy') || lower.includes('space') || lower.includes('sky')) {
+    return '/images/astronomy_placeholder.jpg';
+  }
+  if (lower.includes('scout') || lower.includes('useful') || lower.includes('local') || lower.includes('youtube')) {
+    return '/images/scouting_placeholder.jpg';
+  }
+  return '/images/nature_placeholder.jpg';
+}
+
 function getResolvedImageUrl(item: CampFeedBulletinItem) {
   if (item.imageUrl) {
     const ytFromImage = getYoutubeThumbnail(item.imageUrl);
@@ -86,7 +103,8 @@ function getResolvedImageUrl(item: CampFeedBulletinItem) {
     const ytFromUrl = getYoutubeThumbnail(item.url);
     if (ytFromUrl) return ytFromUrl;
   }
-  return item.imageUrl;
+  if (item.imageUrl) return item.imageUrl;
+  return getCategoryFallbackImage(item.category || item.sourceType);
 }
 
 function FeedImage({ item, imageUrl }: { item: CampFeedBulletinItem; imageUrl?: string }) {
