@@ -57,15 +57,47 @@ function publicationLabel(item: CampFeedBulletinItem) {
   };
 }
 
-function FeedImage({ item }: { item: CampFeedBulletinItem }) {
+function getYoutubeThumbnail(urlStr?: string) {
+  if (!urlStr) return undefined;
+  try {
+    const url = new URL(urlStr);
+    let videoId: string | null = null;
+    if (url.hostname === 'youtu.be') videoId = url.pathname.split('/').filter(Boolean)[0] || null;
+    if (url.hostname.endsWith('youtube.com')) {
+      if (url.pathname.startsWith('/v/')) {
+        videoId = url.pathname.split('/')[2] || null;
+      } else {
+        videoId = url.searchParams.get('v');
+      }
+    }
+    if (!videoId || !/^[\w-]{6,}$/.test(videoId)) return undefined;
+    return `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+  } catch {
+    return undefined;
+  }
+}
+
+function getResolvedImageUrl(item: CampFeedBulletinItem) {
+  if (item.imageUrl) {
+    const ytFromImage = getYoutubeThumbnail(item.imageUrl);
+    if (ytFromImage) return ytFromImage;
+  }
+  if (item.url) {
+    const ytFromUrl = getYoutubeThumbnail(item.url);
+    if (ytFromUrl) return ytFromUrl;
+  }
+  return item.imageUrl;
+}
+
+function FeedImage({ item, imageUrl }: { item: CampFeedBulletinItem; imageUrl?: string }) {
   const [failed, setFailed] = useState(false);
-  if (!item.imageUrl || failed) return null;
+  if (!imageUrl || failed) return null;
 
   const image = (
     // Feed image hosts are dynamic, so they cannot be exhaustively configured for next/image.
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={item.imageUrl}
+      src={imageUrl}
       alt=""
       className={styles.cardImage}
       loading="lazy"
@@ -121,10 +153,11 @@ export default function CampFeedBulletin({ items, onClose, closeButtonRef }: Cam
             {items.map((item) => {
               const publication = publicationLabel(item);
               const category = (item.category || item.sourceType || 'live').replaceAll('_', ' ');
+              const resolvedImageUrl = getResolvedImageUrl(item);
 
               return (
-                <article key={item.id} className={`${styles.card} ${item.imageUrl ? styles.cardWithImage : ''}`}>
-                  <FeedImage item={item} />
+                <article key={item.id} className={`${styles.card} ${resolvedImageUrl ? styles.cardWithImage : ''}`}>
+                  <FeedImage item={item} imageUrl={resolvedImageUrl} />
 
                   <div className={styles.cardBody}>
                     <div className={styles.metaRow}>

@@ -277,6 +277,9 @@ function youtubeThumbnail(link: string) {
 }
 
 function extractImageUrl(item: ParsedRssItem, link: string) {
+  const ytThumb = youtubeThumbnail(link);
+  if (ytThumb) return ytThumb;
+
   const enclosureType = item.enclosure?.type?.toLowerCase() || '';
   const enclosureUrl = safeImageUrl(item.enclosure?.url);
   if (enclosureUrl && (enclosureType.startsWith('image/') || !enclosureType)) return enclosureUrl;
@@ -291,7 +294,7 @@ function extractImageUrl(item: ParsedRssItem, link: string) {
     if (found) return found;
   }
 
-  return youtubeThumbnail(link);
+  return undefined;
 }
 
 function rssTimeoutAfter(ms: number, feedUrl: string) {
