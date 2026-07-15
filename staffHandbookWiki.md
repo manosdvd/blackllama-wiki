@@ -794,11 +794,13 @@ Here is a cheat sheet for writing a camp song that meets your needs: it demands 
 
 # Severe Weather Preparedness
 
+> **Mandatory Course Portal:** Under NCAP Standard SQ-402, all staff must complete the Hazardous Weather Training. You can access the module directly via the [Hazardous Weather Training Link](https://training.scouting.org/courses/SCO_800/watch?bc=W3siaWQiOiIvY2F0YWxvZyIsImlzUGFyZW50Um91dGUiOnRydWUsImtpbmQiOiJscCIsInRleHQiOiIiLCJzZWFyY2hQYXJhbXMiOiIiLCJ1dWlkIjoiL2NhdGFsb2cifSx7ImlkIjoiMTEzNSIsImlzUGFyZW50Um91dGUiOmZhbHNlLCJraW5kIjoibHAiLCJ0ZXh0IjoiIiwic2VhcmNoUGFyYW1zIjoiP2JjPVczc2lhV1FpT2lJdlkyRjBZV3h2WnlJc0ltbHpVR0Z5Wlc1MFVtOTFkR1VpT25SeWRXVXNJbXRwYm1RaU9pSnNjQ0lzSW5SbGVIUWlPaUlpTENKelpXRnlZMmhRWVhKaGJYTWlPaUlpTENKMWRXbGtJam9pTDJOaGRHRnNiMmNpZlYwPSIsInV1aWQiOiIyZWE2YzI1OS0wNzcxLTRmMzEtOTNjOS1kN2VmNDQxZTAxNDQifV0=).
+
 **Training Requirements & Compliance**
 
 * Mandatory for Staff: Under National Camp Accreditation Program (NCAP) Standard SQ-402, all camp staff must complete the Hazardous Weather Training online before youth participants arrive. It is also required for all registered Direct Contact Leaders (e.g., Scoutmasters, Cubmasters).  
 * Two-Year Renewal: The certification is valid for exactly two years (730 days) and must be kept current.  
-* Online Only: The training takes about 30 minutes aynd must be completed individually online via My.Scouting.org. In-person or group-facilitated classes are strictly prohibited and will not be recorded in official training systems.
+* Online Only: The training takes about 30 minutes and must be completed individually online via the [Hazardous Weather Training Portal](https://training.scouting.org/courses/SCO_800/watch?bc=W3siaWQiOiIvY2F0YWxvZyIsImlzUGFyZW50Um91dGUiOnRydWUsImtpbmQiOiJscCIsInRleHQiOiIiLCJzZWFyY2hQYXJhbXMiOiIiLCJ1dWlkIjoiL2NhdGFsb2cifSx7ImlkIjoiMTEzNSIsImlzUGFyZW50Um91dGUiOmZhbHNlLCJraW5kIjoibHAiLCJ0ZXh0IjoiIiwic2VhcmNoUGFyYW1zIjoiP2JjPVczc2lhV1FpT2lJdlkyRjBZV3h2WnlJc0ltbHpVR0Z5Wlc1MFVtOTFkR1VpT25SeWRXVXNJbXRwYm1RaU9pSnNjQ0lzSW5SbGVIUWlPaUlpTENKelpXRnlZMmhRWVhKaGJYTWlPaUlpTENKMWRXbGtJam9pTDJOaGRHRnNiMmNpZlYwPSIsInV1aWQiOiIyZWE2YzI1OS0wNzcxLTRmMzEtOTNjOS1kN2VmNDQxZTAxNDQifV0=). In-person or group-facilitated classes are strictly prohibited and will not be recorded in official training systems.
 
 **Lightning Safety & The 30/30 Rule**
 
@@ -830,6 +832,8 @@ High Winds & Hazard Trees
 # 
 
 # Safeguarding Youth
+
+> **Mandatory Course Portal:** All staff members and adult leaders must complete the Safeguarding Youth Training annually. You can access the module directly via the [Safeguarding Youth Training Link](https://my.scouting.org/vim2/webscript/output/proxy.aspx?method=ExecuteContainerAPI&container=LMSAgent&api=DeeplLink&Program=YPT).
 
 Scouting is still recovering from the fallout of some very dark stories. It’s uncomfortable to talk about, but it must be addressed. The important thing to understand is that it’s not about the individual abusers here; it’s about the culture they create that allows the abuse. A scoutmaster doesn’t crawl into the sleeping bag of a youth if there are people around that are unwilling to allow it. Our commitment to Safeguarding Youth is not just about preventing abuse. It’s about making Camp Lawton a place where that could never happen.
 
