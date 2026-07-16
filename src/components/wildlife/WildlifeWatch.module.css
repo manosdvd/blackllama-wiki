@@ -42,6 +42,7 @@
   letter-spacing: 0.04em;
   text-transform: uppercase;
   white-space: nowrap;
+  text-box: trim-both cap alphabetic;
 }
 
 .summaryWarn {
@@ -199,13 +200,14 @@
 
 .levelBadge {
   flex-shrink: 0;
-  padding: 0.08rem 0.32rem;
+  padding: 0.15rem 0.35rem;
   border-radius: 3px;
   font-size: 0.58rem;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   border: 1px solid currentColor;
+  text-box: trim-both cap alphabetic;
 }
 
 .caution {
@@ -213,7 +215,7 @@
 }
 
 .watch {
-  color: var(--lantern-gold);
+  color: var(--yellow-pine);
 }
 
 .info {
@@ -237,11 +239,12 @@
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  color: var(--lantern-gold);
+  color: var(--yellow-pine);
   font-size: 0.78rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
+  text-box: trim-both cap alphabetic;
 }
 
 .habitatItem {
@@ -292,16 +295,18 @@
 }
 
 .dotOk {
-  background: #22c55e;
-  box-shadow: 0 0 4px rgba(34, 197, 94, 0.5);
+  background: var(--pine-green-light);
+  box-shadow: 0 0 6px rgba(91, 226, 167, 0.5);
 }
 
 .dotDegraded {
-  background: #f59e0b;
+  background: var(--yellow-pine);
+  box-shadow: 0 0 6px rgba(229, 193, 88, 0.4);
 }
 
 .dotError {
-  background: #ef4444;
+  background: var(--emergency-red);
+  box-shadow: 0 0 6px rgba(255, 118, 118, 0.4);
 }
 
 .dotMissing {

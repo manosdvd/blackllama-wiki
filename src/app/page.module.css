@@ -186,31 +186,33 @@
 
 /* Cards */
 .card {
-  background-color: var(--surface);
+  background: linear-gradient(135deg, rgba(36, 22, 17, 0.4) 0%, rgba(18, 18, 18, 0.85) 100%);
   border: 1px solid var(--surface-border);
-  border-radius: 6px;
+  border-radius: 12px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .card:hover {
-  border-color: rgba(229, 140, 53, 0.15);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+  border-color: rgba(229, 140, 53, 0.25);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  transform: translateY(-2px);
 }
 
 .cardHeader {
-  background-color: rgba(0, 0, 0, 0.2);
-  padding: 1rem 1.25rem;
+  background-color: rgba(0, 0, 0, 0.35);
+  padding: 1.1rem 1.5rem;
   border-bottom: 1px solid var(--surface-border);
+  border-left: 4px solid var(--pine-green-light); /* Accent leading bar */
 }
 
 .cardHeader h3 {
   font-size: 0.9rem;
   font-weight: 700;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.12em;
   color: var(--canvas-tan);
   margin: 0;
   text-transform: uppercase;
@@ -309,19 +311,19 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.9rem 1.2rem;
-  background-color: rgba(255, 255, 255, 0.01);
+  padding: 0.95rem 1.25rem;
+  background-color: rgba(255, 255, 255, 0.02);
   border: 1px solid var(--surface-border);
-  border-radius: 4px;
+  border-radius: 6px;
   color: var(--canvas-tan);
   text-decoration: none;
-  transition: all 0.2s;
+  transition: all 0.2s ease-in-out;
   gap: 1rem;
 }
 
 .articleItem:hover {
-  background-color: rgba(20, 184, 166, 0.04);
-  border-color: rgba(20, 184, 166, 0.2);
+  background-color: rgba(91, 226, 167, 0.05);
+  border-color: rgba(91, 226, 167, 0.2);
 }
 
 .articleLeft {
@@ -361,10 +363,11 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
   font-weight: 700;
-  color: var(--lantern-gold);
-  background-color: rgba(234, 179, 8, 0.08);
-  padding: 0.1rem 0.4rem;
+  color: var(--yellow-pine);
+  background-color: rgba(229, 193, 88, 0.08);
+  padding: 0.15rem 0.45rem;
   border-radius: 3px;
+  text-box: trim-both cap alphabetic;
 }
 
 .articleDate {
@@ -374,6 +377,7 @@
   align-items: center;
   gap: 0.25rem;
   font-family: monospace;
+  text-box: trim-both cap alphabetic;
 }
 
 .emptyState {
@@ -403,7 +407,7 @@
 .featuredTitle {
   font-size: 1.1rem;
   font-weight: 700;
-  color: var(--lantern-gold);
+  color: var(--yellow-pine);
   line-height: 1.4;
   margin: 0;
 }
@@ -437,8 +441,8 @@
 }
 
 .featuredReadBtn:hover {
-  color: var(--lantern-gold);
-  border-bottom-color: var(--lantern-gold);
+  color: var(--yellow-pine);
+  border-bottom-color: var(--yellow-pine);
 }
 
 .featuredReadBtn svg {
@@ -450,7 +454,7 @@
 }
 
 .highlightIcon {
-  color: var(--lantern-gold);
+  color: var(--yellow-pine);
 }
 
 /* Emergency Directory inside Side Panel */

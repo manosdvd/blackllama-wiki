@@ -138,7 +138,16 @@ const FEED_URLS = [
   'https://www.youtube.com/feeds/videos.xml?channel_id=UCwZcNfPpV9CXSVbpH1ckVmw',
   'https://www.youtube.com/feeds/videos.xml?channel_id=UCQhqmV26773qZhzqJz4VFcw',
   'https://www.youtube.com/feeds/videos.xml?channel_id=UCvu61kqsjMf9AiQKzNZB0iw',
-  'https://www.youtube.com/feeds/videos.xml?channel_id=UCgut0aj_YW9tJNKJ8Rd7EoA'
+  'https://www.youtube.com/feeds/videos.xml?channel_id=UCgut0aj_YW9tJNKJ8Rd7EoA',
+  'https://www.youtube.com/feeds/videos.xml?channel_id=UCd--uCF3SCw5sADeog_WsOw',
+  'https://www.youtube.com/feeds/videos.xml?channel_id=UCiLW00N3_Qe5yazpDk8xxjA',
+  'https://www.youtube.com/feeds/videos.xml?channel_id=UCUFuh_KvJzAVoRfZRleJLIQ',
+  'https://www.youtube.com/feeds/videos.xml?channel_id=UCoYR1doityX-Cac-3lP4MLA',
+  'https://www.youtube.com/feeds/videos.xml?channel_id=UCsT424axBr4bMLoFqiP4l_g',
+  'https://www.youtube.com/feeds/videos.xml?channel_id=UCAuUUnT6oDeKwE6v1NGQxug',
+  'https://www.youtube.com/feeds/videos.xml?channel_id=UC7KlOYUv8lxU3MG4sfxaLzA',
+  'https://www.youtube.com/feeds/videos.xml?channel_id=UCwmZiChSryoWQCZMIQezgTg'
+  'https://www.youtube.com/feeds/videos.xml?channel_id=UCMG6vWRRaOLzr74uIuzMRaw'
 ];
 
 const SCOUT_UNSUITABLE_PATTERNS = [

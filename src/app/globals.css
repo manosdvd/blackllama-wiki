@@ -62,6 +62,12 @@
   --charcoal-lighter: #2a2a2a;
   --charcoal-darker: #0a0a0a;
 
+  /* Custom Rustic Palette */
+  --yellow-pine: #e5c158;
+  --dark-brown: #241611;
+  --dark-brown-light: #3d2720;
+  --rustic-accent: #2e1f1a;
+
   --background: var(--charcoal-base);
   --foreground: var(--canvas-tan);
   --surface: #1e1e1e; /* Card background */
@@ -89,6 +95,12 @@ html.light-theme {
   --charcoal-lighter: #e7e5e4;
   --charcoal-darker: #fafaf9;
 
+  /* Custom Rustic Palette - Light */
+  --yellow-pine: #b48a1b;
+  --dark-brown: #faf7f2;
+  --dark-brown-light: #f5efe6;
+  --rustic-accent: #e6dfd3;
+
   --background: var(--charcoal-base);
   --foreground: var(--canvas-tan);
   --surface: #f5f3eb;
@@ -110,6 +122,12 @@ html.high-contrast {
   --charcoal-dark: #000000;
   --charcoal-lighter: #222222;
   --charcoal-darker: #000000;
+
+  /* Custom Rustic Palette - HC */
+  --yellow-pine: #ffff00;
+  --dark-brown: #000000;
+  --dark-brown-light: #000000;
+  --rustic-accent: #ffffff;
 
   --background: var(--charcoal-base);
   --foreground: var(--canvas-tan);
@@ -145,6 +163,7 @@ body {
   font-size: var(--font-base);
   letter-spacing: var(--letter-spacing);
   word-spacing: var(--word-spacing);
+  font-size-adjust: from-font; /* Mitigate CLS and scaling mismatch on fallback fonts */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -163,6 +182,11 @@ html.font-inter body {
 
 h1, h2, h3, h4, h5, h6 {
   font-family: inherit;
+  text-wrap: balance; /* Symmetrical headings, no awkward single words on second line */
+}
+
+p, blockquote, li {
+  text-wrap: pretty; /* Prevents orphaned single words at ends of paragraphs */
 }
 
 
