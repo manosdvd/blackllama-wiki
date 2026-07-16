@@ -2,7 +2,7 @@
 
 # WELCOME TO CAMP LAWTON STAFF
 
-![Illustration](/images/wiki/camp-sign.jpg)
+
 
 Congratulations on joining the Camp Lawton team\! For over a century, Camp Lawton has helped shape the lives of generations of Scouts. As Camp Staff, you are now part of that legacy.
 
@@ -14,7 +14,7 @@ This handbook is designed to help you make the best of your summer. We want you 
 
 # Catalina Council/Camp Lawton Leadership
 
-![Illustration](/images/wiki/camp-sign.jpg)
+
 
 *(Placeholder, replace this with 202x info)*
 
@@ -22,26 +22,26 @@ This handbook is designed to help you make the best of your summer. We want you 
 * **Mike Korcheck**, Council Operations Manager — [Michael.korcheck@scouting.org](mailto:Michael.korcheck@scouting.org)
 * **Ethan Crisp**, Council District Executive — [ethan.crisp@scouting.org](mailto:ethan.crisp@scouting.org)
 * **MaryLou Chopelas**, Council Camp Ranger & Camp Director — [marylou.chopelas@scouting.org](mailto:marylou.chopelas@scouting.org)
-  ![MaryLou](/images/wiki/char_marylou.png)
+  
 * **Alexis (Lex) Smith**, Camp Program Director — [lexismith8600@gmail.com](mailto:lexismith8600@gmail.com)
-  ![Lex Smith](/images/wiki/char_lex.png)
+  
 * **Jim Tarleton**, Scoutcraft Area Director — [jhtarleton@comcast.net](mailto:jhtarleton@comcast.net)
-  ![Jim Tarleton](/images/wiki/char_jim_t.png)
+  
 * **Jack Erickson**, Handicraft Area Director — [ericksonjack2@gmail.com](mailto:ericksonjack2@gmail.com)
-  ![Jack Erickson](/images/wiki/char_jack_e.png)
+  
 * **Andrew Rasmussen**, Nature Area Director — [andrewdr2@gmail.com](mailto:andrewdr2@gmail.com)
-  ![Andrew Rasmussen](/images/wiki/char_andrew.png)
+  
 * **Mike Jones**, Council Advancement Chair — [mike@mcdjones.us](mailto:mike@mcdjones.us)
-  ![Mike Jones](/images/wiki/char_mike.png)
+  
 * **Brian Rome**, Range and Target Area Director — [scoutdad@rome1989.com](mailto:scoutdad@rome1989.com)
 * **Jim Harrington**, Cook, Climbing Wall & Merit Badges — [jnherriman@gmail.com](mailto:jnherriman@gmail.com)
-  ![Jim Harrington](/images/wiki/char_jim_h.png)
+  
 * **Jack Pickell**, Camp Maintenance — [jjpickell58@gmail.com](mailto:jjpickell58@gmail.com)
-  ![Jack Pickell](/images/wiki/char_jack_p.png)
+  
 
 # Camp Mailing Address
 
-![Illustration](/images/wiki/camp-office.jpg)
+
 
 Give this to your family and friends so you can get mail and care packages while you’re away. Keep in mind that it can take up to three days to make the journey through the snail mail system.
 
@@ -54,7 +54,7 @@ Camp Office: 520-576-1263
 
 # Our Mission & Vision
 
-![Illustration](/images/wiki/CLlogo.png)
+
 
 We do a lot of silly things at camp, but the underlying reason we are here is serious business.
 
@@ -96,7 +96,7 @@ Scouting America will prepare every eligible youth in America to become a respon
 
 # The Core Pillars of Summer Camp
 
-![Illustration](/images/wiki/wayfinding.jpg)
+
 
 An organized camping program like ours is an educational powerhouse that targets growth in four specific areas:
 
@@ -107,7 +107,7 @@ An organized camping program like ours is an educational powerhouse that targets
 
 # The Aims and Methods of Scouting
 
-![Illustration](/images/wiki/CLlogo.png)
+
 
 **The Aims of Scouting**
 
@@ -130,7 +130,7 @@ An organized camping program like ours is an educational powerhouse that targets
 
 # What Makes A Staff?
 
-![Illustration](/images/wiki/char_lex.png)
+
 
 A Camp Staff is more than a group of employees going about their assigned duties. The staff is a group of dedicated Scouts and Scouters who lead by example, set the tone for the attitude and excitement in camp, and are responsible for the lifetime of memories made during their weeks at camp.  
 To get a good idea of what we are asking you to do, please pay close attention to the following four areas which will influence our Scouts during their visit to Camp Lawton:
@@ -146,7 +146,7 @@ Remember, our goal is to provide a safe, educational, and fun environment for ou
 
 # Staff Positions
 
-![Illustration](/images/wiki/char_mike.png)
+
 
 *“You know what the chain of command is? It’s the chain I go get and beat you with ’til you understand who’s in ruttin’ command here.” \- Jayne, Firefly*
 
@@ -247,7 +247,7 @@ National Camp School is a great week-long program that teaches participants ever
 
 # Staff Expectations
 
-![Illustration](/images/wiki/char_jack_p.png)
+
 
 **What are my duties anyway?**  
 I'm so glad you asked\! Camp Staff is much more than a regular job. So much so that calling it a “job” is woefully insufficient. It's a lifestyle. A calling. In the coming weeks, you will make friends, maybe enemies, probably a few frienemies. Heck, you might even fall in love (see the section on Fraternization)\! You'll do things you've never done and things you never thought you could do. You'll do tedious stuff, gross stuff, grueling stuff and painful stuff. It'll be really hard at times. But it’ll be worth it, I promise. 
@@ -299,7 +299,7 @@ Clearly we’re asking a lot of you. What kind of monsters would we be if we did
 
 # The Junior Staff Conundrum (Basic Ground Rules)
 
-![Illustration](/images/wiki/program.jpg)
+
 
 Under ideal conditions, the vast majority of Camp Lawton's staff is made up of Junior Staff and CITs between 14 and 17\. That of course presents this chilling challenge: we've got a bunch of hormonal mixed gender teenagers running this place\! How are we ever to survive?
 
@@ -337,7 +337,7 @@ Sound fair? To be clear, I wouldn’t dream of getting in the way of your person
 
 # Stress Management and Mental Stability
 
-![Illustration](/images/wiki/nature-lodge.jpg)
+
 
 *“At some point, everything’s gonna go south and you’re going to say, this is it. This is how I end. Now, you can either accept that, or you can get to work. That’s all it is. You just begin. You do the math. You solve one problem and you solve the next one and then the next. And if you solve enough problems, you get to come home.” \- The Martian (2015), screenwriter Drew Goddard*
 
@@ -359,7 +359,7 @@ As dangerous as it is to get overworked and burned out, it can also be all too e
 
 # Glossary
 
-![Illustration](/images/wiki/campsite.jpg)
+
 
 **Class A / Field Uniform:**
 
@@ -393,7 +393,7 @@ As dangerous as it is to get overworked and burned out, it can also be all too e
 
 # This Is Your Life (Rough Daily Schedule)
 
-![Illustration](/images/wiki/campsite.jpg)
+
 
 *“Seven A.M., the usual morning lineup*  
 *Start on the chores and sweep 'til the floor's all clean*  
@@ -459,7 +459,7 @@ Whew\! What a week, huh? Sunday's schedule is designed to get the Scouts **out**
 
 # Customer Service
 
-![Illustration](/images/wiki/camp-office.jpg)
+
 
 One of the most important parts of your job on camp staff is making scouts feel appreciated and encouraging an atmosphere where scouts can thrive. In fact, Camp Lawton’s most powerful asset is its staff. Ask any scout who has gone to a larger camp to name five staff members. They won’t be able to. At Lawton, they'll know almost every one of you and have a story for each. That’s because at other camps, staff are just there to deliver the program. A camp our size allows us to build personal relationships with the scouts and give them unique experiences they won’t get anywhere else. To help you understand your role, here’s a few conceptual methods to follow. These were designed for corporate trainings, but they apply surprisingly well to us. 
 
@@ -483,7 +483,7 @@ What it comes down to is that your attitude and how well each and every one of u
 
 # Preparing Your Program Area
 
-![Illustration](/images/wiki/handicraft.jpg)
+
 
 You don't just want an area that functions. You want an area that is popular, effective, and thriving. Here is how you do it:  
 **Running a Tight Ship (The Logistics)**
@@ -538,7 +538,7 @@ The Area Director’s job is to prepare a solid lesson plan for every Merit Badg
 
 # Guiding Your Scouts: Empathy, Inclusion, and Leadership
 
-![Illustration](/images/wiki/char_anna.png)
+
 
 A few years back, college professor David Gracey went viral on Tiktok for revealing he had a policy of giving universal accommodations. Instead of granting due date extensions and test redos to special needs students, he decided those same accommodations could benefit *all* his students. You will absolutely have neurodivergent scouts in your classes. Knowing how to talk to them will be crucial, but those same lessons will help you with *everyone*. 
 
@@ -573,7 +573,7 @@ Cliques and exclusive social groups can destroy a camp's culture. Strive to be a
 
 # Gaming The Teaching System
 
-![Illustration](/images/wiki/program.jpg)
+
 
 **Teaching With E.D.G.E.**  
 The official method Scouting America teaches everyone is the EDGE method. It’s a solid method.  
@@ -603,7 +603,7 @@ So how can that possibly relate to teaching an 11 year old scout how to tie a **
 
 # The Psychology of Effective Teaching
 
-![Illustration](/images/wiki/char_cohen.png)
+
 
 To be an effective instructor, you are doing more than just demonstrating a skill. You are helping to build new pathways in a Scout's brain. Keep these modern teaching strategies in your toolkit:
 
@@ -632,7 +632,7 @@ To be an effective instructor, you are doing more than just demonstrating a skil
 
 # Darmok and Jalad at Tanagra: A Communication Master Class
 
-![Illustration](/images/wiki/char_vinny.png)
+
 
 Even though we all speak English (presumably), we don't always speak the same “language.” I don't just mean jargon and slang, but we make assumptions about the other person’s intelligence, intentions, or familiarity with a subject. How often has someone told you “I’m fine\!” when you know for a fact that they are not. Human society has taught us to not say what we really mean, even and especially, when it's most important. “Do you need help with that?” “No, I'm fine.” 
 
@@ -675,7 +675,7 @@ Memorizing this handbook and all the safety rules won't save you when a camper i
 
 # National Campfire Guidelines 
 
-![Illustration](/images/wiki/char_chuck.png)
+
 
 Let's get this out of the way right away. The following guidelines are passed down directly from National:
 
@@ -712,7 +712,7 @@ But that's ok\! Creativity thrives in adversity. Most of the skits and songs you
 
 # Campfire Performance Fundamentals
 
-![Illustration](/images/wiki/char_gabe.png)
+
 
 Great campfires come down to great performances with great improv. Embrace the “Yes, and…” philosophy and follow these basic rules:
 
@@ -730,7 +730,7 @@ When it comes to the Camper Campfire, we usually have one or two SPL’s do the 
 
 # How To Lead A Songs
 
-![Illustration](/images/wiki/char_grant.png)
+
 
 **How to Start a Song**  
 Never ask, “Who wants to sing?” or “What do you want to sing?” The crowd will either answer with dead silence or the latest highly inappropriate pop song.
@@ -747,7 +747,7 @@ No. Our uniforms are better.
 
 # Copyright (An Inconvenient Truth)
 
-![Illustration](/images/wiki/office_documents.jpg)
+
 
 The reality is, being a summer camp does not protect us from copyright. Legally, printing songs in songbooks is copying and publishing copyright material and singing the songs in camp is  life performance. There’s not many ways around it, and being a summer camp doesn’t legally give us any leeway. We can get permission and/or license the songs, but that’s an awful lot of work you’re probably not going to do. There’s some wiggle room when it comes to fair use, but you’d want to have a chat with a lawyer.
 
@@ -757,7 +757,7 @@ So why do we do it? Because shared absurdity brings people together. It’s deep
 
 # The Campfire Arc
 
-![Illustration](/images/wiki/char_marvelous.png)
+
 
 Like any great story, a campfire should have an arc. I've heard a number of theories about what it should look like, but I believe the next structure is not entirely unlike the fire itself:
 
@@ -769,7 +769,7 @@ Like any great story, a campfire should have an arc. I've heard a number of theo
 
 # Campfire Master Class And Songbook
 
-![Illustration](/images/wiki/char_david.png)
+
 
 Many of the skits I see today are 50 or more years old. Everyone brings something new to them, which is great, but how many more times do I have to see “Is it time yet?” With Youtube offering endless access to complete libraries of Saturday Night Live, Monty Python, Kids in the Hall, Second City, Groundlings, Upright Citizens Brigade, even BYU’s Studio C, not to mention countless Tiktok/Instagram Reels/YouTube Shorts comedy bits, there’s really no excuse for falling back on the same old jokes.
 
@@ -821,7 +821,7 @@ Phase 6: Polishing the Turd
 
 # Writing Songs
 
-![Illustration](/images/wiki/char_david.png)
+
 
 When the Llama Song was written, it began with the 1994 Camp Lawton Cub Scout Camp staff having Na Na Hey Hey (Kiss Him Goodbye) (Steam, 1969\) stuck in their heads. That just naturally evolved into “Llama llama \- I ride a \- ride a llama.” Amidst giggles over the brilliance of that wordplay, staff member Morgan Grantham went away for a bit and wrote the lyrics to the verses as a rap which later became the tune to We Will Rock You (Queen, 1977). That's how great songs are written sometimes. It's just a matter of finding the hook.
 
@@ -853,7 +853,7 @@ Here is a cheat sheet for writing a camp song that meets your needs: it demands 
 
 # Severe Weather Preparedness
 
-![Illustration](/images/wiki/wiki_severe_weather.jpg)
+
 
 > **Mandatory Course Portal:** Under NCAP Standard SQ-402, all staff must complete the Hazardous Weather Training. You can access the module directly via the [Hazardous Weather Training Link](https://training.scouting.org/courses/SCO_800/watch?bc=W3siaWQiOiIvY2F0YWxvZyIsImlzUGFyZW50Um91dGUiOnRydWUsImtpbmQiOiJscCIsInRleHQiOiIiLCJzZWFyY2hQYXJhbXMiOiIiLCJ1dWlkIjoiL2NhdGFsb2cifSx7ImlkIjoiMTEzNSIsImlzUGFyZW50Um91dGUiOmZhbHNlLCJraW5kIjoibHAiLCJ0ZXh0IjoiIiwic2VhcmNoUGFyYW1zIjoiP2JjPVczc2lhV1FpT2lJdlkyRjBZV3h2WnlJc0ltbHpVR0Z5Wlc1MFVtOTFkR1VpT25SeWRXVXNJbXRwYm1RaU9pSnNjQ0lzSW5SbGVIUWlPaUlpTENKelpXRnlZMmhRWVhKaGJYTWlPaUlpTENKMWRXbGtJam9pTDJOaGRHRnNiMmNpZlYwPSIsInV1aWQiOiIyZWE2YzI1OS0wNzcxLTRmMzEtOTNjOS1kN2VmNDQxZTAxNDQifV0=).
 
@@ -894,7 +894,7 @@ High Winds & Hazard Trees
 
 # Safeguarding Youth
 
-![Illustration](/images/wiki/char_casey.png)
+
 
 > **Mandatory Course Portal:** All staff members and adult leaders must complete the Safeguarding Youth Training annually. You can access the module directly via the [Safeguarding Youth Training Link](https://my.scouting.org/vim2/webscript/output/proxy.aspx?method=ExecuteContainerAPI&container=LMSAgent&api=DeeplLink&Program=YPT).
 
@@ -951,7 +951,7 @@ Mandatory Reporting (ARS 13-3620) As a camp staff member, YOU are a mandated rep
 
 # The Campwide Rules 
 
-![Illustration](/images/wiki/scout_skills.jpg)
+
 
 The following are the campwide rules to be followed by everyone in camp. Staff are expected to model these standards and enforce them calmly, consistently, and respectfully. Most problems can be handled with a friendly reminder. When someone refuses to cooperate or creates an immediate safety concern, that's when you escalate to a director or the administration.
 
@@ -979,7 +979,7 @@ Weapons, tobacco and nicotine products, alcohol, and illegal drugs are not permi
 
 # Radios
 
-![Illustration](/images/wiki/safety_alert.jpg)
+
 
 Camp Lawton has a limited number of high quality radios capable of reaching anywhere in camp (under the right conditions).
 
@@ -993,7 +993,7 @@ Camp Lawton has a limited number of high quality radios capable of reaching anyw
 
 # The Kitchen
 
-![Illustration](/images/wiki/camp_welcome.jpg)
+
 
 The kitchen is off limits unless explicitly permitted by the Cook or Camp Director. This is to ensure health and safety for everyone.
 
@@ -1002,43 +1002,43 @@ For anyone with special diets, be it medical or ideology, the kitchen will be ha
 
 # Pets
 
-![Illustration](/images/wiki/nature_scenic.jpg)
+
 
 Personal pets are not permitted in camp. The Forest Service prohibits animals without special permitting due to the potential to draw dangerous situations with the local wildlife. They can also be a distraction in camp. Small mammals, small birds, and non-venomous reptiles may be temporarily donated to the Nature Lodge, but during the summer they become an educational tool of the Nature Lodge, maintained by the Nature staff, not pets. If you plan to donate an animal, discuss it in advance with the Nature Director who will then clear it with the Camp Director. If cleared to do so, you must provide all materials needed for taking care of the animal. The camp will purchase refills of food and bedding as needed.
 
 # Laundry
 
-![Illustration](/images/wiki/camp_welcome.jpg)
+
 
 Clean clothes are an important part of how you present yourself and represent the camp. However, *we do not have a washing machine in camp*. Have multiple uniforms, plenty of socks, underwear, and shirts. If necessary, manually washing clothes the old fashioned way may be your best option. If absolutely necessary, we can try to arrange a run down the mountain to a laundramat.
 
 # Staff Use of Camp Equipment
 
-![Illustration](/images/wiki/scout_skills.jpg)
+
 
 Camp materials are always available for use as needed, but you must be thrifty. Take excellent care of all equipment and return it to where it belongs. If you use a finite resource, make sure you don’t impact the inventory in a way that will impair the program or the camper experience.
 
 # Advancement for Staff
 
-![Illustration](/images/wiki/scout_skills.jpg)
+
 
 Youth staff members are encouraged to work on their own advancement while at camp. With the approval of your home Scoutmaster, the Program Director or Camp Director may sign off on merit badges and rank advancement. However, advancement should not be your primary goal at camp. Think of it more as a convenient perk.
 
 # Payment of Salaries
 
-![Illustration](/images/wiki/office_documents.jpg)
+
 
 For legal and council policy purposes, paid staff must have an IRS W-4 form, an I-9 form, a completed Staff Application and a Social Security Number filed and the appropriate deductions made. The value of room and board will be added to and deducted from each check in keeping with IRS policies. To be clear, that’s just a lot of handwaving for the benefit of the feds. It cancels out, you're not actually being charged for your room and board.
 
 # Tips and Gratuities
 
-![Illustration](/images/wiki/office_documents.jpg)
+
 
 It is not consistent with Scouting to expect or receive tips, gratuities, or gifts from unit leaders or scouts. Offers should be declined.
 
 # Leaving Camp
 
-![Illustration](/images/wiki/camp_welcome.jpg)
+
 
 Staff members may only leave camp with the prior permission of the Camp Director. For any camp sponsored activity that will take place off the camp property, there must be a sign-up list, posted in the Camp Office. This list will be used as a roster for the outing as well as the group sign out. Before leaving camp, take a roll to double check that the list is consistent with who is going on the outing. Make a copy of the final list and post it with the sign out board at the Camp Office. Do head counts regularly and sign back in when returning. If a Scout decides to return to camp early, it must be reported back at camp.
 
@@ -1047,69 +1047,69 @@ A clip board should be posted at the camp office where anyone entering or leavin
 
 # Visitors
 
-![Illustration](/images/wiki/camp_welcome.jpg)
+
 
 Be sure that visitors give you advance notice of their plans to come to camp. They must be approved by the Program or Camp Director before arrival and must sign in at the Guest Sign-In sheet at the Camp Office immediately upon arrival. Guests must also sign out when leaving the camp. Visitors are expected to follow all camp rules and dress appropriately.  
 Visitors that have permission from the Camp Director to spend the night at camp, must have a completed BSA Health Form, Parts A & B and be checked by the Health Officer.
 
 # Staff Vehicles and Transportation
 
-![Illustration](/images/wiki/camp_welcome.jpg)
+
 
 Staff may park on Staff Hill. All vehicles must be backed in and faced toward the exit road for quick departure in case of an emergency. There is limited space, so carpool where possible. No motorized vehicles (including ATVs, golf carts, and scooters) are permitted within the camp proper unless vetted and explicitly cleared by the Camp Director. All staff under the age of 18 must have written parental approval and the approval of the Camp Director to have a motor vehicle on camp premises. Transportation to and from camp is the responsibility of the individual staff member. Junior staƯ being transported by persons other than their parents must have written parental permission. StaƯ vehicles must always remain in the parking lot. Only approved vehicles may be within the camp property.
 
 # Emergency Leave
 
-![Illustration](/images/wiki/safety_alert.jpg)
+
 
 Stuff happens. We don't expect this job to take priority over your real life. Whether it's a death in the family or a close friend’s bar mitzvah, you should be there for your people. To request leave, speak to the Camp Director with as much notice as possible and we'll make it work.
 
 # Health Examination
 
-![Illustration](/images/wiki/office_documents.jpg)
+
 
 As with all long term Scouting America outings, you are required to have medical forms A, B, and C on file in camp. Part A is a release form, B is medications and medical history, and C is an annual evaluation by a medical professional. Your presence in camp overnight at all, let alone your job, is contingent on completing these forms before camp.
 
 # Worker's Compensation
 
-![Illustration](/images/wiki/office_documents.jpg)
+
 
 As is standard practice by any employer, you are entitled to worker's comp coverage, meaning Catalina Council will pay your medical bills if you are injured while doing your job in camp. This is a lot of paperwork — I mean, we care deeply about all of our staff, so we'd prefer you don't have to use this benefit, but if you do, we got you.
 
 # Alcohol, Tobacco, Pornography and Drugs
 
-![Illustration](/images/wiki/camp_leadership.jpg)
+
 
 The consuming or possession of alcoholic beverages is strictly forbidden on Camp Lawton property, even for those over 21\. Underaged possession of tobacco and ‘vape’ equipment is similarly forbidden. Tobacco products possessed by persons 21 or older must be kept secure in a locked vehicle. Cigarettes may only be smoked inside of your car with the window up. Vapes only while no youth is present. Limited use of Marajuana is legal for recreational purposes in Arizona, but not in Camp Lawton. No possession or use of any form of Marajuana is permitted anywhere in Camp Lawton. The same goes for being under the influence of marajuana, alcohol, or illicit drugs. Violation of any of these rules, as well as the possession, use or sale of illegal drugs or prescription pharmaceuticals not prescribed to you, will lead to immediate termination. Possession of physical, video, or online pornography is prohibited on camp grounds. Navigation to one of these sites over the camp-provided wifi will automatically be escalated directly to the Catalina Council Chief Scout Executive.
 
 # Job Performance and Appraisals
 
-![Illustration](/images/wiki/camp_leadership.jpg)
+
 
 Area Directors will be asked to do evaluations on each staff member. These are meant simply as feedback, not as a disciplinary process. A bad evaluation should be thought of as a useful tool allowing you to know exactly where to improve and become the staff member we knew you could be when we hired you. We want you to excel. Area Directors will also be evaluated by the Program Director, and the Program Director is evaluated by the Camp Director. The Camp Director is evaluated too, by the Council Executive.
 
 # Staff Quarters
 
-![Illustration](/images/wiki/camp_welcome.jpg)
+
 
 Maintaining an orderly and hygienic living environment is a core expectation. Because you may share a cabin with up to seven other colleagues, mutual respect for personal space is paramount. Keep pathways clear of obstructions by arranging your equipment thoughtfully. All belongings should be tucked away neatly, and we ask that you keep your bunk looking sharp. To keep your gear secure and organized, we recommend using one or two lockable trunks that fit under or beside your bed. Don't forget to bring a laundry bag—nobody wants your dirty socks becoming a shared sensory experience\!  
 While we respect your privacy, the administration may conduct inspections if we have concerns regarding health, safety, or prohibited items. We reserve the right to visit cabins at reasonable times, always adhering strictly to Safeguarding Youth protocols. Occasionally, we may even show our facilities to visitors. While we’ll try to give you a heads-up, remember that your quarters are essentially an extension of the "onstage" experience. Don't let your mess break the magic\!
 
 # Religious Services
 
-![Illustration](/images/wiki/nature_scenic.jpg)
+
 
 The Scouting movement recognizes religion as an integral part of the character-building process and encourages staff to set an example for campers by openly participating in their own religious practices. The camp offers a camp-wide non-denominational chapel service every Sunday. All staff are invited and encouraged to attend this service. The chapel area is open to all personal and public faith practices at nearly any time, but in the case of an emergency you should make sure someone knows you're down there.
 
 # Trading Post
 
-![Illustration](/images/wiki/camp_welcome.jpg)
+
 
 The Trading Post is the camp's primary income source besides camp fees. During approved time off, staff are welcome to enjoy the Trading Post as much as you like. Staff discounts, free items, and “tabs” will not be available. All merchandise must be paid for in cash or by card at the time of purchase.
 
 # Recreational Items
 
-![Illustration](/images/wiki/camp_activities.jpg)
+
 
 Recreational items like smartphones, books, media devices, playing cards, role playing games, and video games must be kept in your quarters and may be used only when that use will not interfere with your duties. You are responsible to see that the camp is not disturbed by sound from their entertainment devices. Music may not be played outside of the cabin, including on the porch Lights Out is to be honored so that everyone can receive proper rest. Music in work areas is restricted to the Kitchen and Trading Post, or for special programs approved by the Program Director. Headphones are a good option when listening to your own music in your quarters but they are not allowed off of Staff Hill.
 
@@ -1121,7 +1121,7 @@ Recreational items are **privileged** items. Permission to have them at camp may
 
 # Employment Information
 
-![Illustration](/images/wiki/office_documents.jpg)
+
 
 **At-Will Employment**  
 Employment with Catalina Council – Scouting America is strictly "at-will." This means that you are free to resign from your position at any time, with or without cause. Likewise, Catalina Council reserves the right to terminate the employment relationship at any time, with or without cause and with or without advance notice. Because of this at-will status, there is no guarantee or contract ensuring employment with Catalina Council or Camp Lawton for any set period of time.
@@ -1198,7 +1198,7 @@ Effective and ongoing communication is essential to our daily operations. Camp L
 
 # Safety & Injuries
 
-![Illustration](/images/wiki/safety_alert.jpg)
+
 
 The safety of our campers and staff is paramount, which means everyone is a Safety Officer. If you see an unsafe act, stop the activity immediately and report all potential hazards to senior staff.  
 If an incident does occur, follow these strict protocols:
@@ -1212,7 +1212,7 @@ If an incident does occur, follow these strict protocols:
 
 # Camp Security
 
-![Illustration](/images/wiki/safety_alert.jpg)
+
 
 Knowing exactly who is on the property is critical to maintaining a safe environment.
 
@@ -1221,7 +1221,7 @@ Knowing exactly who is on the property is critical to maintaining a safe environ
 
 # Missing Person (Code Blue)
 
-![Illustration](/images/wiki/safety_alert.jpg)
+
 
 When a missing person is reported, all normal camp operations pause. Locating the individual immediately becomes the single highest priority for the entire staff until the "all clear" is given.
 
@@ -1239,7 +1239,7 @@ If a camper or staff member is reported missing to you, follow these steps in or
 
 # Emergency Alarm Procedures
 
-![Illustration](/images/wiki/safety_alert.jpg)
+
 
 **General Emergency Alarm (The Continuous Bell)**  
 The camp-wide alarm is the **continuous ringing of the large dining hall bell**, signaling an immediate emergency or camp-wide drill. While initial coordination will happen over the radios, all staff must be prepared to rely entirely on direct, face-to-face communication in the event of a power outage or system failure.
@@ -1256,7 +1256,7 @@ An emergency drill will be conducted within the first 24 hours of every camp wee
 
 # Bear & Wildlife Safety
 
-![Illustration](/images/wiki/nature_scenic.jpg)
+
 
 Camp Lawton is located within active black bear and mountain lion habitat. While sightings are rare, it takes very little for a wildlife encounter to escalate. Strict, uncompromising adherence to our camp policies is the single most effective method for preventing these incidents.
 
@@ -1299,7 +1299,7 @@ Camp Lawton shares its environment with other native species, including turkeys,
 
 # Fire Safety
 
-![Illustration](/images/wiki/safety_alert.jpg)
+
 
 **Campfire Restrictions** \- All campfires are subject to current Forest Service regulations, which change without notice. Administration will monitor the status each day, and this app has the latest alerts at the top if you have an active internet connection. These restrictions also apply to fireplaces in camp, but generally not to gas fires (although those need to be closely monitored as well).  
 
@@ -1314,7 +1314,7 @@ When fires are permitted…
 
 # Wildfires
 
-![Illustration](/images/wiki/safety_alert.jpg)
+
 
 Wildfires are very much a reality in this environment, making strict adherence to fire safety and emergency communication protocols **essential**.
 
@@ -1327,7 +1327,7 @@ Wildfires are very much a reality in this environment, making strict adherence t
 
 # Lightning & Severe Thunderstorms
 
-![Illustration](/images/wiki/safety_alert.jpg)
+
 
 Mountain weather can turn quickly. When severe storms approach, strict adherence to these protocols ensures everyone's safety.
 
@@ -1350,7 +1350,7 @@ Mountain weather can turn quickly. When severe storms approach, strict adherence
 
 # Armed Intruder / Active Shooter
 
-![Illustration](/images/wiki/safety_alert.jpg)
+
 
 While an active shooter event is highly unlikely, it requires a completely different response than weather or wildlife emergencies. Because this is a dynamic, human-driven threat, strict step-by-step procedures cannot cover every variable.
 
@@ -1368,7 +1368,7 @@ If you hear gunshots or receive a radio warning of an armed intruder, assume an 
 
 # Full Evacuation
 
-![Illustration](/images/wiki/safety_alert.jpg)
+
 
 In the event a fire or other emergency situation forces an evacuation of camp, the alarm will sound and instructions will be given. Specifics will depend on the situation, but here are the key things to know:
 
@@ -1382,7 +1382,7 @@ In the event a fire or other emergency situation forces an evacuation of camp, t
 
 # Fatality Protocol
 
-![Illustration](/images/wiki/safety_alert.jpg)
+
 
 In the tragic event of a fatality at camp, the absolute priorities are immediate scene preservation, respect for the deceased, and strictly limiting camper exposure to minimize trauma.  
 If you are the first to respond to or discover a fatality, follow these steps immediately:
@@ -1397,7 +1397,7 @@ If you are the first to respond to or discover a fatality, follow these steps im
 
 # Unexpected Incidents
 
-![Illustration](/images/wiki/safety_alert.jpg)
+
 
 Camp environments are inherently unpredictable. From sudden flash floods to a wandering Gila Monster, the camp has experienced a wide variety of highly unusual events over the years. Because it is impossible to have a written procedure for every conceivable scenario, staff must be prepared to rely on core safety principles and common sense.  
 If you encounter a strange, disruptive, or dangerous situation that is not covered by standard emergency protocols, follow these fundamental steps:
@@ -1409,7 +1409,7 @@ If you encounter a strange, disruptive, or dangerous situation that is not cover
 
 # Media & Public Relations
 
-![Illustration](/images/wiki/camp_leadership.jpg)
+
 
 Occasionally, news media may arrive at camp. They might be here for a lighthearted public interest piece, or they could be responding to a serious emergency like a wildfire or flood. Regardless of the circumstances, we must present a unified and professional front.  
 If you are approached by a reporter or camera crew, follow these strict guidelines:
@@ -1422,7 +1422,7 @@ If you are approached by a reporter or camera crew, follow these strict guidelin
 
 # Incident Response Protocols
 
-![Illustration](/images/wiki/safety_alert.jpg)
+
 
 Whether dealing with broken equipment or a medical emergency, rapid assessment and clear communication are essential.  
 **Property Damage**
@@ -1442,7 +1442,7 @@ Whether dealing with broken equipment or a medical emergency, rapid assessment a
 
 # Camp Opening Procedures
 
-![Illustration](/images/wiki/camp_welcome.jpg)
+
 
 **Pre-Camp Training**  
 As of 2026, the National Camp Accreditation Program (NCAP) standards outline specific pre-camp training requirements based on the type of camp, alongside mandatory certifications for all camp staff.
@@ -1494,7 +1494,7 @@ Catalina Council and the Camp Director are responsible for ensuring we meet all 
 
 # Required Paperwork
 
-![Illustration](/images/wiki/office_documents.jpg)
+
 
 To ensure a smooth onboarding process, all required paperwork must be submitted no later than **two weeks before Staff Week**. Completing these forms is a strict requirement for your employment with Catalina Council, so please do not delay in getting them submitted.
 
@@ -1514,7 +1514,7 @@ To ensure a smooth onboarding process, all required paperwork must be submitted 
 
 # Packing List
 
-![Illustration](/images/wiki/scout_skills.jpg)
+
 
 **Necessary Clothing (Pack for 6 days)**
 
@@ -1616,7 +1616,7 @@ Contraband & Other
 
 # Camp Lawton Staff Code of Conduct
 
-![Illustration](/images/wiki/camp_leadership.jpg)
+
 
 The Scout Oath and Law are the foundation of our camp culture. As a Camp Lawton staff member, your personal habits and actions are the living embodiment of Scouting. You agree to align your conduct, both on and off the clock, with the ideals of Scouting America, ensuring you remain a positive role model and maintain the physical and mental readiness required to serve our campers.
 

@@ -85,10 +85,10 @@ interface SpeciesFetchResult {
 }
 
 const CAMP: Coordinates = { lat: 32.398, lng: -110.725 };
-const DEFAULT_RADIUS_MILES = 15;
+const DEFAULT_RADIUS_MILES = 5;
 const MAX_RADIUS_MILES = 25;
-const DEFAULT_LOOKBACK_DAYS = 5 * 365;
-const MAX_LOOKBACK_DAYS = 10 * 365;
+const DEFAULT_LOOKBACK_DAYS = 5;
+const MAX_LOOKBACK_DAYS = 30;
 const RECENT_DAYS = 90;
 const ONE_YEAR_DAYS = 365;
 

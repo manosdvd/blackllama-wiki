@@ -66,6 +66,20 @@ const SUMMARY_OVERRIDES = new Map([
   ],
 ]);
 
+// Load AI summaries if available
+const AI_SUMMARIES_PATH = path.join(process.cwd(), 'scripts/ai_summaries.json');
+if (existsSync(AI_SUMMARIES_PATH)) {
+  try {
+    const aiSummaries = JSON.parse(readFileSync(AI_SUMMARIES_PATH, 'utf8'));
+    for (const [title, summary] of Object.entries(aiSummaries)) {
+      SUMMARY_OVERRIDES.set(title, summary);
+    }
+    console.log(`Loaded ${Object.keys(aiSummaries).length} AI-generated summaries from scripts/ai_summaries.json`);
+  } catch (err) {
+    console.warn('Warning: Could not parse scripts/ai_summaries.json:', err.message);
+  }
+}
+
 function hash(value, length = 64) {
   return createHash('sha256').update(value).digest('hex').slice(0, length);
 }

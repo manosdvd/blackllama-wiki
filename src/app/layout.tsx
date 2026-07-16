@@ -5,6 +5,7 @@ import Header from "@/components/layout/Header";
 import BottomNav from "@/components/layout/BottomNav";
 import EmbersBackground from "@/components/ui/EmbersBackground";
 import { AuthProvider } from "@/components/auth/AuthContext";
+import PwaUpdater from "@/components/layout/PwaUpdater";
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' });
 const atkinson = Atkinson_Hyperlegible({ weight: ['400', '700'], subsets: ['latin'], variable: '--font-atkinson', display: 'swap' });
@@ -35,6 +36,7 @@ export default function RootLayout({
             {children}
           </main>
           <BottomNav />
+          <PwaUpdater />
         </AuthProvider>
       </body>
     </html>

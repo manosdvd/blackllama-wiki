@@ -7,6 +7,8 @@ const withPWA = withPWAInit({
   register: true,
   workboxOptions: {
     disableDevLogs: true,
+    skipWaiting: false,
+    clientsClaim: true,
   },
 });
 

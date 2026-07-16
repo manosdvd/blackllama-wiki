@@ -121,7 +121,7 @@ interface ArcGisLayerMetadata {
 
 const CAMP_LAT = 32.398;
 const CAMP_LNG = -110.725;
-const DEFAULT_RADIUS_KM = 25;
+const DEFAULT_RADIUS_KM = 8.0; // 5 miles is approx 8.0 km
 const MAX_RADIUS_KM = 80;
 
 const JSON_HEADERS = {
@@ -248,10 +248,12 @@ function iNaturalistPhotoUrl(observation: INaturalistObservation) {
 
 async function fetchINaturalistSightings(location: WildlifeCoordinates, radiusKm: number): Promise<SourceResult<WildlifeSighting>> {
   try {
+    const earliest = new Date(Date.now() - 5 * 86_400_000); // 5 days lookback (same as bear/lion alerts)
     const params = new URLSearchParams({
       lat: String(location.lat),
       lng: String(location.lng),
       radius: String(radiusKm),
+      d1: earliest.toISOString().slice(0, 10),
       order: 'desc',
       order_by: 'observed_on',
       per_page: '48',
