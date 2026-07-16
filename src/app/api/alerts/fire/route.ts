@@ -296,7 +296,7 @@ async function fetchNWSAlerts(): Promise<{ items: FireAlertItem[]; health: Sourc
         expiresAt: props.expires,
         confidence: 'official' as Confidence,
         actionability,
-        url: props.uri,
+        url: `https://forecast.weather.gov/MapClick.php?lat=${CAMP_LAT}&lon=${CAMP_LON}`,
       };
     });
 
@@ -442,7 +442,7 @@ async function fetchUSFSAlerts(): Promise<{ items: FireAlertItem[]; health: Sour
           updatedAt: new Date().toISOString(),
           confidence: 'official',
           actionability: level === 'critical' ? 'contact-leadership' : level === 'warning' ? 'review-plan' : 'monitor',
-          url: href ? (href.startsWith('http') ? href : `https://www.fs.usda.gov${href}`) : undefined,
+          url: href ? (href.startsWith('http') ? href : `https://www.fs.usda.gov${href}`) : 'https://www.fs.usda.gov/r03/coronado/alerts',
         });
       }
     });
@@ -467,7 +467,7 @@ async function fetchUSFSAlerts(): Promise<{ items: FireAlertItem[]; health: Sour
                 updatedAt: new Date().toISOString(),
                 confidence: 'official',
                 actionability: level === 'critical' ? 'contact-leadership' : level === 'warning' ? 'review-plan' : 'monitor',
-                url: href ? (href.startsWith('http') ? href : `https://www.fs.usda.gov${href}`) : undefined,
+                url: href ? (href.startsWith('http') ? href : `https://www.fs.usda.gov${href}`) : 'https://www.fs.usda.gov/r03/coronado/alerts',
               });
             }
           });
@@ -601,7 +601,7 @@ async function fetchWFIGS(): Promise<{ items: FireAlertItem[]; health: SourceHea
         updatedAt,
         confidence: 'official',
         actionability: 'contact-leadership',
-        url: 'https://data-nifc.opendata.arcgis.com/datasets/nifc::wfigs-interagency-fire-perimeters/about',
+        url: 'https://inciweb.wildfire.gov/state/arizona',
       });
     });
 

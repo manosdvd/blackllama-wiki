@@ -68,7 +68,7 @@ export async function GET() {
         level: levelFromText(title + ' ' + body),
         title,
         message: body || title,
-        url: href ? (href.startsWith('http') ? href : `https://www.fs.usda.gov${href}`) : undefined,
+        url: href ? (href.startsWith('http') ? href : `https://www.fs.usda.gov${href}`) : 'https://www.fs.usda.gov/r03/coronado/alerts',
         source: 'USFS',
         timestamp: new Date().toISOString(),
       });
@@ -90,7 +90,7 @@ export async function GET() {
               level: levelFromText(text),
               title: text.slice(0, 100),
               message: text,
-              url: href ? (href.startsWith('http') ? href : `https://www.fs.usda.gov${href}`) : undefined,
+              url: href ? (href.startsWith('http') ? href : `https://www.fs.usda.gov${href}`) : 'https://www.fs.usda.gov/r03/coronado/alerts',
               source: 'USFS',
               timestamp: new Date().toISOString(),
             });
@@ -111,7 +111,7 @@ export async function GET() {
           level: levelFromText(text),
           title: text.slice(0, 100),
           message: text,
-          url: href ? (href.startsWith('http') ? href : `https://www.fs.usda.gov${href}`) : undefined,
+          url: href ? (href.startsWith('http') ? href : `https://www.fs.usda.gov${href}`) : 'https://www.fs.usda.gov/r03/coronado/alerts',
           source: 'USFS',
           timestamp: new Date().toISOString(),
         });

@@ -31,7 +31,7 @@ const SOURCE_LABELS: Record<FireAlertSource, string> = {
 const SOURCE_FALLBACK_URLS: Record<FireAlertSource, string> = {
   NWS: 'https://forecast.weather.gov/MapClick.php?lat=32.39806&lon=-110.725',
   USFS: 'https://www.fs.usda.gov/r03/coronado/alerts',
-  WFIGS: 'https://data-nifc.opendata.arcgis.com/datasets/nifc::wfigs-interagency-fire-perimeters/about',
+  WFIGS: 'https://inciweb.wildfire.gov/state/arizona',
   WILDCAD: 'https://www.wildwebe.net/?dc_name=AZTDC',
   PIMA_GIS: 'https://gisopendata.pima.gov/datasets/pima-county-cwpp-fire-perimeters/about',
 };
@@ -238,6 +238,7 @@ export default function AlertsHUD() {
   );
 
   const renderAlertCard = (alert: FireAlertItem, index: number) => {
+    const alertUrl = alert.url || SOURCE_FALLBACK_URLS[alert.source];
     const cardContent = (
       <>
         <div className={styles.hudIconWrapper}>
@@ -251,7 +252,7 @@ export default function AlertsHUD() {
             )}
           </div>
           <p className={styles.hudMessage}>{alert.message}</p>
-          {alert.url && (
+          {alertUrl && (
             <span className={styles.alertLinkFake}>
               View official source ↗
             </span>
@@ -260,13 +261,13 @@ export default function AlertsHUD() {
       </>
     );
 
-    const cardClass = `${styles.alertCard} ${styles[alert.level] || styles.info} ${index === activeAlertIndex ? styles.activeAlert : ''} ${alert.url ? styles.clickableAlertCard : ''}`;
+    const cardClass = `${styles.alertCard} ${styles[alert.level] || styles.info} ${index === activeAlertIndex ? styles.activeAlert : ''} ${alertUrl ? styles.clickableAlertCard : ''}`;
 
-    if (alert.url) {
+    if (alertUrl) {
       return (
         <a
           key={alert.id}
-          href={alert.url}
+          href={alertUrl}
           target="_blank"
           rel="noopener noreferrer"
           ref={(node) => { alertRefs.current[alert.id] = node; }}
