@@ -90,6 +90,7 @@ const FEED_URLS = [
   'https://www.youtube.com/feeds/videos.xml?channel_id=UC415bOPUcGSamy543abLmRA',
   'https://www.youtube.com/feeds/videos.xml?channel_id=UCWXWkY9L14tgx9JFTzn_uaA',
   'https://www.youtube.com/feeds/videos.xml?channel_id=UClFrYG5h7Vbz-Y2CEIEU6EQ',
+  'https://www.nols.edu/feed/',
 
   // Southern Arizona, desert ecology, public lands, and current safety information.
   'https://www.sonorandesert.org/feed/',
