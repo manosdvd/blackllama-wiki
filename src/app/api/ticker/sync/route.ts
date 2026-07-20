@@ -145,7 +145,6 @@ const FEED_URLS = [
   'https://www.youtube.com/feeds/videos.xml?channel_id=UCoYR1doityX-Cac-3lP4MLA',
   'https://www.youtube.com/feeds/videos.xml?channel_id=UCsT424axBr4bMLoFqiP4l_g',
   'https://www.youtube.com/feeds/videos.xml?channel_id=UCAuUUnT6oDeKwE6v1NGQxug',
-  'https://www.youtube.com/feeds/videos.xml?channel_id=UC7KlOYUv8lxU3MG4sfxaLzA',
   'https://www.youtube.com/feeds/videos.xml?channel_id=UCwmZiChSryoWQCZMIQezgTg',
   'https://www.youtube.com/feeds/videos.xml?channel_id=UCMG6vWRRaOLzr74uIuzMRaw',
 ];
